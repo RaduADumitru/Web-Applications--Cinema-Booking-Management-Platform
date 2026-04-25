@@ -1,4 +1,4 @@
-package com.awbd.cinema.helpers;
+package com.awbd.cinema.utils;
 
 import lombok.Getter;
 import lombok.Setter;

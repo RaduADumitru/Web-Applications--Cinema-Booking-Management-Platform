@@ -1,10 +1,9 @@
 package com.awbd.cinema.security;
 
-import com.awbd.cinema.helpers.SecurityCorsProperties;
+import com.awbd.cinema.utils.SecurityCorsProperties;
 import com.awbd.cinema.services.LoginAttemptService.LoginAttemptService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.web.servlet.DispatcherType;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
