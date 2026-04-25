@@ -2,6 +2,7 @@ package com.awbd.cinema.security;
 
 import com.awbd.cinema.utils.SecurityCorsProperties;
 import com.awbd.cinema.services.LoginAttemptService.LoginAttemptService;
+import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -47,7 +48,7 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http){
         http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(authz -> authz
-                        .dispatcherTypeMatchers().permitAll()
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/auth/**").permitAll()
                         .anyRequest().authenticated())
@@ -77,7 +78,6 @@ public class SecurityConfig {
         if (allowedOrigins == null || allowedOrigins.isEmpty()) {
             allowedOrigins = List.of(websiteDomain);
         }
-        corsConfiguration.setAllowedOriginPatterns(allowedOrigins);
         corsConfiguration.setAllowedOriginPatterns(allowedOrigins);
         corsConfiguration.setAllowedHeaders(List.of(
                 "Authorization",

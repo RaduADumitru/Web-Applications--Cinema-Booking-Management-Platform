@@ -60,6 +60,7 @@ public class AuthServiceImpl implements AuthService{
                             new UsernamePasswordAuthenticationToken(login.username(), login.password()));
             SecurityContextHolder.getContext().setAuthentication(auth);
         } catch (BadCredentialsException e) {
+            loginAttemptService.loginFailed(login.username());
             throw new InvalidFieldException("Date de conectare invalide.");
         } catch (LockedException e) {
             throw new TooManyRequestsException("Prea multe logări. Încearcă iar peste 15 min.");
@@ -73,8 +74,11 @@ public class AuthServiceImpl implements AuthService{
                         .orElseThrow(() -> new InvalidFieldException("Date de conectare invalide."));
 
         if (u.getDeletedAt() != null) {
+            loginAttemptService.loginFailed(login.username());
             throw new InvalidFieldException("Date de conectare invalide.");
         }
+
+        loginAttemptService.loginSucceeded(login.username());
 
         ResponseCookie jwtCookie = createJwtCookie(u.getUsername());
         ResponseCookie refreshCookie = createRefreshCookie(u.getUsername());

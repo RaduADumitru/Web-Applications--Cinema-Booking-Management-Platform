@@ -8,6 +8,10 @@ public class PasswordMatchValidator implements ConstraintValidator<PasswordMatch
 
     @Override
     public boolean isValid(RegisterDTO dto, ConstraintValidatorContext context) {
+        if (dto == null) {
+            return true;
+        }
+
         if (dto.password() == null || dto.confirmPassword() == null) {
             return false;
         }

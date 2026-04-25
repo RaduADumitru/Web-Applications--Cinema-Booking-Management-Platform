@@ -11,17 +11,19 @@ public record RegisterDTO(
                 message =
                         "Numele de utilizator conține caractere invalide sau nu respectă dimensiunile (3-20 de caractere).")
         String username,
+        @NotBlank(message = "Parola nu poate fi goală.")
         @Size(min = 8)
         @Pattern(
                 regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).+$",
                 message =
-                        "Parola trebuie sa includă cel putin o litera mare, una mica, un caracter special si cel putin 8 caractere")
+                        "Parola trebuie sa includă cel puțin o litera mare, una mica, un caracter special si cel putin 8 caractere")
         String password,
+        @NotBlank(message = "Parola nu poate fi goală.")
         @Size(min = 8, max = 128)
         @Pattern(
                 regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).+$",
                 message =
-                        "Parola trebuie sa includă cel putin o litera mare, una mica, un caracter special si cel putin 8 caractere")
+                        "Parola trebuie sa includă cel puțin o litera mare, una mica, un caracter special si cel putin 8 caractere")
         String confirmPassword,
         @NotEmpty(message = "Adresa de email nu poate fi goala.")
         @Email(message = "Adresa de email este invalida.")
