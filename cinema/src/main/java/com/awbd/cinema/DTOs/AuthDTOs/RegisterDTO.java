@@ -1,8 +1,9 @@
 package com.awbd.cinema.DTOs.AuthDTOs;
 
-import com.awbd.cinema.entities.User;
+import com.awbd.cinema.validators.PasswordMatch;
 import jakarta.validation.constraints.*;
 
+@PasswordMatch
 public record RegisterDTO(
         @NotEmpty(message = "Numele de utilizator nu poate fi gol.")
         @Pattern(
