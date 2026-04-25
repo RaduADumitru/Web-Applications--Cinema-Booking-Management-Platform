@@ -52,7 +52,8 @@ public class User {
 
     @NotNull
     @Enumerated(EnumType.STRING)
-    private Role role;
+    @Builder.Default
+    private Role role = Role.USER;
 
     @Column(name = "created_at", updatable = false)
     @Builder.Default
