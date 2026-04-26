@@ -4,9 +4,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 
 public record LoginDTO(
-        @NotEmpty(message = "Numele de utilizator nu poate fi gol.")
+        @NotEmpty(message = "The username field is required.")
         String username,
-        @NotBlank(message = "Parola nu poate fi gol.")
+        @NotBlank(message = "The password field is required.")
         String password
 ) {
 }

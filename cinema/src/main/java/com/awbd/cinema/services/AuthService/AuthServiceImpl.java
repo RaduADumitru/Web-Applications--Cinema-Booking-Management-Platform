@@ -2,6 +2,7 @@ package com.awbd.cinema.services.AuthService;
 
 import com.awbd.cinema.DTOs.AuthDTOs.*;
 import com.awbd.cinema.entities.User;
+import com.awbd.cinema.enums.Role;
 import com.awbd.cinema.exceptions.AlreadyExistsException;
 import com.awbd.cinema.exceptions.InvalidFieldException;
 import com.awbd.cinema.exceptions.TooManyRequestsException;
@@ -10,6 +11,7 @@ import com.awbd.cinema.services.LoginAttemptService.LoginAttemptService;
 import com.awbd.cinema.utils.JwtUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.*;
@@ -19,8 +21,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.HtmlUtils;
 
-import java.util.List;
-
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService{
@@ -45,13 +46,13 @@ public class AuthServiceImpl implements AuthService{
         User u = maptoEntity(register);
 
         userRepository.save(u);
-        return new RegisterResponseDTO("Cont creat cu succes.",u.getUsername());
+        return new RegisterResponseDTO("Account created successfully.",u.getUsername());
     }
 
     @Override
     public LoginActionDTO login(LoginDTO login){
         if (loginAttemptService.isBlocked(login.username())) {
-            throw new TooManyRequestsException("Prea multe logări. Încearcă iar peste 15 min.");
+            throw new TooManyRequestsException("Too many attempts. Try again later.");
         }
         Authentication auth;
         try {
@@ -61,21 +62,21 @@ public class AuthServiceImpl implements AuthService{
             SecurityContextHolder.getContext().setAuthentication(auth);
         } catch (BadCredentialsException e) {
             loginAttemptService.loginFailed(login.username());
-            throw new InvalidFieldException("Date de conectare invalide.");
+            throw new InvalidFieldException("Invalid account details.");
         } catch (LockedException e) {
-            throw new TooManyRequestsException("Prea multe logări. Încearcă iar peste 15 min.");
+            throw new TooManyRequestsException("Too many attempts. Try again later.");
         } catch (DisabledException e) {
-            throw new InvalidFieldException("Email neverificat.");
+            throw new InvalidFieldException("Email is not verified.");
         }
 
         User u =
                 userRepository
                         .findByUsernameIgnoreCase(auth.getName())
-                        .orElseThrow(() -> new InvalidFieldException("Date de conectare invalide."));
+                        .orElseThrow(() -> new InvalidFieldException("Invalid account details."));
 
         if (u.getDeletedAt() != null) {
             loginAttemptService.loginFailed(login.username());
-            throw new InvalidFieldException("Date de conectare invalide.");
+            throw new InvalidFieldException("Invalid account details.");
         }
 
         loginAttemptService.loginSucceeded(login.username());
@@ -86,9 +87,21 @@ public class AuthServiceImpl implements AuthService{
         return new LoginActionDTO(LoginResponseDTO.from(u), new LoginCookiesDTO(jwtCookie,refreshCookie));
     }
 
+    @Override
+    public void createOwner(RegisterDTO owner){
+        userRepository.findByUsernameIgnoreCaseOrEmailIgnoreCase(owner.username(),owner.email())
+                .orElseGet(()->{
+                    User u = maptoEntity(owner);
+                    u.setRole(Role.OWNER);
+
+                    log.info("Created owner: {}", u.getUsername());
+                    return userRepository.save(u);
+                });
+    }
+
     private void validateUserUniqueness(RegisterDTO register){
-        if (userRepository.existsUserByUsernameIgnoreCaseOrEmail(register.username(), register.email())) {
-            throw new AlreadyExistsException("Există deja un utilizator cu acest nume sau email.");
+        if (userRepository.existsUserByUsernameIgnoreCaseOrEmailIgnoreCase(register.username(), register.email())) {
+            throw new AlreadyExistsException("Username or email address is already in use.");
         }
     }
 
@@ -109,7 +122,7 @@ public class AuthServiceImpl implements AuthService{
                 .httpOnly(true)
                 .secure(cookieSecure)
                 .path("/")
-                .maxAge(3 * 60 * 60) // 3 ore
+                .maxAge(3 * 60 * 60) // 3 hours
                 .sameSite(cookieSameSite)
                 .build();
     }
@@ -120,7 +133,7 @@ public class AuthServiceImpl implements AuthService{
                 .httpOnly(true)
                 .secure(cookieSecure)
                 .path("/")
-                .maxAge(60L * 60L * 24L * 30L) // 30 de zile
+                .maxAge(60L * 60L * 24L * 30L) // 30 days
                 .sameSite(cookieSameSite)
                 .build();
     }

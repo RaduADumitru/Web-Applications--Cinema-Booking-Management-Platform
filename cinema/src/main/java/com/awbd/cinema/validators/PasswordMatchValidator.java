@@ -13,7 +13,7 @@ public class PasswordMatchValidator implements ConstraintValidator<PasswordMatch
         }
 
         if (dto.password() == null || dto.confirmPassword() == null) {
-            return false;
+            return true;
         }
 
         boolean isValid = dto.password().equals(dto.confirmPassword());

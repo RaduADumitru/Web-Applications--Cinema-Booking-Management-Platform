@@ -20,30 +20,30 @@ public class User {
     private Long id;
 
     @Column(unique = true, nullable = false)
-    @NotBlank(message = "Username-ul este obligatoriu.")
+    @NotBlank(message = "The username field is required.")
     private String username;
 
     @Column(name="first_name", nullable = false)
-    @NotBlank(message = "Prenumele nu poate fi gol.")
-    @Pattern(regexp = "^[a-zA-ZăâîșțĂÂÎȘȚ]{2,}(?:[ -][a-zA-ZăâîșțĂÂÎȘȚ]+){0,2}$", message = "Prenumele este invalid")
+    @NotBlank(message = "Please include your first name.")
+    @Pattern(regexp = "^[a-zA-ZăâîșțĂÂÎȘȚ]{2,}(?:[ -][a-zA-ZăâîșțĂÂÎȘȚ]+){0,2}$", message = "Invalid first name.")
     private String firstName;
 
     @Column(name="last_name", nullable = false)
-    @NotBlank(message = "Numele de familie nu poate fi gol.")
-    @Pattern(regexp = "^[a-zA-ZăâîșțĂÂÎȘȚ]{2,}(?:[ -][a-zA-ZăâîșțĂÂÎȘȚ]+){0,2}$", message = "Numele de familie este invalid")
+    @NotBlank(message = "Please include your last name.")
+    @Pattern(regexp = "^[a-zA-ZăâîșțĂÂÎȘȚ]{2,}(?:[ -][a-zA-ZăâîșțĂÂÎȘȚ]+){0,2}$", message = "Invalid last name.")
     private String lastName;
 
     @Column(unique = true, nullable = false)
-    @Email(message = "Adresa de email este invalida.")
-    @NotBlank(message = "Adresa de email nu poate fi goala.")
+    @Email(message = "Email address is not correct.")
+    @NotBlank(message = "Please include your email address.")
     private String email;
 
     @Column(nullable = false)
     private String password;
 
     @Column(name="phone_number", nullable = false)
-    @NotBlank(message = "Introdu numarul de telefon")
-    @Pattern(regexp = "^\\+?[0-9]{7,15}$", message = "Numărul de telefon este invalid.")
+    @NotBlank(message = "Please include your phone number.")
+    @Pattern(regexp = "^\\+?[0-9]{7,15}$", message = "Phone number is invalid.")
     private String phoneNumber;
 
     @Column(name = "loyalty_points")

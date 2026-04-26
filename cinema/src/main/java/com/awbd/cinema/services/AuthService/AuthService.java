@@ -6,4 +6,6 @@ public interface AuthService {
     RegisterResponseDTO register(RegisterDTO register);
 
     LoginActionDTO login(LoginDTO login);
+
+    void createOwner(RegisterDTO owner);
 }

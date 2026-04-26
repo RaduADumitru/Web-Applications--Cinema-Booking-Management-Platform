@@ -5,41 +5,47 @@ import jakarta.validation.constraints.*;
 
 @PasswordMatch
 public record RegisterDTO(
-        @NotEmpty(message = "Numele de utilizator nu poate fi gol.")
+        @NotEmpty(message = "Username cannot be empty.")
         @Pattern(
                 regexp = "^[a-zA-Z0-9._-]{3,20}$",
                 message =
-                        "Numele de utilizator conține caractere invalide sau nu respectă dimensiunile (3-20 de caractere).")
+                        "Username contains invalid characters or does not meet the length requirements (3-20 characters).")
         String username,
-        @NotBlank(message = "Parola nu poate fi goală.")
+
+        @NotBlank(message = "Password cannot be empty.")
         @Size(min = 8)
         @Pattern(
                 regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).+$",
                 message =
-                        "Parola trebuie sa includă cel puțin o litera mare, una mica, un caracter special si cel putin 8 caractere")
+                        "Password must include at least one uppercase letter, one lowercase letter, one special character, and be at least 8 characters long.")
         String password,
-        @NotBlank(message = "Parola nu poate fi goală.")
+
+        @NotBlank(message = "Password cannot be empty.")
         @Size(min = 8, max = 128)
         @Pattern(
                 regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).+$",
                 message =
-                        "Parola trebuie sa includă cel puțin o litera mare, una mica, un caracter special si cel putin 8 caractere")
+                        "Password must include at least one uppercase letter, one lowercase letter, one special character, and be at least 8 characters long.")
         String confirmPassword,
-        @NotEmpty(message = "Adresa de email nu poate fi goala.")
-        @Email(message = "Adresa de email este invalida.")
+
+        @NotEmpty(message = "Email address cannot be empty.")
+        @Email(message = "Email address is invalid.")
         String email,
-        @NotEmpty(message = "Prenumele nu poate fi gol.")
+
+        @NotEmpty(message = "First name cannot be empty.")
         @Pattern(
                 regexp = "^[a-zA-ZăâîșțĂÂÎȘȚ]{2,}(?:[ -][a-zA-ZăâîșțĂÂÎȘȚ]+){0,2}$",
-                message = "Prenumele este invalid")
+                message = "First name is invalid.")
         String firstName,
-        @NotEmpty(message = "Numele de familie nu poate fi gol.")
+
+        @NotEmpty(message = "Last name cannot be empty.")
         @Pattern(
                 regexp = "^[a-zA-ZăâîșțĂÂÎȘȚ]{2,}(?:[ -][a-zA-ZăâîșțĂÂÎȘȚ]+){0,2}$",
-                message = "Numele de familie este invalid")
+                message = "Last name is invalid.")
         String lastName,
-        @NotBlank(message = "Introdu numărul tau de telefon.")
-        @Pattern(regexp = "^\\+?[0-9]{7,15}$", message = "Numărul de telefon este invalid.")
+
+        @NotBlank(message = "Please enter your phone number.")
+        @Pattern(regexp = "^\\+?[0-9]{7,15}$", message = "Phone number is invalid.")
         String phoneNumber
-        ){
+){
 }

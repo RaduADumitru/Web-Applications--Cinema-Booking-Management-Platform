@@ -44,7 +44,7 @@ public class GlobalExceptionHandler {
                 errors.put(error.getField(), error.getDefaultMessage())
         );
 
-        return buildResponse(HttpStatus.UNPROCESSABLE_CONTENT, "Validarea a eșuat.", errors);
+        return buildResponse(HttpStatus.UNPROCESSABLE_CONTENT, "Validation failed.", errors);
     }
 
     private ResponseEntity<Map<String, Object>> buildResponse(HttpStatus status, String message, Object details) {
