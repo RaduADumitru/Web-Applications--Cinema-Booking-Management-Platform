@@ -14,15 +14,15 @@ import java.time.LocalDateTime;
 public class Movie {
     @Id
     @Column(name = "movie_id")
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long id; //uses tmdb's id, don't autogenerate
 
     @Column(name = "title", unique = true, nullable = false)
     @NotBlank(message = "The movie title field is required.")
     private String title;
 
     @Column(name = "duration_min", nullable = false)
-    @NotBlank(message = "The duration is required.")
+    @NotNull(message = "The duration is required.")
+    @PositiveOrZero(message = "The duration must be a positive number.")
     private Integer duration;
 
     @Column(name = "description", nullable = false)
