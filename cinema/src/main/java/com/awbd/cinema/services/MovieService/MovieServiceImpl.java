@@ -21,6 +21,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -50,16 +51,25 @@ public class MovieServiceImpl implements MovieService {
     }
 
     @Transactional
-    public SaveMovieDTO saveMovie(int adminMovieId){
+    public SaveMovieDTO saveMovie(int adminMovieId) {
         try {
             MovieDb tmdbMovie = tmdbApi.getMovies().getDetails(adminMovieId, "en-US");
-
             Long tmdbMovieId = (long) tmdbMovie.getId();
-            movieRepository.findById(tmdbMovieId).ifPresent(movie -> {
-                throw new AlreadyExistsException("Movie already exists.");
-            });
 
-            com.awbd.cinema.entities.Movie m = Movie.builder()
+            Optional<Movie> existingMovieOpt = movieRepository.findById(tmdbMovieId);
+
+            if (existingMovieOpt.isPresent()) {
+                Movie movie = existingMovieOpt.get();
+                if (movie.getDeletedAt() == null) {
+                    throw new AlreadyExistsException("Movie already exists.");
+                } else {
+                    movie.setDeletedAt(null);
+                    Movie savedMovie = movieRepository.save(movie);
+                    return SaveMovieDTO.from(savedMovie);
+                }
+            }
+
+            Movie m = Movie.builder()
                     .id(tmdbMovieId)
                     .title(tmdbMovie.getTitle())
                     .releaseDate(LocalDate.parse(tmdbMovie.getReleaseDate()).atStartOfDay())
@@ -71,8 +81,8 @@ public class MovieServiceImpl implements MovieService {
 
             movieRepository.save(m);
             return SaveMovieDTO.from(m);
-        }
-        catch (TmdbException e){
+
+        } catch (TmdbException e) {
             log.error("Error while fetching movies: {}", e.getMessage());
             throw new BadRequestException("Error while fetching movies.");
         }
