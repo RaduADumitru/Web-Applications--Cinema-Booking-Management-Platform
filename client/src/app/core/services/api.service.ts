@@ -17,8 +17,7 @@ export class ApiService {
   get<T>(endpoint: string, options?: any): Observable<any> {
     return this.http.get<ApiResponse<T>>(
       `${this.apiUrl}${endpoint}`,
-      options
-    );
+      { ...options, withCredentials: true } );
   }
 
   post<T>(endpoint: string, body: any, options?: { observe?: 'body' } & any): Observable<ApiResponse<T>>;
@@ -28,7 +27,7 @@ export class ApiService {
     return this.http.post<ApiResponse<T>>(
       `${this.apiUrl}${endpoint}`,
       body,
-      options
+      { ...options, withCredentials: true }
     );
   }
 
@@ -39,7 +38,7 @@ export class ApiService {
     return this.http.put<ApiResponse<T>>(
       `${this.apiUrl}${endpoint}`,
       body,
-      options
+      { ...options, withCredentials: true }
     );
   }
 
@@ -49,7 +48,7 @@ export class ApiService {
   delete<T>(endpoint: string, options?: any): Observable<any> {
     return this.http.delete<ApiResponse<T>>(
       `${this.apiUrl}${endpoint}`,
-      options
+      { ...options, withCredentials: true }
     );
   }
 
@@ -63,11 +62,11 @@ export class ApiService {
 
     return this.http.get<ApiResponse<T>>(
       `${this.apiUrl}${endpoint}`,
-      { params: httpParams }
+      { params: httpParams, withCredentials: true }
     );
   }
 
-  getPaged<T>(endpoint: string, page: number = 0, size: number = 10, params?: any): Observable<ApiResponse<PagedResponse<T>>> {
+  getPaged<T>(endpoint: string, page: number = 0, size: number = 10, params?: any): Observable<PagedResponse<T>> {
     let httpParams = new HttpParams()
       .set('page', page.toString())
       .set('size', size.toString());
@@ -80,9 +79,9 @@ export class ApiService {
       });
     }
 
-    return this.http.get<ApiResponse<PagedResponse<T>>>(
+    return this.http.get<PagedResponse<T>>(
       `${this.apiUrl}${endpoint}`,
-      { params: httpParams }
+      { params: httpParams, withCredentials: true }
     );
   }
 }

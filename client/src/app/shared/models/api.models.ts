@@ -8,12 +8,15 @@ export interface ApiResponse<T> {
 
 export interface PagedResponse<T> {
   content: T[];
-  totalElements: number;
-  totalPages: number;
-  currentPage: number;
-  pageSize: number;
+  page: PagedInfo;
 }
 
+export interface PagedInfo {
+  number: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
 export interface ErrorResponse {
   success: boolean;
   message: string;

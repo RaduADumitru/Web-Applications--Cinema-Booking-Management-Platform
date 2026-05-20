@@ -1,0 +1,90 @@
+<div class="admin-page">
+	<section class="admin-hero">
+		<div>
+			<p class="eyebrow">Admin dashboard</p>
+			<h1>Movie catalog</h1>
+			<p class="subtitle">Browse every movie returned by the admin list endpoint.</p>
+		</div>
+
+		<div class="summary-card" *ngIf="!loading && !error">
+			<span class="summary-label">Showing</span>
+			<strong>{{ tmdbMovies.length }}</strong>
+			<span class="summary-meta">of {{ totalElements }} total</span>
+		</div>
+	</section>
+
+	<div *ngIf="loading()" class="state-panel">Loading movies...</div>
+
+	<div *ngIf="error && !loading()" class="state-panel error-state">
+		{{ error }}
+	</div>
+
+	<ng-container *ngIf="!loading() && !error">
+<div class="pagination-shell" *ngIf="totalPages > 1">
+    <button type="button" class="page-button" (click)="goToPage(0)" [disabled]="currentPage === 0">
+        First
+    </button>
+
+    <button type="button" class="page-button" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 0">
+        Previous
+    </button>
+
+    <span class="pagination-ellipsis" *ngIf="pageNumbers[0] > 0">...</span>
+
+
+    <button
+        type="button"
+        class="page-button number"
+        *ngFor="let page of pageNumbers; trackBy: trackByPage"
+        (click)="goToPage(page)"
+        [class.active]="page === currentPage"
+    >
+        {{ page + 1 }}
+    </button>
+
+    <span class="pagination-ellipsis" *ngIf="pageNumbers[pageNumbers.length - 1] < totalPages - 1">...</span>
+
+    <button type="button" class="page-button" (click)="goToPage(currentPage + 1)" [disabled]="currentPage >= totalPages - 1">
+        Next
+    </button>
+
+    <button type="button" class="page-button" (click)="goToPage(totalPages - 1)" [disabled]="currentPage >= totalPages - 1">
+        Last
+    </button>
+</div>
+
+		<div *ngIf="tmdbMovies.length > 0; else noMovies" class="movies-grid">
+			<article class="movie-card" *ngFor="let movie of tmdbMovies; trackBy: trackByMovie">
+				<div class="poster">
+					<img [src]="movie.imageUrl" [alt]="movie.title" />
+				</div>
+
+				<div class="movie-content">
+					<div class="movie-header">
+						<div>
+							<h2>{{ movie.title }}</h2>
+							<p class="movie-id">Movie #{{ movie.id }}</p>
+						</div>
+
+						<span class="rating-pill">{{ movie.rating }}</span>
+					</div>
+
+					<div class="movie-meta">
+						<span>Release: {{ movie.releaseDate | date: 'mediumDate' }}</span>
+						<span>Genres: {{ movie.genreIds.length > 0 ? movie.genreIds.join(', ') : 'None' }}</span>
+					</div>
+
+					<p class="description">{{ movie.description }}</p>
+				</div>
+
+                <button (click)="saveMovie(movie.id)">Save Movie locally</button>
+			</article>
+		</div>
+
+
+	</ng-container>
+
+	<ng-template #noMovies>
+		<div class="state-panel">No movies available.</div>
+	</ng-template>
+</div>

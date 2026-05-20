@@ -1,9 +1,32 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
+import { MovieResponse } from '@app/shared/models/movie.models';
+import { MovieService } from '@app/core/services/movie.service';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-home',
-  imports: [],
+  standalone: true,
+  imports: [CommonModule],
   templateUrl: './home.html',
-  styleUrl: './home.css',
+  styleUrls: ['./home.css'],
 })
-export class HomeComponent {}
+
+export class HomeComponent implements OnInit {
+  movies = signal<MovieResponse[]>([]);
+  isLoading = signal<boolean>(true);
+
+  constructor(private movieService: MovieService) {}
+
+  ngOnInit(): void {
+    this.movieService.getMovies().subscribe({
+      next: (response) => {
+        this.movies.set(response.content);
+        this.isLoading.set(false);
+      },
+      error: (error) => {
+        console.error(error);
+        this.isLoading.set(false);
+      }
+    });
+  }
+}

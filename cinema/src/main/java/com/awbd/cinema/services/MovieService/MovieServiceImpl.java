@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -38,11 +39,17 @@ public class MovieServiceImpl implements MovieService {
     private final TmdbApi tmdbApi;
     private final MovieRepository movieRepository;
 
-    public List<AdminMovieDTO> getAdminMovieList(Integer page){
+    public Page<AdminMovieDTO> getAdminMovieList(Integer page){
         try {
-            return tmdbApi.getMovieLists().getPopular(
-                    "en-US", page, "GBR").getResults().stream()
-                    .map((AdminMovieDTO::from)).toList();
+            int tmdbPage = (page == null || page < 1) ? 1 : page;
+            var popularMovies = tmdbApi.getMovieLists().getPopular("en-US", tmdbPage, "GBR");
+            List<AdminMovieDTO> movies = popularMovies.getResults().stream()
+                    .map(AdminMovieDTO::from)
+                    .toList();
+
+            int tmdbPageSize = 20;
+            Pageable pageable = PageRequest.of(tmdbPage - 1, tmdbPageSize);
+            return new PageImpl<>(movies, pageable, popularMovies.getTotalResults());
         }
         catch (TmdbException e){
             log.error("Error while fetching movies: {}", e.getMessage());
@@ -96,7 +103,6 @@ public class MovieServiceImpl implements MovieService {
 
             Specification<Movie> spec = (root, query, cb) -> {
                 List<Predicate> predicates = new ArrayList<>();
-                predicates.add(cb.isNull(root.get("deletedAt")));
 
                 if (title != null && !title.isBlank()) {
                     predicates.add(cb.like(cb.lower(root.get("title")), "%" + title.toLowerCase() + "%"));

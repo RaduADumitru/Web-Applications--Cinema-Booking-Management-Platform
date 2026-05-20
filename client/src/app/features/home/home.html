@@ -1,1 +1,28 @@
-<p>home works!</p>
+<div class="home-container">
+    <div *ngIf="isLoading()" class="loading-state">
+        <p>Loading movies...</p>
+    </div>
+
+    <ng-container *ngIf="!isLoading()">
+        <div class="movies-grid" *ngIf="movies().length > 0; else noMovies">
+            <div class="movie-card" *ngFor="let movie of movies()">
+                <div class="movie-body">
+                    <h3 class="movie-title">{{ movie.title }}</h3>
+                    <div class="movie-meta">
+                        <span class="rating">{{ movie.rating }}</span>
+                        <span class="duration">• {{ movie.duration }} min</span>
+                        <span class="age">• {{ movie.ageRating }}</span>
+                    </div>
+                    <div class="release">Released: {{ movie.releaseDate | date:'mediumDate' }}</div>
+                    <p class="description">{{ movie.description }}</p>
+                </div>
+            </div>
+        </div>
+    </ng-container>
+
+    <ng-template #noMovies>
+        <div class="no-movies">No movies available.</div>
+    </ng-template>
+
+    <button onclick="window.location.href='/admin'">Go to Admin Dashboard</button>
+</div>

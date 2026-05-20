@@ -10,8 +10,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/movies")
 @RequiredArgsConstructor
@@ -21,7 +19,7 @@ public class MovieController {
 
     @RequestMapping("/admin/list")
     @PreAuthorize("hasRole('STAFF')")
-    public ResponseEntity<List<AdminMovieDTO>> getAdminMovieList(@RequestParam(defaultValue = "1") Integer page){
+    public ResponseEntity<Page<AdminMovieDTO>> getAdminMovieList(@RequestParam(defaultValue = "1") Integer page){
         return ResponseEntity.ok(movieService.getAdminMovieList(page));
     }
 

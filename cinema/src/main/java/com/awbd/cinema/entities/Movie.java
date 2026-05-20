@@ -25,7 +25,7 @@ public class Movie {
     @PositiveOrZero(message = "The duration must be a positive number.")
     private Integer duration;
 
-    @Column(name = "description", nullable = false)
+    @Column(name = "description", nullable = false, columnDefinition = "TEXT")
     @NotNull(message = "The description field is required.")
     private String description;
 
