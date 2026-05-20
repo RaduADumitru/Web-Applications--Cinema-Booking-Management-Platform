@@ -1,0 +1,141 @@
+<div class="min-h-screen flex items-center justify-center bg-surface">
+  <div class="w-full max-w-md p-8 bg-background rounded-lg shadow-lg">
+    <h1 class="text-3xl font-bold text-center mb-8 text-accent">Create Account</h1>
+
+    <div *ngIf="error" class="mb-4 p-4 bg-error bg-opacity-20 text-error rounded-lg border border-error">
+      {{ error }}
+    </div>
+
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="space-y-4">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label for="firstName" class="block text-sm font-medium mb-2">First Name</label>
+          <input
+            id="firstName"
+            type="text"
+            formControlName="firstName"
+            class="w-full px-4 py-2 border border-secondary rounded-lg bg-surface text-foreground focus:outline-none focus:border-primary"
+            [class.border-error]="submitted && f['firstName'].errors"
+            placeholder="First name"
+          />
+          <div *ngIf="submitted && f['firstName'].errors" class="mt-1 text-xs text-error">
+            <div *ngIf="f['firstName'].hasError('required')">First name cannot be empty.</div>
+            <div *ngIf="f['firstName'].hasError('pattern')">First name is invalid.</div>
+          </div>
+        </div>
+
+        <div>
+          <label for="lastName" class="block text-sm font-medium mb-2">Last Name</label>
+          <input
+            id="lastName"
+            type="text"
+            formControlName="lastName"
+            class="w-full px-4 py-2 border border-secondary rounded-lg bg-surface text-foreground focus:outline-none focus:border-primary"
+            [class.border-error]="submitted && f['lastName'].errors"
+            placeholder="Last name"
+          />
+          <div *ngIf="submitted && f['lastName'].errors" class="mt-1 text-xs text-error">
+            <div *ngIf="f['lastName'].hasError('required')">Last name cannot be empty.</div>
+            <div *ngIf="f['lastName'].hasError('pattern')">Last name is invalid.</div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <label for="email" class="block text-sm font-medium mb-2">Email</label>
+        <input
+          id="email"
+          type="email"
+          formControlName="email"
+          class="w-full px-4 py-2 border border-secondary rounded-lg bg-surface text-foreground focus:outline-none focus:border-primary"
+          [class.border-error]="submitted && f['email'].errors"
+          placeholder="your@email.com"
+        />
+        <div *ngIf="submitted && f['email'].errors" class="mt-1 text-sm text-error">
+          <div *ngIf="f['email'].hasError('required')">Email address cannot be empty.</div>
+          <div *ngIf="f['email'].hasError('email')">Email address is invalid.</div>
+        </div>
+      </div>
+
+      <div>
+        <label for="username" class="block text-sm font-medium mb-2">Username</label>
+        <input
+          id="username"
+          type="text"
+          formControlName="username"
+          class="w-full px-4 py-2 border border-secondary rounded-lg bg-surface text-foreground focus:outline-none focus:border-primary"
+          [class.border-error]="submitted && f['username'].errors"
+          placeholder="username"
+        />
+        <div *ngIf="submitted && f['username'].errors" class="mt-1 text-sm text-error">
+          <div *ngIf="f['username'].hasError('required')">Username cannot be empty.</div>
+          <div *ngIf="f['username'].hasError('pattern')">Username contains invalid characters or does not meet the length requirements (3-20 characters).</div>
+        </div>
+      </div>
+
+      <div>
+        <label for="password" class="block text-sm font-medium mb-2">Password</label>
+        <input
+          id="password"
+          type="password"
+          formControlName="password"
+          class="w-full px-4 py-2 border border-secondary rounded-lg bg-surface text-foreground focus:outline-none focus:border-primary"
+          [class.border-error]="submitted && f['password'].errors"
+          placeholder="At least 6 characters"
+        />
+        <div *ngIf="submitted && f['password'].errors" class="mt-1 text-sm text-error">
+          <div *ngIf="f['password'].hasError('required')">Password cannot be empty.</div>
+          <div *ngIf="f['password'].hasError('minlength')">Password must include at least one uppercase letter, one lowercase letter, one special character, and be at least 8 characters long.</div>
+          <div *ngIf="f['password'].hasError('pattern')">Password must include at least one uppercase letter, one lowercase letter, one special character, and be at least 8 characters long.</div>
+        </div>
+      </div>
+
+      <div>
+        <label for="confirmPassword" class="block text-sm font-medium mb-2">Confirm Password</label>
+        <input
+          id="confirmPassword"
+          type="password"
+          formControlName="confirmPassword"
+          class="w-full px-4 py-2 border border-secondary rounded-lg bg-surface text-foreground focus:outline-none focus:border-primary"
+          [class.border-error]="submitted && (f['confirmPassword'].errors || registerForm.hasError('passwordMismatch'))"
+          placeholder="Confirm password"
+        />
+        <div *ngIf="submitted && (f['confirmPassword'].errors || registerForm.hasError('passwordMismatch'))" class="mt-1 text-sm text-error">
+          <div *ngIf="f['confirmPassword'].hasError('required')">Password cannot be empty.</div>
+          <div *ngIf="f['confirmPassword'].hasError('minlength')">Password must include at least one uppercase letter, one lowercase letter, one special character, and be at least 8 characters long.</div>
+          <div *ngIf="f['confirmPassword'].hasError('pattern')">Password must include at least one uppercase letter, one lowercase letter, one special character, and be at least 8 characters long.</div>
+          <div *ngIf="registerForm.hasError('passwordMismatch')">Passwords do not match</div>
+        </div>
+      </div>
+
+      <div>
+        <label for="phoneNumber" class="block text-sm font-medium mb-2">Phone Number</label>
+        <input
+          id="phoneNumber"
+          type="tel"
+          formControlName="phoneNumber"
+          class="w-full px-4 py-2 border border-secondary rounded-lg bg-surface text-foreground focus:outline-none focus:border-primary"
+          [class.border-error]="submitted && f['phoneNumber'].errors"
+          placeholder="+1234567890"
+        />
+        <div *ngIf="submitted && f['phoneNumber'].errors" class="mt-1 text-sm text-error">
+          <div *ngIf="f['phoneNumber'].hasError('required')">Please enter your phone number.</div>
+          <div *ngIf="f['phoneNumber'].hasError('pattern')">Phone number is invalid.</div>
+        </div>
+      </div>
+
+      <button
+        type="submit"
+        [disabled]="loading"
+        class="w-full py-2 px-4 bg-primary text-background font-semibold rounded-lg hover:bg-accent-light transition disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {{ loading ? 'Creating account...' : 'Register' }}
+      </button>
+    </form>
+
+    <p class="text-center mt-6 text-sm">
+      Already have an account?
+      <a routerLink="/login" class="text-primary hover:text-accent-light font-semibold">Login here</a>
+    </p>
+  </div>
+</div>

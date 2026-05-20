@@ -1,0 +1,56 @@
+<div class="min-h-screen flex items-center justify-center bg-surface">
+  <div class="w-full max-w-md p-8 bg-background rounded-lg shadow-lg">
+    <h1 class="text-3xl font-bold text-center mb-8 text-accent">Cinema Booking</h1>
+
+    <div *ngIf="error" class="mb-4 p-4 bg-error bg-opacity-20 text-error rounded-lg border border-error">
+      {{ error }}
+    </div>
+
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-6">
+      <div>
+        <label for="username" class="block text-sm font-medium mb-2">Username</label>
+        <input
+          id="username"
+          type="text"
+          formControlName="username"
+          class="w-full px-4 py-2 border border-secondary rounded-lg bg-surface text-foreground focus:outline-none focus:border-primary"
+          [class.border-error]="submitted && f['username'].errors"
+          placeholder="Enter your username"
+        />
+        <div *ngIf="submitted && f['username'].errors" class="mt-1 text-sm text-error">
+          <div *ngIf="f['username'].hasError('required')">Username is required</div>
+          <div *ngIf="f['username'].hasError('minlength')">Username must be at least 3 characters</div>
+        </div>
+      </div>
+
+      <div>
+        <label for="password" class="block text-sm font-medium mb-2">Password</label>
+        <input
+          id="password"
+          type="password"
+          formControlName="password"
+          class="w-full px-4 py-2 border border-secondary rounded-lg bg-surface text-foreground focus:outline-none focus:border-primary"
+          [class.border-error]="submitted && f['password'].errors"
+          placeholder="Enter your password"
+        />
+        <div *ngIf="submitted && f['password'].errors" class="mt-1 text-sm text-error">
+          <div *ngIf="f['password'].hasError('required')">Password is required</div>
+          <div *ngIf="f['password'].hasError('minlength')">Password must be at least 6 characters</div>
+        </div>
+      </div>
+
+      <button
+        type="submit"
+        [disabled]="loading"
+        class="w-full py-2 px-4 bg-primary text-background font-semibold rounded-lg hover:bg-accent-light transition disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {{ loading ? 'Logging in...' : 'Login' }}
+      </button>
+    </form>
+
+    <p class="text-center mt-6 text-sm">
+      Don&apos;t have an account?
+      <a routerLink="/register" class="text-primary hover:text-accent-light font-semibold">Register here</a>
+    </p>
+  </div>
+</div>
