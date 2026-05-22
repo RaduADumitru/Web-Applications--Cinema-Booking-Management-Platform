@@ -17,7 +17,7 @@ public class MovieController {
 
     private final MovieService movieService;
 
-    @RequestMapping("/admin/list")
+    @GetMapping("/admin/list")
     @PreAuthorize("hasRole('STAFF')")
     public ResponseEntity<Page<AdminMovieDTO>> getAdminMovieList(@RequestParam(defaultValue = "1") Integer page){
         return ResponseEntity.ok(movieService.getAdminMovieList(page));

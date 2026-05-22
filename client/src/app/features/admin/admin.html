@@ -6,7 +6,7 @@
 			<p class="subtitle">Browse every movie returned by the admin list endpoint.</p>
 		</div>
 
-		<div class="summary-card" *ngIf="!loading && !error">
+		<div class="summary-card" *ngIf="!loading() && !error">
 			<span class="summary-label">Showing</span>
 			<strong>{{ tmdbMovies.length }}</strong>
 			<span class="summary-meta">of {{ totalElements }} total</span>

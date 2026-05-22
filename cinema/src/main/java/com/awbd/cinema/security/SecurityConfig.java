@@ -48,6 +48,11 @@ public class SecurityConfig {
     @Value("${security.csrf.enabled:true}")
     private boolean csrfEnabled;
 
+    @Value("${auth.cookie.secure:false}")
+    private boolean authCookieSecure;
+    @Value("${auth.cookie.same-site:Lax}")
+    private String authCookieSameSite;
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
@@ -66,7 +71,7 @@ public class SecurityConfig {
 
         if (csrfEnabled) {
             http.csrf(csrf -> csrf
-                    .csrfTokenRepository(getCookieCsrfTokenRepository())
+                    .csrfTokenRepository(cookieCsrfTokenRepository())
                     .csrfTokenRequestHandler(requestHandler)
                     .ignoringRequestMatchers("/auth/**")
             );
@@ -133,9 +138,13 @@ public class SecurityConfig {
         return handler;
     }
 
-    private CookieCsrfTokenRepository getCookieCsrfTokenRepository() {
+    @Bean
+    public CookieCsrfTokenRepository cookieCsrfTokenRepository() {
         CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
-        repository.setCookieCustomizer(cookie -> cookie.secure(false));
+        repository.setCookieCustomizer(cookie -> {
+            cookie.secure(authCookieSecure);
+            cookie.sameSite(authCookieSameSite);
+        });
         return repository;
     }
 }

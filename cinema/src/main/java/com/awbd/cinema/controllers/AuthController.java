@@ -8,7 +8,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfToken;
@@ -16,7 +15,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.beans.factory.annotation.Value;
 
 @RestController
 @RequestMapping("/auth")
@@ -24,14 +22,7 @@ import org.springframework.beans.factory.annotation.Value;
 public class AuthController {
 
     private final AuthService authService;
-    private final CookieCsrfTokenRepository csrfTokenRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
-
-
-    @Value("${auth.cookie.secure:false}")
-    private boolean cookieSecure;
-
-    @Value("${auth.cookie.same-site:Lax}")
-    private String cookieSameSite;
+    private final CookieCsrfTokenRepository csrfTokenRepository;
 
     @PostMapping("/register")
     public ResponseEntity<RegisterResponseDTO> register(@Valid @RequestBody RegisterDTO register) {
@@ -44,18 +35,11 @@ public class AuthController {
         LoginCookiesDTO cookies = loginAction.cookies();
 
         CsrfToken csrfToken = csrfTokenRepository.generateToken(request);
-        ResponseCookie xsrfCookie = ResponseCookie.from("XSRF-TOKEN", csrfToken.getToken())
-                .httpOnly(false)
-                .secure(cookieSecure)
-                .path("/")
-                .sameSite(cookieSameSite)
-                .build();
         csrfTokenRepository.saveToken(csrfToken, request, response);
 
         return ResponseEntity.ok()
             .header(HttpHeaders.SET_COOKIE, cookies.jwtCookie().toString())
             .header(HttpHeaders.SET_COOKIE, cookies.refreshTokenCookie().toString())
-            .header(HttpHeaders.SET_COOKIE, xsrfCookie.toString())
             .body(loginAction.response());
     }
 }

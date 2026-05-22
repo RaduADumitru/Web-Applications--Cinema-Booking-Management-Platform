@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -79,7 +80,7 @@ public class MovieServiceImpl implements MovieService {
             Movie m = Movie.builder()
                     .id(tmdbMovieId)
                     .title(tmdbMovie.getTitle())
-                    .releaseDate(LocalDate.parse(tmdbMovie.getReleaseDate()).atStartOfDay())
+                    .releaseDate(parseTmdbReleaseDate(tmdbMovie.getReleaseDate()))
                     .description(tmdbMovie.getOverview())
                     .rating(tmdbMovie.getVoteAverage())
                     .duration(tmdbMovie.getRuntime())
@@ -92,6 +93,19 @@ public class MovieServiceImpl implements MovieService {
         } catch (TmdbException e) {
             log.error("Error while fetching movies: {}", e.getMessage());
             throw new BadRequestException("Error while fetching movies.");
+        }
+    }
+
+    private LocalDateTime parseTmdbReleaseDate(String releaseDate) {
+        if (releaseDate == null || releaseDate.isBlank()) {
+            throw new BadRequestException("TMDB release date is missing.");
+        }
+
+        try {
+            return LocalDate.parse(releaseDate.trim()).atStartOfDay();
+        } catch (DateTimeParseException e) {
+            log.warn("Invalid TMDB release date '{}': {}", releaseDate, e.getMessage());
+            throw new BadRequestException("TMDB release date is invalid.");
         }
     }
 
