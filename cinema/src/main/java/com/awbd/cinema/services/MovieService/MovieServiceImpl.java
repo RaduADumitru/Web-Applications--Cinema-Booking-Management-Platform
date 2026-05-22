@@ -64,7 +64,7 @@ public class MovieServiceImpl implements MovieService {
             MovieDb tmdbMovie = tmdbApi.getMovies().getDetails(adminMovieId, "en-US");
             Long tmdbMovieId = (long) tmdbMovie.getId();
 
-            Optional<Movie> existingMovieOpt = movieRepository.findById(tmdbMovieId);
+            Optional<Movie> existingMovieOpt = Optional.ofNullable(movieRepository.findByIdIncludingDeleted(tmdbMovieId));
 
             if (existingMovieOpt.isPresent()) {
                 Movie movie = existingMovieOpt.get();
