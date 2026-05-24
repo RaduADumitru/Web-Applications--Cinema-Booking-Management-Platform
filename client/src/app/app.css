@@ -1,0 +1,9 @@
+/* Error Snackbar Styles */
+:global(.error-snackbar) {
+  background-color: #f44336 !important;
+  color: white !important;
+}
+
+:global(.error-snackbar .mdc-button__label) {
+  color: white !important;
+}
