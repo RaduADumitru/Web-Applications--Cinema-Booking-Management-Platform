@@ -4,10 +4,14 @@ LABEL authors="Radu"
     
 WORKDIR /workspace/cinema
 
-RUN apt-get update \
+COPY pom.xml mvnw ./
+COPY .mvn .mvn
+COPY src src
+RUN chmod +x ./mvnw \
+	&& apt-get update \
 	&& apt-get install -y --no-install-recommends curl \
 	&& rm -rf /var/lib/apt/lists/*
 
 EXPOSE 8080
 
-CMD ["sh", "-c", "chmod +x ./mvnw && ./mvnw spring-boot:run"]
+CMD ["sh", "-c", "./mvnw spring-boot:run"]
