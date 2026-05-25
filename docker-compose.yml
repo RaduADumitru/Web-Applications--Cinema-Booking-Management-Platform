@@ -1,0 +1,73 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: cinema-postgres
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: ${DATABASE_NAME}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB} || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    networks:
+      - cinema-network
+
+  app:
+    build:
+      context: ./cinema
+      dockerfile: Dockerfile
+    container_name: cinema-app
+    working_dir: /workspace/cinema
+    command: sh -c "chmod +x ./mvnw && ./mvnw spring-boot:run"
+    env_file:
+      - .env
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${DATABASE_NAME}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/workspace
+      - maven_repo:/root/.m2
+      - uploads_data:/workspace/cinema/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f spring-boot || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    networks:
+      - cinema-network
+  
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: cinema-client
+    ports:
+      - "4200:4200"
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - cinema-network
+    
+networks:
+  cinema-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  maven_repo:
+  uploads_data:
+  
