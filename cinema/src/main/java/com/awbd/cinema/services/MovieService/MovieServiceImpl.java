@@ -13,9 +13,11 @@ import info.movito.themoviedbapi.model.movies.MovieDb;
 import info.movito.themoviedbapi.tools.TmdbException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -39,8 +41,12 @@ public class MovieServiceImpl implements MovieService {
 
     private final TmdbApi tmdbApi;
     private final MovieRepository movieRepository;
+    private final RedisTemplate<String, Object> redisTemplate;
 
-    public Page<AdminMovieDTO> getAdminMovieList(Integer page){
+    private static final String MOVIE_CACHE_PREFIX = "movie:";
+    private static final Duration MOVIE_CACHE_TTL = Duration.ofHours(1);
+
+    public Page<AdminMovieDTO> getAdminMovieList(Integer page) {
         try {
             int tmdbPage = (page == null || page < 1) ? 1 : page;
             var popularMovies = tmdbApi.getMovieLists().getPopular("en-US", tmdbPage, "GBR");
@@ -51,8 +57,7 @@ public class MovieServiceImpl implements MovieService {
             int tmdbPageSize = 20;
             Pageable pageable = PageRequest.of(tmdbPage - 1, tmdbPageSize);
             return new PageImpl<>(movies, pageable, popularMovies.getTotalResults());
-        }
-        catch (TmdbException e){
+        } catch (TmdbException e) {
             log.error("Error while fetching movies: {}", e.getMessage());
             throw new BadRequestException("Error while fetching movies.");
         }
@@ -73,6 +78,8 @@ public class MovieServiceImpl implements MovieService {
                 } else {
                     movie.setDeletedAt(null);
                     Movie savedMovie = movieRepository.save(movie);
+                    // Invalidate any stale cache entry from before the soft-delete
+                    redisTemplate.delete(MOVIE_CACHE_PREFIX + tmdbMovieId);
                     return SaveMovieDTO.from(savedMovie);
                 }
             }
@@ -154,11 +161,23 @@ public class MovieServiceImpl implements MovieService {
         }
     }
 
+    // Cache-Aside: check cache first, populate on miss
     public MovieDTO getMovie(Long id) {
-        return movieRepository.findById(id)
+        String key = MOVIE_CACHE_PREFIX + id;
+
+        Object cached = redisTemplate.opsForValue().get(key);
+        if (cached instanceof MovieDTO dto) {
+            log.debug("Cache hit for movie {}", id);
+            return dto;
+        }
+
+        MovieDTO dto = movieRepository.findById(id)
                 .filter(m -> m.getDeletedAt() == null)
                 .map(MovieDTO::from)
                 .orElseThrow(() -> new NotFoundException("Movie not found."));
+
+        redisTemplate.opsForValue().set(key, dto, MOVIE_CACHE_TTL);
+        return dto;
     }
 
     @Transactional
@@ -174,6 +193,7 @@ public class MovieServiceImpl implements MovieService {
         movie.setAgeRating(dto.ageRating());
 
         Movie saved = movieRepository.save(movie);
+        redisTemplate.delete(MOVIE_CACHE_PREFIX + id);
         return MovieDTO.from(saved);
     }
 
@@ -184,5 +204,6 @@ public class MovieServiceImpl implements MovieService {
             movie.setDeletedAt(LocalDateTime.now());
             movieRepository.save(movie);
         }
+        redisTemplate.delete(MOVIE_CACHE_PREFIX + id);
     }
 }
