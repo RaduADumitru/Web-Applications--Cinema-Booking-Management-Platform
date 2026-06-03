@@ -12,4 +12,7 @@ COPY . .
 
 EXPOSE 4200
 
-CMD ["npm", "start", "--", "--host", "0.0.0.0", "--poll", "2000"]
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh && sed -i 's/\r//' /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
