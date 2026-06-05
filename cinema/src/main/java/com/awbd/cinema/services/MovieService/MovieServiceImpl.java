@@ -3,7 +3,10 @@ package com.awbd.cinema.services.MovieService;
 import com.awbd.cinema.DTOs.MovieDTOs.AdminMovieDTO;
 import com.awbd.cinema.DTOs.MovieDTOs.SaveMovieDTO;
 import com.awbd.cinema.DTOs.MovieDTOs.MovieDTO;
+import com.awbd.cinema.entities.Genre;
 import com.awbd.cinema.entities.Movie;
+import com.awbd.cinema.enums.GenreType;
+import com.awbd.cinema.repositories.GenreRepository;
 import com.awbd.cinema.exceptions.AlreadyExistsException;
 import com.awbd.cinema.exceptions.BadRequestException;
 import com.awbd.cinema.exceptions.NotFoundException;
@@ -32,6 +35,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 
 @Service
@@ -41,6 +46,7 @@ public class MovieServiceImpl implements MovieService {
 
     private final TmdbApi tmdbApi;
     private final MovieRepository movieRepository;
+    private final GenreRepository genreRepository;
     private final RedisTemplate<String, Object> redisTemplate;
 
     private static final String MOVIE_CACHE_PREFIX = "movie:";
@@ -71,14 +77,16 @@ public class MovieServiceImpl implements MovieService {
 
             Optional<Movie> existingMovieOpt = Optional.ofNullable(movieRepository.findByIdIncludingDeleted(tmdbMovieId));
 
+            List<Genre> genres = resolveGenres(tmdbMovie.getGenres());
+
             if (existingMovieOpt.isPresent()) {
                 Movie movie = existingMovieOpt.get();
                 if (movie.getDeletedAt() == null) {
                     throw new AlreadyExistsException("Movie already exists.");
                 } else {
                     movie.setDeletedAt(null);
+                    movie.setGenres(genres);
                     Movie savedMovie = movieRepository.save(movie);
-                    // Invalidate any stale cache entry from before the soft-delete
                     redisTemplate.delete(MOVIE_CACHE_PREFIX + tmdbMovieId);
                     return SaveMovieDTO.from(savedMovie);
                 }
@@ -92,6 +100,7 @@ public class MovieServiceImpl implements MovieService {
                     .rating(tmdbMovie.getVoteAverage())
                     .duration(tmdbMovie.getRuntime())
                     .ageRating(tmdbMovie.getAdult() ? "18+" : "12+")
+                    .genres(genres)
                     .build();
 
             movieRepository.save(m);
@@ -116,7 +125,8 @@ public class MovieServiceImpl implements MovieService {
         }
     }
 
-    public Page<MovieDTO> getUserMovieList(Integer page, Integer size, String title, Double minRating, Double maxRating, String ageRating, String releaseFrom, String releaseTo) {
+    @Transactional(readOnly = true)
+    public Page<MovieDTO> getUserMovieList(Integer page, Integer size, String title, Double minRating, Double maxRating, String ageRating, String releaseFrom, String releaseTo, String genre) {
         try {
             int p = (page == null || page < 1) ? 0 : page - 1;
             int s = (size == null || size < 1) ? 10 : size;
@@ -151,6 +161,12 @@ public class MovieServiceImpl implements MovieService {
                     predicates.add(cb.lessThanOrEqualTo(root.get("releaseDate"), LocalDateTime.of(to, LocalTime.MAX)));
                 }
 
+                if (genre != null && !genre.isBlank()) {
+                    GenreType genreType = GenreType.valueOf(genre.toUpperCase());
+                    Join<Movie, Genre> genreJoin = root.join("genres", JoinType.INNER);
+                    predicates.add(cb.equal(genreJoin.get("type"), genreType));
+                }
+
                 return cb.and(predicates.toArray(new Predicate[0]));
             };
 
@@ -161,7 +177,7 @@ public class MovieServiceImpl implements MovieService {
         }
     }
 
-    // Cache-Aside: check cache first, populate on miss
+    @Transactional(readOnly = true)
     public MovieDTO getMovie(Long id) {
         String key = MOVIE_CACHE_PREFIX + id;
 
@@ -191,10 +207,55 @@ public class MovieServiceImpl implements MovieService {
         movie.setRating(dto.rating());
         movie.setDuration(dto.duration());
         movie.setAgeRating(dto.ageRating());
+        movie.setGenres(resolveGenresByType(dto.genres()));
 
         Movie saved = movieRepository.save(movie);
         redisTemplate.delete(MOVIE_CACHE_PREFIX + id);
         return MovieDTO.from(saved);
+    }
+
+    private List<Genre> resolveGenresByType(List<GenreType> types) {
+        if (types == null || types.isEmpty()) return List.of();
+        return types.stream()
+                .map(type -> genreRepository.findByType(type)
+                        .orElseGet(() -> genreRepository.save(Genre.builder().type(type).build())))
+                .toList();
+    }
+
+    private List<Genre> resolveGenres(List<info.movito.themoviedbapi.model.core.Genre> tmdbGenres) {
+        if (tmdbGenres == null || tmdbGenres.isEmpty()) return List.of();
+        return tmdbGenres.stream()
+                .map(tg -> mapTmdbGenreId(tg.getId()))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .map(type -> genreRepository.findByType(type)
+                        .orElseGet(() -> genreRepository.save(Genre.builder().type(type).build())))
+                .toList();
+    }
+
+    private Optional<GenreType> mapTmdbGenreId(int tmdbId) {
+        return switch (tmdbId) {
+            case 28    -> Optional.of(GenreType.ACTION);
+            case 12    -> Optional.of(GenreType.ADVENTURE);
+            case 16    -> Optional.of(GenreType.ANIMATION);
+            case 35    -> Optional.of(GenreType.COMEDY);
+            case 80    -> Optional.of(GenreType.CRIME);
+            case 99    -> Optional.of(GenreType.DOCUMENTARY);
+            case 18    -> Optional.of(GenreType.DRAMA);
+            case 10751 -> Optional.of(GenreType.FAMILY);
+            case 14    -> Optional.of(GenreType.FANTASY);
+            case 36    -> Optional.of(GenreType.HISTORY);
+            case 27    -> Optional.of(GenreType.HORROR);
+            case 10402 -> Optional.of(GenreType.MUSIC);
+            case 9648  -> Optional.of(GenreType.MYSTERY);
+            case 10749 -> Optional.of(GenreType.ROMANCE);
+            case 878   -> Optional.of(GenreType.SCI_FI);
+            case 53    -> Optional.of(GenreType.THRILLER);
+            case 10770 -> Optional.of(GenreType.TV_MOVIE);
+            case 10752 -> Optional.of(GenreType.WAR);
+            case 37    -> Optional.of(GenreType.WESTERN);
+            default    -> Optional.empty();
+        };
     }
 
     @Transactional
@@ -202,6 +263,7 @@ public class MovieServiceImpl implements MovieService {
         Movie movie = movieRepository.findById(id).orElseThrow(() -> new NotFoundException("Movie not found."));
         if (movie.getDeletedAt() == null) {
             movie.setDeletedAt(LocalDateTime.now());
+            movie.setGenres(List.of());
             movieRepository.save(movie);
         }
         redisTemplate.delete(MOVIE_CACHE_PREFIX + id);

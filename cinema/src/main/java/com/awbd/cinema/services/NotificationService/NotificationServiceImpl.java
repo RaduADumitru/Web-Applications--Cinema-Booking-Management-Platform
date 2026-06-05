@@ -1,0 +1,72 @@
+package com.awbd.cinema.services.NotificationService;
+
+import com.awbd.cinema.DTOs.NotificationDTOs.CreateNotificationDTO;
+import com.awbd.cinema.DTOs.NotificationDTOs.NotificationDTO;
+import com.awbd.cinema.entities.Notification;
+import com.awbd.cinema.entities.Order;
+import com.awbd.cinema.entities.User;
+import com.awbd.cinema.exceptions.NotFoundException;
+import com.awbd.cinema.repositories.NotificationRepository;
+import com.awbd.cinema.repositories.OrderRepository;
+import com.awbd.cinema.repositories.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class NotificationServiceImpl implements NotificationService {
+
+    private final NotificationRepository notificationRepository;
+    private final UserRepository userRepository;
+    private final OrderRepository orderRepository;
+
+    @Override
+    @Transactional
+    public NotificationDTO createNotification(CreateNotificationDTO dto) {
+        User user = userRepository.findById(dto.userId())
+                .orElseThrow(() -> new NotFoundException("User not found with id: " + dto.userId()));
+
+        Order lastOrder = orderRepository.findFirstByUserIdOrderByCreatedAtDesc(dto.userId()).orElse(null);
+
+        Notification notification = Notification.builder()
+                .type(dto.type())
+                .content(dto.content())
+                .createdDate(LocalDateTime.now())
+                .user(user)
+                .order(lastOrder)
+                .build();
+
+        return NotificationDTO.from(notificationRepository.save(notification));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<NotificationDTO> getMyNotifications(Long userId) {
+        return notificationRepository.findByUserIdOrderByCreatedDateDesc(userId)
+                .stream()
+                .map(NotificationDTO::from)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public NotificationDTO getNotification(Long id) {
+        Notification notification = notificationRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Notification not found with id: " + id));
+        return NotificationDTO.from(notification);
+    }
+
+    @Override
+    @Transactional
+    public NotificationDTO markAsSent(Long id) {
+        Notification notification = notificationRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Notification not found with id: " + id));
+        notification.setSentDate(LocalDateTime.now());
+        return NotificationDTO.from(notificationRepository.save(notification));
+    }
+
+}
