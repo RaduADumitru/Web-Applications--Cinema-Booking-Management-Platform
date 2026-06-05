@@ -16,6 +16,7 @@ import info.movito.themoviedbapi.model.movies.MovieDb;
 import info.movito.themoviedbapi.tools.TmdbException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -180,22 +181,12 @@ public class MovieServiceImpl implements MovieService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "public_movies", key = "#id")
     public MovieDTO getMovie(Long id) {
-        String key = MOVIE_CACHE_PREFIX + id;
-
-        Object cached = redisTemplate.opsForValue().get(key);
-        if (cached instanceof MovieDTO dto) {
-            log.debug("Cache hit for movie {}", id);
-            return dto;
-        }
-
-        MovieDTO dto = movieRepository.findById(id)
+        return movieRepository.findById(id)
                 .filter(m -> m.getDeletedAt() == null)
                 .map(MovieDTO::from)
                 .orElseThrow(() -> new NotFoundException("Movie not found."));
-
-        redisTemplate.opsForValue().set(key, dto, MOVIE_CACHE_TTL);
-        return dto;
     }
 
     @Transactional

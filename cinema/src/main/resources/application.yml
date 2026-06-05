@@ -1,0 +1,6 @@
+app:
+  cache:
+    default-ttl: 5m
+    caches:
+      public_movies: 10m
+      actor_details: 1h
