@@ -2,12 +2,12 @@ package com.awbd.cinema.services.SeatService;
 
 import com.awbd.cinema.DTOs.SeatDTOs.SeatDTO;
 import com.awbd.cinema.DTOs.SeatDTOs.SaveSeatDTO;
-
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public interface SeatService {
     SeatDTO createSeat(SaveSeatDTO dto);
-    List<SeatDTO> getSeats(String roomType, Long screenSessionId, Long movieId);
+    Page<SeatDTO> getSeats(String roomType, Long screenSessionId, Long movieId, Pageable pageable);
     SeatDTO getSeat(Long id);
     SeatDTO updateSeat(Long id, SaveSeatDTO dto);
     void deleteSeat(Long id);

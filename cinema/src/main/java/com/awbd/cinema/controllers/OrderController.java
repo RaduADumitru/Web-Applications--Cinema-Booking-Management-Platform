@@ -7,13 +7,14 @@ import com.awbd.cinema.security.CustomUserDetails;
 import com.awbd.cinema.services.OrderService.OrderService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/orders")
@@ -25,34 +26,35 @@ public class OrderController {
     @PostMapping
     public ResponseEntity<OrderDTO> createOrder(
             @Valid @RequestBody CreateOrderDTO dto,
-            Authentication authentication) {
-        Long userId = ((CustomUserDetails) authentication.getPrincipal()).getId();
-        return ResponseEntity.status(HttpStatus.CREATED).body(orderService.createOrder(dto, userId));
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(orderService.createOrder(dto, userDetails.getId()));
     }
 
     @GetMapping
     @PreAuthorize("hasRole('STAFF')")
-    public ResponseEntity<List<OrderDTO>> getOrders(
-            @RequestParam(required = false) String status) {
-        return ResponseEntity.ok(orderService.getOrders(status));
+    public ResponseEntity<Page<OrderDTO>> getOrders(
+            @RequestParam(required = false) String status,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ResponseEntity.ok(orderService.getOrders(status, pageable));
     }
 
     @GetMapping("/my")
-    public ResponseEntity<List<OrderDTO>> getMyOrders(Authentication authentication) {
-        Long userId = ((CustomUserDetails) authentication.getPrincipal()).getId();
-        return ResponseEntity.ok(orderService.getMyOrders(userId));
+    public ResponseEntity<Page<OrderDTO>> getMyOrders(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ResponseEntity.ok(orderService.getMyOrders(userDetails.getId(), pageable));
     }
 
     @GetMapping("/my/discount-preview")
-    public ResponseEntity<DiscountPreviewDTO> getDiscountPreview(Authentication authentication) {
-        Long userId = ((CustomUserDetails) authentication.getPrincipal()).getId();
-        return ResponseEntity.ok(orderService.getDiscountPreview(userId));
+    public ResponseEntity<DiscountPreviewDTO> getDiscountPreview(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(orderService.getDiscountPreview(userDetails.getId()));
     }
 
     @GetMapping("/my/past")
-    public ResponseEntity<List<OrderDTO>> getMyPastOrders(Authentication authentication) {
-        Long userId = ((CustomUserDetails) authentication.getPrincipal()).getId();
-        return ResponseEntity.ok(orderService.getMyPastOrders(userId));
+    public ResponseEntity<Page<OrderDTO>> getMyPastOrders(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ResponseEntity.ok(orderService.getMyPastOrders(userDetails.getId(), pageable));
     }
 
     @GetMapping("/{id}")

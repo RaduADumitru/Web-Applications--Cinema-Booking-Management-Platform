@@ -20,10 +20,10 @@ import com.awbd.cinema.repositories.MovieRepository;
 import com.awbd.cinema.repositories.RoomRepository;
 import com.awbd.cinema.repositories.ScreenSessionRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -64,7 +64,7 @@ public class ScreenSessionServiceImpl implements ScreenSessionService {
     }
 
     @Transactional(readOnly = true)
-    public List<ScreenSessionDTO> getScreenSessions(Long movieId, String format) {
+    public Page<ScreenSessionDTO> getScreenSessions(Long movieId, String format, Pageable pageable) {
         Specification<ScreenSession> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
@@ -81,19 +81,15 @@ public class ScreenSessionServiceImpl implements ScreenSessionService {
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
-        return screenSessionRepository.findAll(spec).stream()
-                .map(ScreenSessionDTO::from)
-                .toList();
+        return screenSessionRepository.findAll(spec, pageable).map(ScreenSessionDTO::from);
     }
 
     @Transactional(readOnly = true)
-    public List<ScreenSessionDTO> getScreenSessionsByMovie(Long movieId) {
+    public Page<ScreenSessionDTO> getScreenSessionsByMovie(Long movieId, Pageable pageable) {
         if (!movieRepository.existsById(movieId)) {
             throw new NotFoundException("Movie not found.");
         }
-        return screenSessionRepository.findByMovieId(movieId).stream()
-                .map(ScreenSessionDTO::from)
-                .toList();
+        return screenSessionRepository.findByMovieId(movieId, pageable).map(ScreenSessionDTO::from);
     }
 
     @Transactional(readOnly = true)

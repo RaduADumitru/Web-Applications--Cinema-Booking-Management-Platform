@@ -28,6 +28,8 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -216,46 +218,33 @@ public class MovieServiceImpl implements MovieService {
 
     private List<Genre> resolveGenresByType(List<GenreType> types) {
         if (types == null || types.isEmpty()) return List.of();
-        return types.stream()
-                .map(type -> genreRepository.findByType(type)
-                        .orElseGet(() -> genreRepository.save(Genre.builder().type(type).build())))
-                .toList();
+
+        List<Genre> existing = genreRepository.findByTypeIn(types);
+        Set<GenreType> existingTypes = existing.stream()
+                .map(Genre::getType)
+                .collect(Collectors.toSet());
+
+        List<Genre> created = types.stream()
+                .filter(type -> !existingTypes.contains(type))
+                .map(type -> Genre.builder().type(type).build())
+                .collect(Collectors.collectingAndThen(
+                        Collectors.toList(),
+                        toCreate -> toCreate.isEmpty() ? List.of() : genreRepository.saveAll(toCreate)
+                ));
+
+        List<Genre> result = new ArrayList<>(existing);
+        result.addAll(created);
+        return result;
     }
 
     private List<Genre> resolveGenres(List<info.movito.themoviedbapi.model.core.Genre> tmdbGenres) {
         if (tmdbGenres == null || tmdbGenres.isEmpty()) return List.of();
-        return tmdbGenres.stream()
-                .map(tg -> mapTmdbGenreId(tg.getId()))
+        List<GenreType> types = tmdbGenres.stream()
+                .map(tg -> GenreType.fromTmdbId(tg.getId()))
                 .filter(Optional::isPresent)
                 .map(Optional::get)
-                .map(type -> genreRepository.findByType(type)
-                        .orElseGet(() -> genreRepository.save(Genre.builder().type(type).build())))
                 .toList();
-    }
-
-    private Optional<GenreType> mapTmdbGenreId(int tmdbId) {
-        return switch (tmdbId) {
-            case 28    -> Optional.of(GenreType.ACTION);
-            case 12    -> Optional.of(GenreType.ADVENTURE);
-            case 16    -> Optional.of(GenreType.ANIMATION);
-            case 35    -> Optional.of(GenreType.COMEDY);
-            case 80    -> Optional.of(GenreType.CRIME);
-            case 99    -> Optional.of(GenreType.DOCUMENTARY);
-            case 18    -> Optional.of(GenreType.DRAMA);
-            case 10751 -> Optional.of(GenreType.FAMILY);
-            case 14    -> Optional.of(GenreType.FANTASY);
-            case 36    -> Optional.of(GenreType.HISTORY);
-            case 27    -> Optional.of(GenreType.HORROR);
-            case 10402 -> Optional.of(GenreType.MUSIC);
-            case 9648  -> Optional.of(GenreType.MYSTERY);
-            case 10749 -> Optional.of(GenreType.ROMANCE);
-            case 878   -> Optional.of(GenreType.SCI_FI);
-            case 53    -> Optional.of(GenreType.THRILLER);
-            case 10770 -> Optional.of(GenreType.TV_MOVIE);
-            case 10752 -> Optional.of(GenreType.WAR);
-            case 37    -> Optional.of(GenreType.WESTERN);
-            default    -> Optional.empty();
-        };
+        return resolveGenresByType(types);
     }
 
     @Transactional

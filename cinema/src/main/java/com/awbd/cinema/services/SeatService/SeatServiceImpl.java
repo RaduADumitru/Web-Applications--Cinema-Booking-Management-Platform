@@ -15,12 +15,13 @@ import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -47,7 +48,7 @@ public class SeatServiceImpl implements SeatService {
     }
 
     @Transactional(readOnly = true)
-    public List<SeatDTO> getSeats(String roomType, Long screenSessionId, Long movieId) {
+    public Page<SeatDTO> getSeats(String roomType, Long screenSessionId, Long movieId, Pageable pageable) {
         Specification<Seat> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
@@ -73,9 +74,7 @@ public class SeatServiceImpl implements SeatService {
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
-        return seatRepository.findAll(spec).stream()
-                .map(SeatDTO::from)
-                .toList();
+        return seatRepository.findAll(spec, pageable).map(SeatDTO::from);
     }
 
     @Transactional(readOnly = true)

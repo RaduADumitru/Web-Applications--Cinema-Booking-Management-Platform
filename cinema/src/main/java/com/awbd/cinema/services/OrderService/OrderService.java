@@ -3,14 +3,14 @@ package com.awbd.cinema.services.OrderService;
 import com.awbd.cinema.DTOs.OrderDTOs.CreateOrderDTO;
 import com.awbd.cinema.DTOs.OrderDTOs.DiscountPreviewDTO;
 import com.awbd.cinema.DTOs.OrderDTOs.OrderDTO;
-
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public interface OrderService {
     OrderDTO createOrder(CreateOrderDTO dto, Long userId);
-    List<OrderDTO> getOrders(String status);
-    List<OrderDTO> getMyOrders(Long userId);
-    List<OrderDTO> getMyPastOrders(Long userId);
+    Page<OrderDTO> getOrders(String status, Pageable pageable);
+    Page<OrderDTO> getMyOrders(Long userId, Pageable pageable);
+    Page<OrderDTO> getMyPastOrders(Long userId, Pageable pageable);
     DiscountPreviewDTO getDiscountPreview(Long userId);
     OrderDTO getOrder(Long id);
     OrderDTO payOrder(Long id);

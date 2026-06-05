@@ -5,12 +5,13 @@ import com.awbd.cinema.DTOs.SeatDTOs.SaveSeatDTO;
 import com.awbd.cinema.services.SeatService.SeatService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/seats")
@@ -26,12 +27,12 @@ public class SeatController {
     }
 
     @GetMapping
-    public ResponseEntity<List<SeatDTO>> getSeats(
+    public ResponseEntity<Page<SeatDTO>> getSeats(
             @RequestParam(required = false) String roomType,
             @RequestParam(required = false) Long screenSessionId,
-            @RequestParam(required = false) Long movieId
-    ) {
-        return ResponseEntity.ok(seatService.getSeats(roomType, screenSessionId, movieId));
+            @RequestParam(required = false) Long movieId,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ResponseEntity.ok(seatService.getSeats(roomType, screenSessionId, movieId, pageable));
     }
 
     @GetMapping("/{id}")

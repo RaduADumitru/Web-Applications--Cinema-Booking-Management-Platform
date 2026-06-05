@@ -5,12 +5,13 @@ import com.awbd.cinema.DTOs.ScreenSessionDTOs.ScreenSessionDTO;
 import com.awbd.cinema.services.ScreenSessionService.ScreenSessionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/screen-sessions")
@@ -26,16 +27,18 @@ public class ScreenSessionController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ScreenSessionDTO>> getScreenSessions(
+    public ResponseEntity<Page<ScreenSessionDTO>> getScreenSessions(
             @RequestParam(required = false) Long movieId,
-            @RequestParam(required = false) String format
-    ) {
-        return ResponseEntity.ok(screenSessionService.getScreenSessions(movieId, format));
+            @RequestParam(required = false) String format,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ResponseEntity.ok(screenSessionService.getScreenSessions(movieId, format, pageable));
     }
 
     @GetMapping("/movie/{movieId}")
-    public ResponseEntity<List<ScreenSessionDTO>> getScreenSessionsByMovie(@PathVariable Long movieId) {
-        return ResponseEntity.ok(screenSessionService.getScreenSessionsByMovie(movieId));
+    public ResponseEntity<Page<ScreenSessionDTO>> getScreenSessionsByMovie(
+            @PathVariable Long movieId,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ResponseEntity.ok(screenSessionService.getScreenSessionsByMovie(movieId, pageable));
     }
 
     @GetMapping("/{id}")

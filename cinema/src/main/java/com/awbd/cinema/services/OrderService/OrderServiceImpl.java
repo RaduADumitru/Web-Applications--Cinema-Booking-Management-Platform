@@ -25,6 +25,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
@@ -148,19 +150,17 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Transactional(readOnly = true)
-    public List<OrderDTO> getOrders(String status) {
+    public Page<OrderDTO> getOrders(String status, Pageable pageable) {
         if (status != null && !status.isBlank()) {
             OrderStatus orderStatus = OrderStatus.valueOf(status.toUpperCase());
-            return orderRepository.findByStatus(orderStatus).stream()
-                    .map(OrderDTO::from).toList();
+            return orderRepository.findByStatus(orderStatus, pageable).map(OrderDTO::from);
         }
-        return orderRepository.findAll().stream().map(OrderDTO::from).toList();
+        return orderRepository.findAll(pageable).map(OrderDTO::from);
     }
 
     @Transactional(readOnly = true)
-    public List<OrderDTO> getMyOrders(Long userId) {
-        return orderRepository.findByUserId(userId).stream()
-                .map(OrderDTO::from).toList();
+    public Page<OrderDTO> getMyOrders(Long userId, Pageable pageable) {
+        return orderRepository.findByUserId(userId, pageable).map(OrderDTO::from);
     }
 
     @Transactional(readOnly = true)
@@ -173,10 +173,10 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Transactional(readOnly = true)
-    public List<OrderDTO> getMyPastOrders(Long userId) {
+    public Page<OrderDTO> getMyPastOrders(Long userId, Pageable pageable) {
         return orderRepository.findByUserIdAndStatusIn(
-                userId, List.of(OrderStatus.PAID, OrderStatus.CANCELLED))
-                .stream().map(OrderDTO::from).toList();
+                userId, List.of(OrderStatus.PAID, OrderStatus.CANCELLED), pageable)
+                .map(OrderDTO::from);
     }
 
     @Transactional(readOnly = true)

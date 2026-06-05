@@ -11,10 +11,10 @@ import com.awbd.cinema.repositories.RoomRepository;
 import com.awbd.cinema.repositories.ScreenSessionRepository;
 import com.awbd.cinema.repositories.SeatRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -35,10 +35,8 @@ public class RoomServiceImpl implements RoomService {
     }
 
     @Transactional(readOnly = true)
-    public List<RoomDTO> getRooms() {
-        return roomRepository.findAll().stream()
-                .map(RoomDTO::from)
-                .toList();
+    public Page<RoomDTO> getRooms(Pageable pageable) {
+        return roomRepository.findAll(pageable).map(RoomDTO::from);
     }
 
     @Transactional(readOnly = true)

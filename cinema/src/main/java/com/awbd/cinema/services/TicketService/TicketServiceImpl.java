@@ -17,10 +17,10 @@ import com.awbd.cinema.repositories.SeatRepository;
 import com.awbd.cinema.repositories.TicketInfoRepository;
 import com.awbd.cinema.repositories.TicketRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -62,24 +62,21 @@ public class TicketServiceImpl implements TicketService {
     }
 
     @Transactional(readOnly = true)
-    public List<TicketDTO> getTickets(Long sessionId, Long roomId, Boolean isAvailable) {
+    public Page<TicketDTO> getTickets(Long sessionId, Long roomId, Boolean isAvailable, Pageable pageable) {
         if (sessionId != null && roomId != null && isAvailable != null) {
-            return ticketRepository.findByScreenSessionIdAndRoomIdAndIsAvailable(sessionId, roomId, isAvailable)
-                    .stream().map(this::toDTO).toList();
+            return ticketRepository.findByScreenSessionIdAndRoomIdAndIsAvailable(sessionId, roomId, isAvailable, pageable)
+                    .map(this::toDTO);
         }
         if (sessionId != null && roomId != null) {
-            return ticketRepository.findByScreenSessionIdAndRoomId(sessionId, roomId)
-                    .stream().map(this::toDTO).toList();
+            return ticketRepository.findByScreenSessionIdAndRoomId(sessionId, roomId, pageable).map(this::toDTO);
         }
         if (sessionId != null) {
-            return ticketRepository.findByScreenSessionId(sessionId)
-                    .stream().map(this::toDTO).toList();
+            return ticketRepository.findByScreenSessionId(sessionId, pageable).map(this::toDTO);
         }
         if (roomId != null) {
-            return ticketRepository.findByRoomId(roomId)
-                    .stream().map(this::toDTO).toList();
+            return ticketRepository.findByRoomId(roomId, pageable).map(this::toDTO);
         }
-        return ticketRepository.findAll().stream().map(this::toDTO).toList();
+        return ticketRepository.findAll(pageable).map(this::toDTO);
     }
 
     @Transactional(readOnly = true)
