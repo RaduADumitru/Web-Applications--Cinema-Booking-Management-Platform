@@ -14,6 +14,7 @@ import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.util.ArrayList;
+import java.util.List;
 import com.awbd.cinema.exceptions.BadRequestException;
 import com.awbd.cinema.exceptions.NotFoundException;
 import com.awbd.cinema.repositories.MovieRepository;
