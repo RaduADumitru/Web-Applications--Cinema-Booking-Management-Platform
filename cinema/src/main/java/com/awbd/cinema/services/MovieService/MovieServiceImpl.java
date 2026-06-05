@@ -16,12 +16,12 @@ import info.movito.themoviedbapi.model.movies.MovieDb;
 import info.movito.themoviedbapi.tools.TmdbException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -50,11 +50,8 @@ public class MovieServiceImpl implements MovieService {
     private final TmdbApi tmdbApi;
     private final MovieRepository movieRepository;
     private final GenreRepository genreRepository;
-    private final RedisTemplate<String, Object> redisTemplate;
 
-    private static final String MOVIE_CACHE_PREFIX = "movie:";
-    private static final Duration MOVIE_CACHE_TTL = Duration.ofHours(1);
-
+    @Cacheable(value = "admin_movies", key = "#page ?: 1")
     public Page<AdminMovieDTO> getAdminMovieList(Integer page) {
         try {
             int tmdbPage = (page == null || page < 1) ? 1 : page;
@@ -73,6 +70,7 @@ public class MovieServiceImpl implements MovieService {
     }
 
     @Transactional
+    @CacheEvict(value = "public_movie_lists", allEntries = true)
     public SaveMovieDTO saveMovie(int adminMovieId) {
         try {
             MovieDb tmdbMovie = tmdbApi.getMovies().getDetails(adminMovieId, "en-US");
@@ -90,7 +88,6 @@ public class MovieServiceImpl implements MovieService {
                     movie.setDeletedAt(null);
                     movie.setGenres(genres);
                     Movie savedMovie = movieRepository.save(movie);
-                    redisTemplate.delete(MOVIE_CACHE_PREFIX + tmdbMovieId);
                     return SaveMovieDTO.from(savedMovie);
                 }
             }
@@ -129,6 +126,7 @@ public class MovieServiceImpl implements MovieService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "public_movie_lists")
     public Page<MovieDTO> getUserMovieList(Integer page, Integer size, String title, Double minRating, Double maxRating, String ageRating, String releaseFrom, String releaseTo, String genre) {
         try {
             int p = (page == null || page < 1) ? 0 : page - 1;
@@ -181,7 +179,7 @@ public class MovieServiceImpl implements MovieService {
     }
 
     @Transactional(readOnly = true)
-    @Cacheable(value = "public_movies", key = "#id")
+    @Cacheable(value = "single_movies", key = "#id")
     public MovieDTO getMovie(Long id) {
         return movieRepository.findById(id)
                 .filter(m -> m.getDeletedAt() == null)
@@ -190,6 +188,10 @@ public class MovieServiceImpl implements MovieService {
     }
 
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "single_movies", key = "#id"),
+            @CacheEvict(value = "public_movie_lists", allEntries = true)
+    })
     public MovieDTO updateMovie(Long id, SaveMovieDTO dto) {
         Movie movie = movieRepository.findById(id).orElseThrow(() -> new NotFoundException("Movie not found."));
         if (movie.getDeletedAt() != null) throw new NotFoundException("Movie not found.");
@@ -203,7 +205,6 @@ public class MovieServiceImpl implements MovieService {
         movie.setGenres(resolveGenresByType(dto.genres()));
 
         Movie saved = movieRepository.save(movie);
-        redisTemplate.delete(MOVIE_CACHE_PREFIX + id);
         return MovieDTO.from(saved);
     }
 
@@ -239,6 +240,10 @@ public class MovieServiceImpl implements MovieService {
     }
 
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "single_movies", key = "#id"),
+            @CacheEvict(value = "public_movie_lists", allEntries = true)
+    })
     public void deleteMovie(Long id) {
         Movie movie = movieRepository.findById(id).orElseThrow(() -> new NotFoundException("Movie not found."));
         if (movie.getDeletedAt() == null) {
@@ -246,6 +251,5 @@ public class MovieServiceImpl implements MovieService {
             movie.setGenres(List.of());
             movieRepository.save(movie);
         }
-        redisTemplate.delete(MOVIE_CACHE_PREFIX + id);
     }
 }

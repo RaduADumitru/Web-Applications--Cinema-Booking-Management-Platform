@@ -10,6 +10,9 @@ import com.awbd.cinema.repositories.NotificationRepository;
 import com.awbd.cinema.repositories.OrderRepository;
 import com.awbd.cinema.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +30,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "user_notifications", key = "#dto.userId()")
     public NotificationDTO createNotification(CreateNotificationDTO dto) {
         User user = userRepository.findById(dto.userId())
                 .orElseThrow(() -> new NotFoundException("User not found with id: " + dto.userId()));
@@ -46,6 +50,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "user_notifications")
     public Page<NotificationDTO> getMyNotifications(Long userId, Pageable pageable) {
         return notificationRepository.findByUserIdOrderByCreatedDateDesc(userId, pageable)
                 .map(NotificationDTO::from);
@@ -53,6 +58,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "notification", key = "#id")
     public NotificationDTO getNotification(Long id) {
         Notification notification = notificationRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Notification not found with id: " + id));
@@ -61,6 +67,10 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "notification", key = "#id"),
+            @CacheEvict(value = "user_notifications", key = "#result.userId()")
+    })
     public NotificationDTO markAsSent(Long id) {
         Notification notification = notificationRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Notification not found with id: " + id));

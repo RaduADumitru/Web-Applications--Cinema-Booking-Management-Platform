@@ -7,6 +7,9 @@ import com.awbd.cinema.exceptions.AlreadyExistsException;
 import com.awbd.cinema.exceptions.NotFoundException;
 import com.awbd.cinema.repositories.OfferRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -20,6 +23,7 @@ public class OfferServiceImpl implements OfferService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "offer_lists", allEntries = true)
     public OfferDTO createOffer(SaveOfferDTO dto) {
         if (offerRepository.existsByDay(dto.day())) {
             throw new AlreadyExistsException("An offer for " + dto.day() + " already exists.");
@@ -33,12 +37,14 @@ public class OfferServiceImpl implements OfferService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "offer_lists")
     public Page<OfferDTO> getOffers(Pageable pageable) {
         return offerRepository.findAll(pageable).map(OfferDTO::from);
     }
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "single_offers", key = "#id")
     public OfferDTO getOffer(Long id) {
         return offerRepository.findById(id)
                 .map(OfferDTO::from)
@@ -47,6 +53,10 @@ public class OfferServiceImpl implements OfferService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "single_offers", key = "#id"),
+            @CacheEvict(value = "offer_lists", allEntries = true)
+    })
     public OfferDTO updateOffer(Long id, SaveOfferDTO dto) {
         Offer offer = offerRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Offer not found with id: " + id));
@@ -62,6 +72,10 @@ public class OfferServiceImpl implements OfferService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "single_offers", key = "#id"),
+            @CacheEvict(value = "offer_lists", allEntries = true)
+    })
     public void deleteOffer(Long id) {
         if (!offerRepository.existsById(id)) {
             throw new NotFoundException("Offer not found with id: " + id);

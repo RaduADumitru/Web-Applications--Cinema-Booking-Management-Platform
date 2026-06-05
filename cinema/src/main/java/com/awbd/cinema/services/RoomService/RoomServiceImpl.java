@@ -11,6 +11,9 @@ import com.awbd.cinema.repositories.RoomRepository;
 import com.awbd.cinema.repositories.ScreenSessionRepository;
 import com.awbd.cinema.repositories.SeatRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -24,7 +27,9 @@ public class RoomServiceImpl implements RoomService {
     private final SeatRepository seatRepository;
     private final ScreenSessionRepository screenSessionRepository;
 
+    @Override
     @Transactional
+    @CacheEvict(value = "room_lists", allEntries = true)
     public RoomDTO createRoom(SaveRoomDTO dto) {
         Room room = Room.builder()
                 .type(dto.type())
@@ -34,19 +39,28 @@ public class RoomServiceImpl implements RoomService {
         return RoomDTO.from(roomRepository.save(room));
     }
 
+    @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "room_lists")
     public Page<RoomDTO> getRooms(Pageable pageable) {
         return roomRepository.findAll(pageable).map(RoomDTO::from);
     }
 
+    @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "single_room", key = "#id")
     public RoomDTO getRoom(Long id) {
         return roomRepository.findById(id)
                 .map(RoomDTO::from)
                 .orElseThrow(() -> new NotFoundException("Room not found."));
     }
 
+    @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "single_rooms", key = "#id"),
+            @CacheEvict(value = "room_lists", allEntries = true)
+    })
     public RoomDTO updateRoom(Long id, SaveRoomDTO dto) {
         Room room = roomRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Room not found."));
@@ -56,7 +70,12 @@ public class RoomServiceImpl implements RoomService {
         return RoomDTO.from(roomRepository.save(room));
     }
 
+    @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "single_rooms", key = "#id"),
+            @CacheEvict(value = "room_lists", allEntries = true)
+    })
     public void deleteRoom(Long id) {
         if (!roomRepository.existsById(id)) {
             throw new NotFoundException("Room not found.");
@@ -64,7 +83,12 @@ public class RoomServiceImpl implements RoomService {
         roomRepository.deleteById(id);
     }
 
+    @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "single_rooms", key = "#roomId"),
+            @CacheEvict(value = "room_lists", allEntries = true)
+    })
     public RoomDTO addSeat(Long roomId, Long seatId) {
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new NotFoundException("Room not found."));
@@ -77,7 +101,16 @@ public class RoomServiceImpl implements RoomService {
         return RoomDTO.from(roomRepository.save(room));
     }
 
+    @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "single_rooms", key = "#roomId"),
+            @CacheEvict(value = "room_lists", allEntries = true),
+
+            @CacheEvict(value = "single_screen_sessions", key = "#sessionId"),
+            @CacheEvict(value = "screen_session_lists", allEntries = true),
+            @CacheEvict(value = "movie_session_lists", allEntries = true)
+    })
     public RoomDTO addScreenSession(Long roomId, Long sessionId) {
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new NotFoundException("Room not found."));
@@ -90,7 +123,12 @@ public class RoomServiceImpl implements RoomService {
         return RoomDTO.from(roomRepository.save(room));
     }
 
+    @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "single_rooms", key = "#roomId"),
+            @CacheEvict(value = "room_lists", allEntries = true)
+    })
     public RoomDTO removeSeat(Long roomId, Long seatId) {
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new NotFoundException("Room not found."));
@@ -98,7 +136,16 @@ public class RoomServiceImpl implements RoomService {
         return RoomDTO.from(roomRepository.save(room));
     }
 
+    @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "single_rooms", key = "#roomId"),
+            @CacheEvict(value = "room_lists", allEntries = true),
+
+            @CacheEvict(value = "single_screen_sessions", key = "#sessionId"),
+            @CacheEvict(value = "screen_session_lists", allEntries = true),
+            @CacheEvict(value = "movie_session_lists", allEntries = true)
+    })
     public RoomDTO removeScreenSession(Long roomId, Long sessionId) {
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new NotFoundException("Room not found."));

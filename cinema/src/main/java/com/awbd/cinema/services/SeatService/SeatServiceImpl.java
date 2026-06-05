@@ -15,6 +15,9 @@ import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -32,7 +35,9 @@ public class SeatServiceImpl implements SeatService {
     private final SeatCategoryRepository seatCategoryRepository;
     private final RoomRepository roomRepository;
 
+    @Override
     @Transactional
+    @CacheEvict(value = "seat_lists", allEntries = true)
     public SeatDTO createSeat(SaveSeatDTO dto) {
         Room room = roomRepository.findById(dto.roomId())
                 .orElseThrow(() -> new NotFoundException("Room not found."));
@@ -48,7 +53,9 @@ public class SeatServiceImpl implements SeatService {
         return SeatDTO.from(savedSeat);
     }
 
+    @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "seat_lists")
     public Page<SeatDTO> getSeats(String roomType, Long screenSessionId, Long movieId, Pageable pageable) {
         Specification<Seat> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -78,14 +85,21 @@ public class SeatServiceImpl implements SeatService {
         return seatRepository.findAll(spec, pageable).map(SeatDTO::from);
     }
 
+    @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "single_seat", key = "#id")
     public SeatDTO getSeat(Long id) {
         return seatRepository.findById(id)
                 .map(SeatDTO::from)
                 .orElseThrow(() -> new NotFoundException("Seat not found."));
     }
 
+    @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "single_seat", key = "#id"),
+            @CacheEvict(value = "seat_lists", allEntries = true)
+    })
     public SeatDTO updateSeat(Long id, SaveSeatDTO dto) {
         Seat seat = seatRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Seat not found."));
@@ -102,7 +116,12 @@ public class SeatServiceImpl implements SeatService {
                 .orElseThrow(() -> new NotFoundException("Seat category not found."));
     }
 
+    @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "single_seat", key = "#id"),
+            @CacheEvict(value = "seat_lists", allEntries = true)
+    })
     public void deleteSeat(Long id) {
         if (!seatRepository.existsById(id)) {
             throw new NotFoundException("Seat not found.");

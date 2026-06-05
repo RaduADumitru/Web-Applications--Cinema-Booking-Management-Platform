@@ -11,6 +11,11 @@ import com.awbd.cinema.repositories.SessionInfoRepository;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.util.ArrayList;
@@ -34,8 +39,14 @@ public class ScreenSessionServiceImpl implements ScreenSessionService {
     private final MovieRepository movieRepository;
     private final SessionInfoRepository sessionInfoRepository;
     private final RoomRepository roomRepository;
+    private final CacheManager cacheManager;
 
+    @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "screen_session_lists", allEntries = true),
+            @CacheEvict(value = "movie_session_lists", allEntries = true)
+    })
     public ScreenSessionDTO createScreenSession(SaveScreenSessionDTO dto) {
         Movie movie = movieRepository.findById(dto.movieId())
                 .orElseThrow(() -> new NotFoundException("Movie not found."));
@@ -64,7 +75,9 @@ public class ScreenSessionServiceImpl implements ScreenSessionService {
         return ScreenSessionDTO.from(savedSession);
     }
 
+    @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "screen_session_lists")
     public Page<ScreenSessionDTO> getScreenSessions(Long movieId, String format, Pageable pageable) {
         Specification<ScreenSession> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -85,7 +98,9 @@ public class ScreenSessionServiceImpl implements ScreenSessionService {
         return screenSessionRepository.findAll(spec, pageable).map(ScreenSessionDTO::from);
     }
 
+    @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "movie_session_lists")
     public Page<ScreenSessionDTO> getScreenSessionsByMovie(Long movieId, Pageable pageable) {
         if (!movieRepository.existsById(movieId)) {
             throw new NotFoundException("Movie not found.");
@@ -93,14 +108,22 @@ public class ScreenSessionServiceImpl implements ScreenSessionService {
         return screenSessionRepository.findByMovieId(movieId, pageable).map(ScreenSessionDTO::from);
     }
 
+    @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "single_screen_sessions", key = "#id")
     public ScreenSessionDTO getScreenSession(Long id) {
         return screenSessionRepository.findById(id)
                 .map(ScreenSessionDTO::from)
                 .orElseThrow(() -> new NotFoundException("Screen session not found."));
     }
 
+    @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "single_screen_sessions", key = "#id"),
+            @CacheEvict(value = "screen_session_lists", allEntries = true),
+            @CacheEvict(value = "movie_session_lists", allEntries = true)
+    })
     public ScreenSessionDTO updateScreenSession(Long id, SaveScreenSessionDTO dto) {
         ScreenSession session = screenSessionRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Screen session not found."));
@@ -121,7 +144,13 @@ public class ScreenSessionServiceImpl implements ScreenSessionService {
         return ScreenSessionDTO.from(screenSessionRepository.save(session));
     }
 
+    @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "single_screen_sessions", key = "#id"),
+            @CacheEvict(value = "screen_session_lists", allEntries = true),
+            @CacheEvict(value = "movie_session_lists", allEntries = true)
+    })
     public void deleteScreenSession(Long id) {
         ScreenSession session = screenSessionRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Screen session not found."));

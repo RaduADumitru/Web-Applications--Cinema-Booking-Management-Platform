@@ -22,6 +22,10 @@ import com.awbd.cinema.repositories.TicketInfoRepository;
 import com.awbd.cinema.repositories.TicketRepository;
 import com.awbd.cinema.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +40,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
@@ -45,7 +50,16 @@ public class OrderServiceImpl implements OrderService {
     private final OfferRepository offerRepository;
     private final NotificationRepository notificationRepository;
 
+    @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "order_lists", allEntries = true),
+            @CacheEvict(value = "user_orders", allEntries = true),
+            @CacheEvict(value = "ticket_lists", allEntries = true),
+            @CacheEvict(value = "single_ticket", allEntries = true),
+            @CacheEvict(value = "user_discount_previews", key = "#userId"),
+            @CacheEvict(value = "user_notifications", key = "#userId")
+    })
     public OrderDTO createOrder(CreateOrderDTO dto, Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User not found."));
@@ -149,7 +163,9 @@ public class OrderServiceImpl implements OrderService {
         return OrderDTO.from(savedOrder);
     }
 
+    @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "order_lists")
     public Page<OrderDTO> getOrders(String status, Pageable pageable) {
         if (status != null && !status.isBlank()) {
             OrderStatus orderStatus = OrderStatus.valueOf(status.toUpperCase());
@@ -158,12 +174,16 @@ public class OrderServiceImpl implements OrderService {
         return orderRepository.findAll(pageable).map(OrderDTO::from);
     }
 
+    @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "user_orders")
     public Page<OrderDTO> getMyOrders(Long userId, Pageable pageable) {
         return orderRepository.findByUserId(userId, pageable).map(OrderDTO::from);
     }
 
+    @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "user_discount_previews", key = "#userId")
     public DiscountPreviewDTO getDiscountPreview(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User not found."));
@@ -172,21 +192,33 @@ public class OrderServiceImpl implements OrderService {
         return new DiscountPreviewDTO(points, discount);
     }
 
+    @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "user_past_orders")
     public Page<OrderDTO> getMyPastOrders(Long userId, Pageable pageable) {
         return orderRepository.findByUserIdAndStatusIn(
                 userId, List.of(OrderStatus.PAID, OrderStatus.CANCELLED), pageable)
                 .map(OrderDTO::from);
     }
 
+    @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "single_orders", key = "#id")
     public OrderDTO getOrder(Long id) {
         return orderRepository.findById(id)
                 .map(OrderDTO::from)
                 .orElseThrow(() -> new NotFoundException("Order not found."));
     }
 
+    @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "single_orders", key = "#id"),
+            @CacheEvict(value = "order_lists", allEntries = true),
+            @CacheEvict(value = "user_orders", allEntries = true),
+            @CacheEvict(value = "user_past_orders", allEntries = true),
+            @CacheEvict(value = "user_discount_previews", key = "#result.userId()")
+    })
     public OrderDTO payOrder(Long id) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Order not found."));
@@ -204,7 +236,16 @@ public class OrderServiceImpl implements OrderService {
         return OrderDTO.from(saved);
     }
 
+    @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "single_orders", key = "#id"),
+            @CacheEvict(value = "order_lists", allEntries = true),
+            @CacheEvict(value = "user_orders", allEntries = true),
+            @CacheEvict(value = "user_past_orders", allEntries = true),
+            @CacheEvict(value = "ticket_lists", allEntries = true),
+            @CacheEvict(value = "single_ticket", allEntries = true)
+    })
     public OrderDTO cancelOrder(Long id) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Order not found."));
@@ -226,7 +267,14 @@ public class OrderServiceImpl implements OrderService {
         return OrderDTO.from(orderRepository.save(order));
     }
 
+    @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "single_orders", key = "#id"),
+            @CacheEvict(value = "order_lists", allEntries = true),
+            @CacheEvict(value = "user_orders", allEntries = true),
+            @CacheEvict(value = "user_past_orders", allEntries = true)
+    })
     public void deleteOrder(Long id) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Order not found."));

@@ -17,6 +17,9 @@ import com.awbd.cinema.repositories.SeatRepository;
 import com.awbd.cinema.repositories.TicketInfoRepository;
 import com.awbd.cinema.repositories.TicketRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -32,7 +35,9 @@ public class TicketServiceImpl implements TicketService {
     private final ScreenSessionRepository screenSessionRepository;
     private final TicketInfoRepository ticketInfoRepository;
 
+    @Override
     @Transactional
+    @CacheEvict(value = "ticket_lists", allEntries = true)
     public TicketDTO createTicket(SaveTicketDTO dto) {
         Seat seat = seatRepository.findById(dto.seatId())
                 .orElseThrow(() -> new NotFoundException("Seat not found."));
@@ -58,45 +63,55 @@ public class TicketServiceImpl implements TicketService {
                 .screenSession(session)
                 .build();
 
-        return toDTO(ticketRepository.save(ticket));
+        return TicketDTO.from(ticketRepository.save(ticket));
     }
 
+    @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "ticket_lists")
     public Page<TicketDTO> getTickets(Long sessionId, Long roomId, Boolean isAvailable, Pageable pageable) {
         if (sessionId != null && roomId != null && isAvailable != null) {
             return ticketRepository.findByScreenSessionIdAndRoomIdAndIsAvailable(sessionId, roomId, isAvailable, pageable)
-                    .map(this::toDTO);
+                    .map(TicketDTO::from);
         }
         if (sessionId != null && roomId != null) {
-            return ticketRepository.findByScreenSessionIdAndRoomId(sessionId, roomId, pageable).map(this::toDTO);
+            return ticketRepository.findByScreenSessionIdAndRoomId(sessionId, roomId, pageable).map(TicketDTO::from);
         }
         if (sessionId != null) {
-            return ticketRepository.findByScreenSessionId(sessionId, pageable).map(this::toDTO);
+            return ticketRepository.findByScreenSessionId(sessionId, pageable).map(TicketDTO::from);
         }
         if (roomId != null) {
-            return ticketRepository.findByRoomId(roomId, pageable).map(this::toDTO);
+            return ticketRepository.findByRoomId(roomId, pageable).map(TicketDTO::from);
         }
-        return ticketRepository.findAll(pageable).map(this::toDTO);
+        return ticketRepository.findAll(pageable).map(TicketDTO::from);
     }
 
+    @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "single_ticket", key = "#id")
     public TicketDTO getTicket(Long id) {
         return ticketRepository.findById(id)
-                .map(this::toDTO)
+                .map(TicketDTO::from)
                 .orElseThrow(() -> new NotFoundException("Ticket not found."));
     }
 
+    @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "single_ticket", key = "#id"),
+            @CacheEvict(value = "ticket_lists", allEntries = true)
+    })
     public TicketDTO bookTicket(Long id, BookTicketDTO dto) {
-        Ticket ticket = ticketRepository.findById(id)
+        Ticket ticket = ticketRepository.findByIdForBooking(id)
                 .orElseThrow(() -> new NotFoundException("Ticket not found."));
+
         if (!ticket.isAvailable()) {
             throw new BadRequestException("Ticket is already booked.");
         }
 
         TicketInfo info = ticketInfoRepository.findByType(dto.type())
                 .orElseThrow(() -> new NotFoundException(
-                    "No price configured for type '" + dto.type() + "'."));
+                        "No price configured for type '" + dto.type() + "'."));
 
         ticket.setType(dto.type());
         ticket.setTicketInfo(info);
@@ -104,15 +119,16 @@ public class TicketServiceImpl implements TicketService {
         return TicketDTO.from(ticketRepository.save(ticket));
     }
 
+    @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "single_ticket", key = "#id"),
+            @CacheEvict(value = "ticket_lists", allEntries = true)
+    })
     public void deleteTicket(Long id) {
         if (!ticketRepository.existsById(id)) {
             throw new NotFoundException("Ticket not found.");
         }
         ticketRepository.deleteById(id);
-    }
-
-    private TicketDTO toDTO(Ticket ticket) {
-        return TicketDTO.from(ticket);
     }
 }
