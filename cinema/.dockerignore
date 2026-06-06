@@ -4,3 +4,10 @@ uploads/
 .git/
 .gitignore
 .env
+.gradle
+build
+.idea
+*.iml
+.git
+README.md
+*.log

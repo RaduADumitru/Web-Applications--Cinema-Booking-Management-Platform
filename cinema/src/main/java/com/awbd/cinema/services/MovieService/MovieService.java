@@ -9,7 +9,7 @@ public interface MovieService {
     Page<AdminMovieDTO> getAdminMovieList(Integer page);
     SaveMovieDTO saveMovie(int adminMovieId);
 
-    Page<MovieDTO> getUserMovieList(Integer page, Integer size, String title, Double minRating, Double maxRating, String ageRating, String releaseFrom, String releaseTo);
+    Page<MovieDTO> getUserMovieList(Integer page, Integer size, String title, Double minRating, Double maxRating, String ageRating, String releaseFrom, String releaseTo, String genre);
 
     MovieDTO getMovie(Long id);
 

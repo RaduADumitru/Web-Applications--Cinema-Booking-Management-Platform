@@ -1,8 +1,10 @@
 package com.awbd.cinema.DTOs.MovieDTOs;
 
 import com.awbd.cinema.entities.Movie;
+import com.awbd.cinema.enums.GenreType;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record MovieDTO(
         Long id,
@@ -11,9 +13,12 @@ public record MovieDTO(
         String description,
         Double rating,
         Integer duration,
-        String ageRating
+        String ageRating,
+        List<GenreType> genres
 ) {
     public static MovieDTO from(Movie m) {
+        List<GenreType> genres = m.getGenres() == null ? List.of() :
+                m.getGenres().stream().map(g -> g.getType()).toList();
         return new MovieDTO(
                 m.getId(),
                 m.getTitle(),
@@ -21,7 +26,8 @@ public record MovieDTO(
                 m.getDescription(),
                 m.getRating(),
                 m.getDuration(),
-                m.getAgeRating()
+                m.getAgeRating(),
+                genres
         );
     }
 }

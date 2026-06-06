@@ -7,6 +7,7 @@ import lombok.*;
 import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "users")
@@ -65,4 +66,10 @@ public class User {
     @Column(name = "email_verified_at")
     @Builder.Default
     private LocalDateTime emailVerifiedAt = LocalDateTime.now(); //placeholder, it will actually be set via email verification in a future update
+
+    @OneToMany(mappedBy = "user")
+    private List<Order> orders;
+
+    @OneToMany(mappedBy = "user")
+    private List<Notification> notifications;
 }

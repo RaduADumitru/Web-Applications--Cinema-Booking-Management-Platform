@@ -1,17 +1,22 @@
 package com.awbd.cinema.services.AuthService;
 
 import com.awbd.cinema.DTOs.AuthDTOs.*;
+import com.awbd.cinema.entities.Notification;
 import com.awbd.cinema.entities.User;
+import com.awbd.cinema.enums.NotificationType;
 import com.awbd.cinema.enums.Role;
 import com.awbd.cinema.exceptions.AlreadyExistsException;
 import com.awbd.cinema.exceptions.InvalidFieldException;
 import com.awbd.cinema.exceptions.TooManyRequestsException;
+import com.awbd.cinema.repositories.NotificationRepository;
 import com.awbd.cinema.repositories.UserRepository;
 import com.awbd.cinema.services.LoginAttemptService.LoginAttemptService;
 import com.awbd.cinema.utils.JwtUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import java.time.LocalDateTime;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
@@ -29,6 +34,7 @@ import org.springframework.web.util.HtmlUtils;
 public class AuthServiceImpl implements AuthService{
 
     private final UserRepository userRepository;
+    private final NotificationRepository notificationRepository;
     private final BCryptPasswordEncoder passwordEncoder;
     private final LoginAttemptService loginAttemptService;
     private final AuthenticationManager authenticationManager;
@@ -47,8 +53,19 @@ public class AuthServiceImpl implements AuthService{
 
         User u = maptoEntity(register);
 
-        userRepository.save(u);
-        return new RegisterResponseDTO("Account created successfully.",u.getUsername());
+        User savedUser = userRepository.save(u);
+
+        Notification emailVerification = Notification.builder()
+                .type(NotificationType.EMAIL_VERIFICATION)
+                .content("Welcome, " + savedUser.getFirstName() + "! Please verify your email address ("
+                        + savedUser.getEmail() + ") to activate your account.")
+                .createdDate(LocalDateTime.now())
+                .sentDate(LocalDateTime.now())
+                .user(savedUser)
+                .build();
+        notificationRepository.save(emailVerification);
+
+        return new RegisterResponseDTO("Account created successfully.", savedUser.getUsername());
     }
 
     @Override
