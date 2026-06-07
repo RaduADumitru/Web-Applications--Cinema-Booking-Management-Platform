@@ -62,7 +62,6 @@ loadUserProfile(): Observable<ProfileResponse | null> {
   }
 
   isAuthenticated(): boolean {
-    console.log('Checking authentication status:', this.currentUser());
     return this.currentUser() !== null;
   }
 }
