@@ -1,8 +1,11 @@
 package com.awbd.cinema.services.UserService;
 
 import com.awbd.cinema.DTOs.UserDTOs.ProfileDTO;
+import com.awbd.cinema.DTOs.UserDTOs.PromoteDTO;
 import com.awbd.cinema.DTOs.UserDTOs.UpdateProfileDTO;
 import com.awbd.cinema.entities.User;
+import com.awbd.cinema.enums.Role;
+import com.awbd.cinema.exceptions.BadRequestException;
 import com.awbd.cinema.exceptions.NotFoundException;
 import com.awbd.cinema.repositories.UserRepository;
 import com.awbd.cinema.security.CustomUserDetails;
@@ -12,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -19,14 +23,17 @@ import java.util.UUID;
 public class UserServiceImpl implements UserService{
     private final UserRepository userRepository;
 
-    public ProfileDTO getProfile(CustomUserDetails userDetails){
-        User u = userRepository.findById(userDetails.getId()).orElseThrow(()->new NotFoundException("User doesn't exist."));
+    public ProfileDTO getProfile(Long id){
+        User u = userRepository.findById(id).orElseThrow(()->new NotFoundException("User doesn't exist."));
         return ProfileDTO.from(u);
     }
 
     @Override
     @Transactional
     public Map<String, String> deleteAccount(CustomUserDetails userDetails) {
+        if(userDetails.getAuthorities().stream().anyMatch(r-> Objects.equals(r.getAuthority(), "ROLE_OWNER")))
+            throw new BadRequestException("You cannot delete your account.");
+
         deleteUser(userDetails.getId());
         return Map.of("message", "Your account has been deleted successfully.");
     }
@@ -39,9 +46,9 @@ public class UserServiceImpl implements UserService{
     }
 
     @Transactional
-    public ProfileDTO updateProfile(CustomUserDetails customUserDetails, UpdateProfileDTO dto) {
-        User user = userRepository.findById(customUserDetails.getId())
-                .orElseThrow(() -> new RuntimeException("User doesn't exist"));
+    public ProfileDTO updateProfile(Long id, UpdateProfileDTO dto) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new BadRequestException("User doesn't exist"));
 
         if (dto.firstName() != null) {
             user.setFirstName(dto.firstName());
@@ -65,8 +72,23 @@ public class UserServiceImpl implements UserService{
         return ProfileDTO.from(user);
     }
 
+    @Override
+    @Transactional
+    public ProfileDTO promoteUser(PromoteDTO dto) {
+        User user = userRepository.findById(dto.id())
+                .orElseThrow(() -> new BadRequestException("User doesn't exist"));
+        user.setRole(dto.role());
+        userRepository.save(user);
+        return ProfileDTO.from(user);
+    }
+
     private String deleteUser(Long id){
         User u = userRepository.findById(id).orElseThrow(()->new NotFoundException("User doesn't exist."));
+        if(u.getDeletedAt() != null)
+            throw new BadRequestException("User doesn't exist.");
+        if(u.getRole() == Role.OWNER)
+            throw new BadRequestException("You cannot delete this account.");
+
         UUID uuid = UUID.randomUUID();
         u.setUsername(u.getUsername() + "-deleted" + uuid);
         u.setEmail("deleted-" + uuid + "@example.com");
