@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 import { RegisterComponent } from '@features/auth/register/register.component';
-import { LoginComponent } from './features/auth/login/login.component';
+import { LoginComponent } from '@features/auth/login/login.component';
 import { HomeComponent } from '@features/home/home';
 import { AdminComponent } from '@features/admin/admin';
 import { authGuard } from '@guards/auth-guard';
@@ -9,9 +9,9 @@ import { rbacGuard } from '@guards/rbac-guard';
 
 export const routes: Routes = [
     { path: '', redirectTo: 'home', pathMatch: 'full' },
-    { path: 'home', component: HomeComponent, canMatch: [authGuard] },
-    { path: 'login', component: LoginComponent, canMatch: [guestGuard] },
-    { path: 'register', component: RegisterComponent, canMatch: [guestGuard] },
-    { path: 'admin', component: AdminComponent, canMatch: [authGuard, rbacGuard('OWNER')] },
+    { path: 'home', component: HomeComponent, canActivate: [authGuard] },
+    { path: 'login', component: LoginComponent, canActivate: [guestGuard] },
+    { path: 'register', component: RegisterComponent, canActivate: [guestGuard] },
+    { path: 'admin', component: AdminComponent, canActivate: [authGuard, rbacGuard('OWNER')] },
     { path: '**', redirectTo: 'home' }
 ];

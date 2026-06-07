@@ -50,10 +50,16 @@ export class LoginComponent implements OnInit {
 
     this.authService.login(credentials).subscribe({
       next: (user: AuthUser) => {
-        console.log('Logged in user:', user);
         if (user && user.username) {
           this.router.navigate(['/home']);
         }
+      },
+      error: (err) => {
+        this.error = err.error?.message || 'An error occurred during login. Please try again.';
+        this.loading = false;
+      },
+      complete: () => {
+        this.loading = false;
       }
     });
   }

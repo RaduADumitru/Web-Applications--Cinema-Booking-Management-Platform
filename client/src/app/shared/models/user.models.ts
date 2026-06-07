@@ -16,8 +16,8 @@ export interface UpdateProfileRequest {
 }
 
 export interface PromoteRequest {
-  userId: number;
-  newRole: "STAFF" | "OWNER" | "USER";
+  id: number;
+  role: "STAFF" | "OWNER" | "USER";
 }
 
 export interface MessageResponse {

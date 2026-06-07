@@ -5,6 +5,7 @@ import com.awbd.cinema.DTOs.UserDTOs.PromoteDTO;
 import com.awbd.cinema.DTOs.UserDTOs.UpdateProfileDTO;
 import com.awbd.cinema.entities.User;
 import com.awbd.cinema.enums.Role;
+import com.awbd.cinema.exceptions.AlreadyExistsException;
 import com.awbd.cinema.exceptions.BadRequestException;
 import com.awbd.cinema.exceptions.NotFoundException;
 import com.awbd.cinema.repositories.UserRepository;
@@ -64,7 +65,7 @@ public class UserServiceImpl implements UserService{
 
         if (dto.email() != null && !user.getEmail().equalsIgnoreCase(dto.email())) {
             userRepository.findByEmailIgnoreCase(dto.email()).ifPresent(existingUser -> {
-                throw new IllegalArgumentException("Email address is already in use.");
+                throw new AlreadyExistsException("Email address is already in use.");
             });
             user.setEmail(dto.email());
         }

@@ -4,6 +4,8 @@ package com.awbd.cinema.controllers;
 import com.awbd.cinema.DTOs.UserDTOs.ProfileDTO;
 import com.awbd.cinema.DTOs.UserDTOs.PromoteDTO;
 import com.awbd.cinema.DTOs.UserDTOs.UpdateProfileDTO;
+import com.awbd.cinema.exceptions.BadRequestException;
+import com.awbd.cinema.exceptions.InvalidFieldException;
 import com.awbd.cinema.security.CustomUserDetails;
 import com.awbd.cinema.services.UserService.UserService;
 import jakarta.validation.Valid;
@@ -48,7 +50,7 @@ public class UserController {
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<ProfileDTO> promoteUser(@Valid @RequestBody PromoteDTO dto, @AuthenticationPrincipal CustomUserDetails userDetails) {
         if(userDetails.getId().equals(dto.id()))
-            throw new IllegalArgumentException("You cannot promote yourself.");
+            throw new BadRequestException("You cannot promote yourself.");
         return ResponseEntity.ok(userService.promoteUser(dto));
     }
 }
