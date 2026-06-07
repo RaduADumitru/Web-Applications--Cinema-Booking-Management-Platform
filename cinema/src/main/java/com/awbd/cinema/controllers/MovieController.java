@@ -38,9 +38,10 @@ public class MovieController {
             @RequestParam(required = false) Double maxRating,
             @RequestParam(required = false) String ageRating,
             @RequestParam(required = false) String releaseFrom,
-            @RequestParam(required = false) String releaseTo
+            @RequestParam(required = false) String releaseTo,
+            @RequestParam(required = false) String genre
     ){
-        return ResponseEntity.ok(movieService.getUserMovieList(page, size, title, minRating, maxRating, ageRating, releaseFrom, releaseTo));
+        return ResponseEntity.ok(movieService.getUserMovieList(page, size, title, minRating, maxRating, ageRating, releaseFrom, releaseTo, genre));
     }
 
     @GetMapping("/{id}")

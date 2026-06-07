@@ -1,0 +1,27 @@
+app:
+  cache:
+    default-ttl: 5m
+    caches:
+      admin_movies: 15m
+      public_movie_lists: 10m
+      single_movies: 2h
+      notifications: 30m
+      user_notifications: 15m
+      offer_lists: 10m
+      single_offers: 30m
+      ticket_lists: 10m
+      single_tickets: 30m
+      ticket_infos: 10m
+      single_ticket_info: 30m
+      seat_lists: 10m
+      single_seat: 30m
+      screen_session_lists: 10m
+      movie_session_lists: 10m
+      single_screen_sessions: 10m
+      single_orders: 1h
+      order_lists: 5m
+      user_orders: 10m
+      user_past_orders: 30m
+      user_discount_previews: 2m
+      room_lists: 15m
+      single_room: 30m
