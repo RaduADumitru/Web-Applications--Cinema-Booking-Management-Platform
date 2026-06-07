@@ -24,7 +24,9 @@
       "@guards/*": ["app/shared/guards/*"],
       "@components/*": ["app/shared/components/*"],
       "@pipes/*": ["app/shared/pipes/*"],
-      "@features/*": ["app/features/*"]
+      "@features/*": ["app/features/*"],
+      "@dtos/*": ["app/shared/dtos/*"],
+      
     }
   },
   "angularCompilerOptions": {

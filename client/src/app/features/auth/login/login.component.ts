@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '@services/auth.service';
+import { AuthUser } from '@app/shared/models/auth.models';
 @Component({
   selector: 'app-login',
   standalone: true,
@@ -48,13 +49,13 @@ export class LoginComponent implements OnInit {
     };
 
     this.authService.login(credentials).subscribe({
-      next: (response: any) => {
-        if (response?.success !== false) {
+      next: (user: AuthUser) => {
+        if (user && user.username) {
           this.router.navigate(['/home']);
         }
       },
-      error: (error: any) => {
-        this.error = error.message || 'Login failed. Please try again.';
+      error: (err) => {
+        this.error = err.error?.message || 'An error occurred during login. Please try again.';
         this.loading = false;
       },
       complete: () => {

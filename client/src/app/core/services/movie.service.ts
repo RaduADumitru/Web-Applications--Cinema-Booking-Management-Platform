@@ -32,19 +32,19 @@ export class MovieService {
         return this.api.getPaged<MovieResponse>('/movies', page, size, params);
     }
 
-    getMovieById(id: number): Observable<ApiResponse<MovieResponse>> {
+    getMovieById(id: number): Observable<MovieResponse> {
         return this.api.get<MovieResponse>(`/movies/${id}`);
     }
 
-    createMovie(movie: SaveMovieResponse): Observable<ApiResponse<MovieResponse>> {
+    createMovie(movie: SaveMovieResponse): Observable<MovieResponse>{
         return this.api.post<MovieResponse>('/movies', movie);
     }
 
-    updateMovie(id: number, movie: SaveMovieResponse): Observable<ApiResponse<MovieResponse>> {
+    updateMovie(id: number, movie: SaveMovieResponse): Observable<MovieResponse> {
         return this.api.put<MovieResponse>(`/movies/${id}`, movie);
     }
 
-    deleteMovie(id: number): Observable<ApiResponse<void>> {
+    deleteMovie(id: number): Observable<void> {
         return this.api.delete<void>(`/movies/${id}`);
     }
 
@@ -62,7 +62,7 @@ export class MovieService {
         );
     }
 
-    saveAdminMovie(tmdbId: number): Observable<ApiResponse<SaveMovieResponse>> {
+    saveAdminMovie(tmdbId: number): Observable<SaveMovieResponse> {
         return this.api.post<SaveMovieResponse>(`/movies/admin/save/${tmdbId}`, {});
     }
 }
