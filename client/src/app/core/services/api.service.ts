@@ -12,46 +12,43 @@ export class ApiService {
 
   constructor(private http: HttpClient) {}
 
-  get<T>(endpoint: string, options?: { observe?: 'body' } & any): Observable<ApiResponse<T>>;
-  get<T>(endpoint: string, options: { observe: 'response' } & any): Observable<HttpResponse<ApiResponse<T>>>;
-  get<T>(endpoint: string, options: { observe: 'events' } & any): Observable<HttpEvent<ApiResponse<T>>>;
-  get<T>(endpoint: string, options?: any): Observable<any> {
-    return this.http.get<ApiResponse<T>>(
+  get<T>(endpoint: string, options?: any): Observable<T> {
+    return this.http.get<T>(
       `${this.apiUrl}${endpoint}`,
-      { ...options, withCredentials: true } );
+      { ...options, withCredentials: true }
+    ) as Observable<T>;
   }
 
-  post<T>(endpoint: string, body: any, options?: { observe?: 'body' } & any): Observable<ApiResponse<T>>;
-  post<T>(endpoint: string, body: any, options?: { observe: 'response' } & any): Observable<HttpResponse<ApiResponse<T>>>;
-  post<T>(endpoint: string, body: any, options?: { observe: 'events' } & any): Observable<HttpEvent<ApiResponse<T>>>;
-  post<T>(endpoint: string, body: any, options?: any): Observable<any> {
-    return this.http.post<ApiResponse<T>>(
+  post<T>(endpoint: string, body: any, options?: any): Observable<T> {
+      return this.http.post<T>(
+        `${this.apiUrl}${endpoint}`,
+        body,
+        { ...options, withCredentials: true }
+      ) as Observable<T>;
+    }
+  
+  put<T>(endpoint: string, body: any, options?: any): Observable<T> {
+    return this.http.put<T>(
       `${this.apiUrl}${endpoint}`,
       body,
       { ...options, withCredentials: true }
-    );
+    ) as Observable<T>;
   }
 
-  put<T>(endpoint: string, body: any, options?: { observe?: 'body' } & any): Observable<ApiResponse<T>>;
-  put<T>(endpoint: string, body: any, options?: { observe: 'response' } & any): Observable<HttpResponse<ApiResponse<T>>>;
-  put<T>(endpoint: string, body: any, options?: { observe: 'events' } & any): Observable<HttpEvent<ApiResponse<T>>>;
-  put<T>(endpoint: string, body: any, options?: any): Observable<any> {
-    return this.http.put<ApiResponse<T>>(
+  delete<T>(endpoint: string, options?: any): Observable<T> {
+    return this.http.delete<T>(
       `${this.apiUrl}${endpoint}`,
-      body,
       { ...options, withCredentials: true }
-    );
+    ) as Observable<T>;
   }
 
-  delete<T>(endpoint: string, options?: { observe?: 'body' } & any): Observable<ApiResponse<T>>;
-  delete<T>(endpoint: string, options?: { observe: 'response' } & any): Observable<HttpResponse<ApiResponse<T>>>;
-  delete<T>(endpoint: string, options?: { observe: 'events' } & any): Observable<HttpEvent<ApiResponse<T>>>;
-  delete<T>(endpoint: string, options?: any): Observable<any> {
-    return this.http.delete<ApiResponse<T>>(
-      `${this.apiUrl}${endpoint}`,
-      { ...options, withCredentials: true }
-    );
-  }
+  patch<T>(endpoint: string, body: any, options?: any): Observable<T> {
+      return this.http.patch<T>(
+        `${this.apiUrl}${endpoint}`,
+        body,
+        { ...options, withCredentials: true }
+      ) as Observable<T>;
+    }
 
   getWithParams<T>(endpoint: string, params: any = {}): Observable<ApiResponse<T>> {
     let httpParams = new HttpParams();
