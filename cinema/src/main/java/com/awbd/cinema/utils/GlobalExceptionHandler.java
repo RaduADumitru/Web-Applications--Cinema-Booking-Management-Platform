@@ -1,9 +1,6 @@
 package com.awbd.cinema.utils;
 
-import com.awbd.cinema.exceptions.AlreadyExistsException;
-import com.awbd.cinema.exceptions.InvalidFieldException;
-import com.awbd.cinema.exceptions.NotFoundException;
-import com.awbd.cinema.exceptions.TooManyRequestsException;
+import com.awbd.cinema.exceptions.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -35,6 +32,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(TooManyRequestsException.class)
     public ResponseEntity<Map<String, Object>> handleTooManyRequests(TooManyRequestsException e) {
         return buildResponse(HttpStatus.TOO_MANY_REQUESTS, e.getMessage(), null);
+    }
+
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<Map<String, Object>> handleBadRequest(BadRequestException e) {
+        return buildResponse(HttpStatus.BAD_REQUEST, e.getMessage(), null);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
