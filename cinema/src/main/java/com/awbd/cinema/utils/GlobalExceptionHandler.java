@@ -3,6 +3,10 @@ package com.awbd.cinema.utils;
 import com.awbd.cinema.exceptions.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -37,6 +41,32 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BadRequestException.class)
     public ResponseEntity<Map<String, Object>> handleBadRequest(BadRequestException e) {
         return buildResponse(HttpStatus.BAD_REQUEST, e.getMessage(), null);
+    }
+
+    @ExceptionHandler(UnauthenticatedException.class)
+    public ResponseEntity<Map<String, Object>> handleUnauthenticated(UnauthenticatedException e) {
+        return buildResponse(HttpStatus.UNAUTHORIZED, e.getMessage(), null);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Map<String, String>> handleAccessDeniedException(AccessDeniedException ex) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+        if (auth == null || !auth.isAuthenticated() || auth instanceof AnonymousAuthenticationToken) {
+            return ResponseEntity
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of(
+                            "error", "Unauthorized",
+                            "message", "Full authentication is required to access this resource."
+                    ));
+        }
+
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(Map.of(
+                        "error", "Forbidden",
+                        "message", "You do not have permission to access this resource."
+                ));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

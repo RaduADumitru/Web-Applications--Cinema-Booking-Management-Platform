@@ -4,6 +4,7 @@ import com.awbd.cinema.DTOs.MovieDTOs.AdminMovieDTO;
 import com.awbd.cinema.DTOs.MovieDTOs.SaveMovieDTO;
 import com.awbd.cinema.DTOs.MovieDTOs.MovieDTO;
 import com.awbd.cinema.services.MovieService.MovieService;
+import com.awbd.cinema.utils.RestPage;
 import org.springframework.data.domain.Page;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +20,7 @@ public class MovieController {
 
     @GetMapping("/admin/list")
     @PreAuthorize("hasRole('STAFF')")
-    public ResponseEntity<Page<AdminMovieDTO>> getAdminMovieList(@RequestParam(defaultValue = "1") Integer page){
+    public ResponseEntity<RestPage<AdminMovieDTO>> getAdminMovieList(@RequestParam(defaultValue = "1") Integer page){
         return ResponseEntity.ok(movieService.getAdminMovieList(page));
     }
 

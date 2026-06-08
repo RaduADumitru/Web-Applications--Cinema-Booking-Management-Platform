@@ -33,7 +33,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 @ExtendWith(MockitoExtension.class)
-class UserServiceImplTest {
+class UserServiceTest {
 
     @Mock private UserRepository userRepository;
     @InjectMocks private UserServiceImpl userService;

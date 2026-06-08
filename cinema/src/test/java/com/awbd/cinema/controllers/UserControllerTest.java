@@ -13,6 +13,7 @@ import com.awbd.cinema.DTOs.UserDTOs.PromoteDTO;
 import com.awbd.cinema.DTOs.UserDTOs.UpdateProfileDTO;
 import com.awbd.cinema.enums.Role;
 import com.awbd.cinema.security.CustomUserDetails;
+import com.awbd.cinema.security.CustomUserDetailsService;
 import com.awbd.cinema.services.UserService.UserService;
 import com.awbd.cinema.utils.JwtUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -45,18 +46,19 @@ class UserControllerTest {
     private UserService userService;
 
     @MockitoBean
-    private JwtUtil jwtUtil;
+    protected JwtUtil jwtUtil;
+
+    @MockitoBean
+    protected CustomUserDetailsService customUserDetailsService;
 
     private CustomUserDetails mockUserDetails;
     private ProfileDTO sampleProfileDTO;
 
     @BeforeEach
     void setUp() {
-        // 1. Mock the CustomUserDetails principal
         mockUserDetails = mock(CustomUserDetails.class);
         when(mockUserDetails.getId()).thenReturn(1L);
 
-        // 2. Explicitly build the Authentication object and seed the ThreadLocal SecurityContext
         Authentication authentication = new UsernamePasswordAuthenticationToken(
                 mockUserDetails, null, mockUserDetails.getAuthorities()
         );
@@ -70,7 +72,6 @@ class UserControllerTest {
 
     @AfterEach
     void tearDown() {
-        // Clear context after every test execution thread to avoid cross-test pollution
         SecurityContextHolder.clearContext();
     }
 
