@@ -17,11 +17,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import com.awbd.cinema.DTOs.MovieDTOs.*;
-import com.awbd.cinema.security.CustomUserDetailsService;
 import com.awbd.cinema.security.SecurityConfig;
-import com.awbd.cinema.services.LoginAttemptService.LoginAttemptService;
 import com.awbd.cinema.services.MovieService.MovieService;
-import com.awbd.cinema.utils.JwtUtil;
 import com.awbd.cinema.utils.RestPage;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.DisplayName;

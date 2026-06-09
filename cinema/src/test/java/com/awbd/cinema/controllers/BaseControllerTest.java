@@ -3,15 +3,12 @@ package com.awbd.cinema.controllers;
 import com.awbd.cinema.entities.User;
 import com.awbd.cinema.enums.Role;
 import com.awbd.cinema.security.CustomUserDetails;
-import com.awbd.cinema.security.CustomUserDetailsService;
 import com.awbd.cinema.security.JwtAuthenticationFilter;
 import com.awbd.cinema.security.SecurityConfig;
 import com.awbd.cinema.services.LoginAttemptService.LoginAttemptService;
 import com.awbd.cinema.utils.JwtUtil;
 import com.awbd.cinema.utils.SecurityCorsProperties;
 import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletRequest;
-import jakarta.servlet.ServletResponse;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -20,7 +17,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import static org.mockito.ArgumentMatchers.any;

@@ -25,11 +25,13 @@ import com.awbd.cinema.repositories.GenreRepository;
 import com.awbd.cinema.repositories.MovieRepository;
 import com.awbd.cinema.services.MovieService.MovieServiceImpl;
 import info.movito.themoviedbapi.tools.TmdbException;
+import jakarta.persistence.criteria.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -257,19 +259,38 @@ class MovieServiceTest {
     @DisplayName("Tests for getUserMovieList")
     class GetUserMovieListTests {
 
+        // ==========================================
+        // 1. PAGINATION MATH BRANCH TESTS
+        // ==========================================
         @Test
-        @DisplayName("Should fetch user movies dynamically filtering by specifications")
-        void shouldFetchUserMoviesWithFilters() {
+        @DisplayName("Should resolve correct fallback page indices when pagination parameters are null or negative")
+        void shouldHandleInvalidPaginationParameters() {
+            ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
             Page<Movie> pageMock = new PageImpl<>(List.of(sampleMovie));
-            when(movieRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pageMock);
+            when(movieRepository.findAll(any(Specification.class), pageableCaptor.capture())).thenReturn(pageMock);
 
-            Page<MovieDTO> result = movieService.getUserMovieList(
-                    1, 10, "Inception", 8.0, 9.5, "12+", "2010-01-01", "2010-12-31", "ACTION"
-            );
+            // Mix 1: Null bounds (Should fallback to p=0, s=10)
+            movieService.getUserMovieList(null, null, null, null, null, null, null, null, null);
 
-            assertThat(result).isNotNull();
-            assertThat(result.getContent()).hasSize(1);
-            assertThat(result.getContent().getFirst().title()).isEqualTo("Inception");
+            // Mix 2: Below zero bounds (Should fallback to p=0, s=10)
+            movieService.getUserMovieList(0, -5, null, null, null, null, null, null, null);
+
+            // Mix 3: Valid bounds (Should offset p = page - 1, s=size)
+            movieService.getUserMovieList(3, 15, null, null, null, null, null, null, null);
+
+            List<Pageable> captured = pageableCaptor.getAllValues();
+
+            // Assert Mix 1
+            assertThat(captured.get(0).getPageNumber()).isEqualTo(0);
+            assertThat(captured.get(0).getPageSize()).isEqualTo(10);
+
+            // Assert Mix 2
+            assertThat(captured.get(1).getPageNumber()).isEqualTo(0);
+            assertThat(captured.get(1).getPageSize()).isEqualTo(10);
+
+            // Assert Mix 3
+            assertThat(captured.get(2).getPageNumber()).isEqualTo(2); // 3 - 1
+            assertThat(captured.get(2).getPageSize()).isEqualTo(15);
         }
 
         @Test
@@ -283,58 +304,81 @@ class MovieServiceTest {
                     .hasMessageContaining("Error while fetching movies.");
         }
 
-        @Test
-        @DisplayName("Should cover branch where title is null or blank")
-        void shouldHandleNullOrBlankTitleFilter() {
-            Page<Movie> pageMock = new PageImpl<>(List.of(sampleMovie));
-            when(movieRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pageMock);
+        // ==========================================
+        // 2. SPECIFICATION LAMBDA BRANCH TESTS
+        // ==========================================
+        @Nested
+        @DisplayName("Specification Inner Lambda Tests")
+        class SpecificationLambdaTests {
 
-            // Passing "" and null to satisfy short circuit combinations
-            movieService.getUserMovieList(1, 10, "", null, null, null, null, null, null);
-            movieService.getUserMovieList(1, 10, null, null, null, null, null, null, null);
+            @Mock private Root<Movie> root;
+            @Mock private CriteriaQuery<?> query;
+            @Mock private CriteriaBuilder cb;
+            @Mock private Join<Movie, Genre> genreJoin;
+            @Mock private Path<Object> pathMock;
+            @Mock private Expression<String> stringExpressionMock;
 
-            verify(movieRepository, times(2)).findAll(any(Specification.class), any(Pageable.class));
-        }
+            @SuppressWarnings("unchecked")
+            private Specification<Movie> captureSpec(String title, Double minRating, Double maxRating,
+                                                     String ageRating, String releaseFrom, String releaseTo, String genre) {
+                ArgumentCaptor<Specification<Movie>> specCaptor = ArgumentCaptor.forClass(Specification.class);
+                Page<Movie> pageMock = new PageImpl<>(List.of(sampleMovie));
+                when(movieRepository.findAll(specCaptor.capture(), any(Pageable.class))).thenReturn(pageMock);
 
-        @Test
-        @DisplayName("Should cover branches for age rating filtering variants")
-        void shouldHandleAgeRatingFilterVariants() {
-            Page<Movie> pageMock = new PageImpl<>(List.of(sampleMovie));
-            when(movieRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pageMock);
+                movieService.getUserMovieList(1, 10, title, minRating, maxRating, ageRating, releaseFrom, releaseTo, genre);
+                return specCaptor.getValue();
+            }
 
-            // 1. Valid string (triggers block execution)
-            movieService.getUserMovieList(1, 10, null, null, null, "16+", null, null, null);
-            // 2. Blank string (fails second part of short-circuit verification)
-            movieService.getUserMovieList(1, 10, null, null, null, "   ", null, null, null);
+            @Test
+            @DisplayName("Should evaluate true for all conditional branches when every filter parameter is valid")
+            void toPredicate_WithAllFiltersValid_ExecutesAllTrueBranches() {
+                Specification<Movie> spec = captureSpec(
+                        "Inception", 8.0, 9.5, "12+", "2010-01-01", "2010-12-31", "ACTION"
+                );
 
-            verify(movieRepository, times(2)).findAll(any(Specification.class), any(Pageable.class));
-        }
+                // Stubbing title lower operations
+                when(root.get("title")).thenReturn(pathMock);
+                when(cb.lower(any())).thenReturn(stringExpressionMock);
 
-        @Test
-        @DisplayName("Should cover branches for releaseFrom and releaseTo date filtering options")
-        void shouldHandleReleaseDateRangeFilters() {
-            Page<Movie> pageMock = new PageImpl<>(List.of(sampleMovie));
-            when(movieRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pageMock);
+                // Stubbing primitive fields
+                when(root.get("rating")).thenReturn(pathMock);
+                when(root.get("ageRating")).thenReturn(pathMock);
+                when(root.get("releaseDate")).thenReturn(pathMock);
 
-            // Covers parsing logic and block entrance
-            movieService.getUserMovieList(1, 10, null, null, null, null, "2026-01-01", "2026-12-31", null);
-            // Covers blank parameters logic
-            movieService.getUserMovieList(1, 10, null, null, null, null, "", "   ", null);
+                // Stubbing join execution
+                doReturn(genreJoin).when(root).join(eq("genres"), eq(JoinType.INNER));
+                when(genreJoin.get("type")).thenReturn(pathMock);
 
-            verify(movieRepository, times(2)).findAll(any(Specification.class), any(Pageable.class));
-        }
+                // Act
+                spec.toPredicate(root, query, cb);
 
-        @Test
-        @DisplayName("Should cover branches for genre filtering execution paths")
-        void shouldHandleGenreFilters() {
-            Page<Movie> pageMock = new PageImpl<>(List.of(sampleMovie));
-            when(movieRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(pageMock);
+                // Assert conversions and entries executed perfectly
+                verify(cb).like(any(), eq("%inception%"));
+                verify(cb).greaterThanOrEqualTo(any(), eq(8.0));
+                verify(cb).lessThanOrEqualTo(any(), eq(9.5));
+                verify(cb).equal(any(), eq("12+"));
+                verify(cb).equal(any(), eq(GenreType.ACTION));
+                verify(cb).and(any(Predicate[].class));
+            }
 
-            // Trigger criteria building for Join
-            movieService.getUserMovieList(1, 10, null, null, null, null, null, null, "ACTION");
-            movieService.getUserMovieList(1, 10, null, null, null, null, null, null, "");
+            @Test
+            @DisplayName("Should evaluate false for all validation paths when parameters are null, empty, or blank whitespace strings")
+            void toPredicate_WithBlankAndNullFilters_ExecutesAllFalseBranches() {
+                // Mix matching null values alongside blank strings to evaluate short circuits
+                Specification<Movie> spec = captureSpec(
+                        "   ", null, null, "", "  ", null, ""
+                );
 
-            verify(movieRepository, times(2)).findAll(any(Specification.class), any(Pageable.class));
+                // Act
+                spec.toPredicate(root, query, cb);
+
+                // Verify that zero criteria methods or entity reflections were triggered
+                verify(root, never()).get(anyString());
+                verify(root, never()).join(anyString(), any(JoinType.class));
+                verify(cb, never()).like(any(), anyString());
+                verify(cb, never()).equal(any(), any());
+                verify(cb).and(any(Predicate[].class));
+            }
         }
     }
 

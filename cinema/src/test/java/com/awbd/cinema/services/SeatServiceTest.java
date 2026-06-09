@@ -3,6 +3,7 @@ package com.awbd.cinema.services;
 import com.awbd.cinema.DTOs.SeatDTOs.SaveSeatDTO;
 import com.awbd.cinema.DTOs.SeatDTOs.SeatDTO;
 import com.awbd.cinema.entities.Room;
+import com.awbd.cinema.entities.ScreenSession;
 import com.awbd.cinema.entities.Seat;
 import com.awbd.cinema.entities.SeatCategory;
 import com.awbd.cinema.enums.SeatCategoryType;
@@ -12,11 +13,13 @@ import com.awbd.cinema.repositories.RoomRepository;
 import com.awbd.cinema.repositories.SeatCategoryRepository;
 import com.awbd.cinema.repositories.SeatRepository;
 import com.awbd.cinema.services.SeatService.SeatServiceImpl;
+import jakarta.persistence.criteria.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -149,17 +152,97 @@ class SeatServiceTest {
     @DisplayName("getSeats & getSeat Tests")
     class ReadSeatTests {
 
+        @Mock private Root<Seat> root;
+        @Mock private CriteriaQuery<?> query;
+        @Mock private CriteriaBuilder cb;
+        @Mock private Join<Seat, Room> roomJoin;
+        @Mock private Join<Room, ScreenSession> sessionJoin;
+        @Mock private Path<Object> pathMock;
+
         @SuppressWarnings("unchecked")
-        @Test
-        @DisplayName("Should return a paginated result when executing filters via specifications")
-        void getSeats_ReturnsPaginatedResult() {
+        private Specification<Seat> captureSpecification(String roomType, Long screenSessionId, Long movieId) {
+            ArgumentCaptor<Specification<Seat>> specCaptor = ArgumentCaptor.forClass(Specification.class);
             Page<Seat> seatPage = new PageImpl<>(List.of(sampleSeat));
-            when(seatRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(seatPage);
 
-            Page<SeatDTO> result = seatService.getSeats("STANDARD", 1L, 2L, pageable);
+            when(seatRepository.findAll(specCaptor.capture(), eq(pageable))).thenReturn(seatPage);
 
-            assertThat(result.getContent()).hasSize(1);
-            assertThat(result.getContent().get(0).id()).isEqualTo(1L);
+            seatService.getSeats(roomType, screenSessionId, movieId, pageable);
+
+            return specCaptor.getValue();
+        }
+
+        @Test
+        @DisplayName("Should execute all specification branches when all filters are provided")
+        void getSeats_WithAllFilters_ExecutesAllSpecificationBranches() {
+            Specification<Seat> spec = captureSpecification("IMAX", 1L, 2L);
+            assertThat(spec).isNotNull();
+
+            // 👇 FIX: Using doReturn().when() to bypass Java type-inference limitations
+            doReturn(roomJoin).when(root).join(eq("rooms"), eq(JoinType.INNER));
+            doReturn(sessionJoin).when(roomJoin).join(eq("screenSessions"), eq(JoinType.INNER));
+
+            when(roomJoin.get("type")).thenReturn(pathMock);
+            when(sessionJoin.get("id")).thenReturn(pathMock);
+
+            Path<Object> moviePath = mock(Path.class);
+            when(sessionJoin.get("movie")).thenReturn(moviePath);
+            when(moviePath.get("id")).thenReturn(pathMock);
+
+            spec.toPredicate(root, query, cb);
+
+            verify(root).join("rooms", JoinType.INNER);
+            verify(roomJoin).join("screenSessions", JoinType.INNER);
+            verify(query).distinct(true);
+            verify(cb).and(any(Predicate[].class));
+        }
+
+        @Test
+        @DisplayName("Should bypass all inner joins and predicates when all filters are null")
+        void getSeats_WithNoFilters_BypassesAllJoinsAndPredicates() {
+            Specification<Seat> spec = captureSpecification(null, null, null);
+            assertThat(spec).isNotNull();
+
+            spec.toPredicate(root, query, cb);
+
+            verify(root, never()).join(anyString(), any(JoinType.class));
+            verify(query).distinct(true);
+            verify(cb).and(any(Predicate[].class));
+        }
+
+        @Test
+        @DisplayName("Should join only rooms table when only roomType filter is supplied")
+        void getSeats_WithOnlyRoomTypeFilter_JoinsRoomOnly() {
+            Specification<Seat> spec = captureSpecification("IMAX", null, null);
+            assertThat(spec).isNotNull();
+
+            // 👇 FIX: Applied doReturn().when() here as well
+            doReturn(roomJoin).when(root).join(eq("rooms"), eq(JoinType.INNER));
+            when(roomJoin.get("type")).thenReturn(pathMock);
+
+            spec.toPredicate(root, query, cb);
+
+            verify(root).join("rooms", JoinType.INNER);
+            verify(roomJoin, never()).join(anyString(), any(JoinType.class));
+        }
+
+        @Test
+        @DisplayName("Should join room and session tables when only movieId filter is supplied")
+        void getSeats_WithOnlyMovieIdFilter_JoinsRoomAndSession() {
+            Specification<Seat> spec = captureSpecification(null, null, 5L);
+            assertThat(spec).isNotNull();
+
+            // 👇 FIX: Applied doReturn().when() here as well
+            doReturn(roomJoin).when(root).join(eq("rooms"), eq(JoinType.INNER));
+            doReturn(sessionJoin).when(roomJoin).join(eq("screenSessions"), eq(JoinType.INNER));
+
+            Path<Object> moviePath = mock(Path.class);
+            when(sessionJoin.get("movie")).thenReturn(moviePath);
+            when(moviePath.get("id")).thenReturn(pathMock);
+
+            spec.toPredicate(root, query, cb);
+
+            verify(root).join("rooms", JoinType.INNER);
+            verify(roomJoin).join("screenSessions", JoinType.INNER);
         }
 
         @Test

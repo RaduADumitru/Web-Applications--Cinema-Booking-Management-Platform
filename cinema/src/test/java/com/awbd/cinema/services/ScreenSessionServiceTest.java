@@ -14,11 +14,13 @@ import com.awbd.cinema.repositories.RoomRepository;
 import com.awbd.cinema.repositories.ScreenSessionRepository;
 import com.awbd.cinema.repositories.SessionInfoRepository;
 import com.awbd.cinema.services.ScreenSessionService.ScreenSessionServiceImpl;
+import jakarta.persistence.criteria.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -157,17 +159,77 @@ class ScreenSessionServiceTest {
     @DisplayName("Query / Search Read Tests")
     class ReadScreenSessionTests {
 
+        @Mock private Root<ScreenSession> root;
+        @Mock private CriteriaQuery<?> query;
+        @Mock private CriteriaBuilder cb;
+        @Mock private Join<ScreenSession, SessionInfo> infoJoin;
+        @Mock private Path<Object> pathMock;
+
         @SuppressWarnings("unchecked")
-        @Test
-        @DisplayName("Should find screen sessions matching complex dynamic specifications layout")
-        void getScreenSessions_WithSpecifications_ReturnsPage() {
+        private Specification<ScreenSession> captureSpecification(Long movieId, String format) {
+            ArgumentCaptor<Specification<ScreenSession>> specCaptor = ArgumentCaptor.forClass(Specification.class);
             Page<ScreenSession> page = new PageImpl<>(List.of(sampleSession));
-            when(screenSessionRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(page);
 
-            Page<ScreenSessionDTO> result = screenSessionService.getScreenSessions(500L, "THREE_D", pageable);
+            when(screenSessionRepository.findAll(specCaptor.capture(), eq(pageable))).thenReturn(page);
 
-            assertThat(result.getContent()).hasSize(1);
-            assertThat(result.getContent().get(0).id()).isEqualTo(1L);
+            // Trigger the service method to build the specification internally
+            screenSessionService.getScreenSessions(movieId, format, pageable);
+
+            return specCaptor.getValue();
+        }
+
+        @Test
+        @DisplayName("Should execute all specification predicate paths when all filters are valid")
+        void getScreenSessions_WithAllFilters_ExecutesAllSpecificationBranches() {
+            Specification<ScreenSession> spec = captureSpecification(500L, "THREE_D");
+            assertThat(spec).isNotNull();
+
+            // Mocking the chain: root.get("movie").get("id")
+            Path<Object> moviePath = mock(Path.class);
+            when(root.get("movie")).thenReturn(moviePath);
+            when(moviePath.get("id")).thenReturn(pathMock);
+
+            // Mocking the join: root.join("sessionInfo", JoinType.INNER)
+            doReturn(infoJoin).when(root).join(eq("sessionInfo"), eq(JoinType.INNER));
+            when(infoJoin.get("format")).thenReturn(pathMock);
+
+            // Execute the specification logic manually
+            spec.toPredicate(root, query, cb);
+
+            // Assertions
+            verify(root).get("movie");
+            verify(root).join("sessionInfo", JoinType.INNER);
+
+            // Verify exact CriteriaBuilder criteria assignments
+            verify(cb).equal(pathMock, 500L);
+            verify(cb).equal(pathMock, Format.THREE_D);
+            verify(cb).and(any(Predicate[].class));
+        }
+
+        @Test
+        @DisplayName("Should bypass all predicate injections when all filtering parameters are null")
+        void getScreenSessions_WithNoFilters_BypassesAllSpecificationBranches() {
+            Specification<ScreenSession> spec = captureSpecification(null, null);
+            assertThat(spec).isNotNull();
+
+            spec.toPredicate(root, query, cb);
+
+            verify(root, never()).get(anyString());
+            verify(root, never()).join(anyString(), any(JoinType.class));
+            verify(cb).and(any(Predicate[].class));
+        }
+
+        @Test
+        @DisplayName("Should bypass format predicate branch when format argument is an empty or blank string")
+        void getScreenSessions_WithBlankFormatFilter_BypassesFormatBranchOnly() {
+            // Triggers the (format != null) true check, but fails the (!format.isBlank()) check
+            Specification<ScreenSession> spec = captureSpecification(null, "   ");
+            assertThat(spec).isNotNull();
+
+            spec.toPredicate(root, query, cb);
+
+            verify(root, never()).join(anyString(), any(JoinType.class));
+            verify(cb).and(any(Predicate[].class));
         }
 
         @Test
