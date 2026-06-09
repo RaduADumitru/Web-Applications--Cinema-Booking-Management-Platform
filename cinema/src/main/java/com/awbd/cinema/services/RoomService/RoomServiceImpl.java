@@ -48,7 +48,7 @@ public class RoomServiceImpl implements RoomService {
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(value = "single_room", key = "#id")
+    @Cacheable(value = "single_rooms", key = "#id")
     public RoomDTO getRoom(Long id) {
         return roomRepository.findById(id)
                 .map(RoomDTO::from)
