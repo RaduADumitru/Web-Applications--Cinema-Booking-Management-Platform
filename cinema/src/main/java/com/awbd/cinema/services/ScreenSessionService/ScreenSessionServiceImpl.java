@@ -11,8 +11,6 @@ import com.awbd.cinema.repositories.SessionInfoRepository;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
-import org.springframework.cache.Cache;
-import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
@@ -39,7 +37,6 @@ public class ScreenSessionServiceImpl implements ScreenSessionService {
     private final MovieRepository movieRepository;
     private final SessionInfoRepository sessionInfoRepository;
     private final RoomRepository roomRepository;
-    private final CacheManager cacheManager;
 
     @Override
     @Transactional

@@ -11,6 +11,7 @@ import com.awbd.cinema.exceptions.AlreadyExistsException;
 import com.awbd.cinema.exceptions.BadRequestException;
 import com.awbd.cinema.exceptions.NotFoundException;
 import com.awbd.cinema.repositories.MovieRepository;
+import com.awbd.cinema.utils.RestPage;
 import info.movito.themoviedbapi.TmdbApi;
 import info.movito.themoviedbapi.model.movies.MovieDb;
 import info.movito.themoviedbapi.tools.TmdbException;
@@ -52,7 +53,7 @@ public class MovieServiceImpl implements MovieService {
     private final GenreRepository genreRepository;
 
     @Cacheable(value = "admin_movies", key = "#page ?: 1")
-    public Page<AdminMovieDTO> getAdminMovieList(Integer page) {
+    public RestPage<AdminMovieDTO> getAdminMovieList(Integer page) {
         try {
             int tmdbPage = (page == null || page < 1) ? 1 : page;
             var popularMovies = tmdbApi.getMovieLists().getPopular("en-US", tmdbPage, "GBR");
@@ -62,7 +63,7 @@ public class MovieServiceImpl implements MovieService {
 
             int tmdbPageSize = 20;
             Pageable pageable = PageRequest.of(tmdbPage - 1, tmdbPageSize);
-            return new PageImpl<>(movies, pageable, popularMovies.getTotalResults());
+            return new RestPage<>(new PageImpl<>(movies, pageable, popularMovies.getTotalResults()));
         } catch (TmdbException e) {
             log.error("Error while fetching movies: {}", e.getMessage());
             throw new BadRequestException("Error while fetching movies.");
