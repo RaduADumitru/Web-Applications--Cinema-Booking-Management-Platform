@@ -14,11 +14,11 @@ import com.awbd.cinema.enums.Role;
 import com.awbd.cinema.exceptions.AlreadyExistsException;
 import com.awbd.cinema.exceptions.NotFoundException;
 import com.awbd.cinema.services.OfferService.OfferService;
+import com.awbd.cinema.utils.RestPage;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -125,7 +125,7 @@ class OfferControllerTest extends BaseControllerTest {
         void getOffers_PublicSuccess() throws Exception {
             loginAsDefaultUser();
 
-            PageImpl<OfferDTO> page = new PageImpl<>(Collections.singletonList(mockOfferDTO));
+            RestPage<OfferDTO> page = new RestPage<>(new PageImpl<>(Collections.singletonList(mockOfferDTO)));
             when(offerService.getOffers(any(Pageable.class))).thenReturn(page);
 
             mockMvc.perform(get("/offers")

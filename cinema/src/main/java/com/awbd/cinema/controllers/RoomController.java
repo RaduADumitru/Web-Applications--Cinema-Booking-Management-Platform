@@ -5,7 +5,7 @@ import com.awbd.cinema.DTOs.RoomDTOs.SaveRoomDTO;
 import com.awbd.cinema.services.RoomService.RoomService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
+import com.awbd.cinema.utils.RestPage;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
@@ -27,7 +27,7 @@ public class RoomController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<RoomDTO>> getRooms(@PageableDefault(size = 20) Pageable pageable) {
+    public ResponseEntity<RestPage<RoomDTO>> getRooms(@PageableDefault(size = 20) Pageable pageable) {
         return ResponseEntity.ok(roomService.getRooms(pageable));
     }
 

@@ -28,7 +28,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithAnonymousUser;
@@ -46,7 +45,7 @@ class MovieControllerTest extends BaseControllerTest{
     @Autowired
     private MockMvc mockMvc;
 
-    private static final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());;
+    private static final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     @MockitoBean
     private MovieService movieService;
@@ -124,7 +123,7 @@ class MovieControllerTest extends BaseControllerTest{
         @DisplayName("Should return 200 with public movie data and apply default parameter values")
         void shouldReturnPublicMovieList() throws Exception {
             MovieDTO dto = new MovieDTO(100L, "Interstellar", LocalDateTime.now(), "Space travel", 8.6, 169, "12+", List.of());
-            Page<MovieDTO> pageResult = new PageImpl<>(List.of(dto));
+            RestPage<MovieDTO> pageResult = new RestPage<>(new PageImpl<>(List.of(dto)));
 
             when(movieService.getUserMovieList(1, 10, null, null, null, null, null, null, null))
                     .thenReturn(pageResult);
@@ -139,7 +138,7 @@ class MovieControllerTest extends BaseControllerTest{
         @Test
         @DisplayName("Should forward explicitly provided filter query parameters to service layer")
         void shouldForwardQueryParameters() throws Exception {
-            Page<MovieDTO> emptyPage = new PageImpl<>(List.of());
+            RestPage<MovieDTO> emptyPage = new RestPage<>(new PageImpl<>(List.of()));
 
             when(movieService.getUserMovieList(2, 5, "The Matrix", 8.0, 9.0, "16+", "1999-01-01", "2000-01-01", "ACTION"))
                     .thenReturn(emptyPage);

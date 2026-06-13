@@ -6,7 +6,7 @@ import com.awbd.cinema.security.CustomUserDetails;
 import com.awbd.cinema.services.NotificationService.NotificationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
+import com.awbd.cinema.utils.RestPage;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
@@ -30,7 +30,7 @@ public class NotificationController {
     }
 
     @GetMapping("/my")
-    public ResponseEntity<Page<NotificationDTO>> getMyNotifications(
+    public ResponseEntity<RestPage<NotificationDTO>> getMyNotifications(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PageableDefault(size = 20) Pageable pageable) {
         return ResponseEntity.ok(notificationService.getMyNotifications(userDetails.getId(), pageable));

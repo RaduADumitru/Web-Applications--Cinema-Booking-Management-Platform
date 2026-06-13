@@ -9,6 +9,7 @@ import com.awbd.cinema.exceptions.NotFoundException;
 import com.awbd.cinema.repositories.NotificationRepository;
 import com.awbd.cinema.repositories.OrderRepository;
 import com.awbd.cinema.repositories.UserRepository;
+import com.awbd.cinema.utils.RestPage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -16,7 +17,6 @@ import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import java.time.LocalDateTime;
 
@@ -51,9 +51,9 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional(readOnly = true)
     @Cacheable(value = "user_notifications")
-    public Page<NotificationDTO> getMyNotifications(Long userId, Pageable pageable) {
-        return notificationRepository.findByUserIdOrderByCreatedDateDesc(userId, pageable)
-                .map(NotificationDTO::from);
+    public RestPage<NotificationDTO> getMyNotifications(Long userId, Pageable pageable) {
+        return new RestPage<>(notificationRepository.findByUserIdOrderByCreatedDateDesc(userId, pageable)
+                .map(NotificationDTO::from));
     }
 
     @Override

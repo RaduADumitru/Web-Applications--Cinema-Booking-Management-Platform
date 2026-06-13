@@ -11,6 +11,7 @@ import com.awbd.cinema.exceptions.NotFoundException;
 import com.awbd.cinema.repositories.RoomRepository;
 import com.awbd.cinema.repositories.SeatCategoryRepository;
 import com.awbd.cinema.repositories.SeatRepository;
+import com.awbd.cinema.utils.RestPage;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
@@ -18,7 +19,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -56,7 +56,7 @@ public class SeatServiceImpl implements SeatService {
     @Override
     @Transactional(readOnly = true)
     @Cacheable(value = "seat_lists")
-    public Page<SeatDTO> getSeats(String roomType, Long screenSessionId, Long movieId, Pageable pageable) {
+    public RestPage<SeatDTO> getSeats(String roomType, Long screenSessionId, Long movieId, Pageable pageable) {
         Specification<Seat> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
@@ -82,7 +82,7 @@ public class SeatServiceImpl implements SeatService {
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
-        return seatRepository.findAll(spec, pageable).map(SeatDTO::from);
+        return new RestPage<>(seatRepository.findAll(spec, pageable).map(SeatDTO::from));
     }
 
     @Override

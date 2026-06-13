@@ -6,7 +6,7 @@ import com.awbd.cinema.DTOs.TicketDTOs.TicketDTO;
 import com.awbd.cinema.services.TicketService.TicketService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
+import com.awbd.cinema.utils.RestPage;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
@@ -28,7 +28,7 @@ public class TicketController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<TicketDTO>> getTickets(
+    public ResponseEntity<RestPage<TicketDTO>> getTickets(
             @RequestParam(required = false) Long sessionId,
             @RequestParam(required = false) Long roomId,
             @RequestParam(required = false) Boolean isAvailable,

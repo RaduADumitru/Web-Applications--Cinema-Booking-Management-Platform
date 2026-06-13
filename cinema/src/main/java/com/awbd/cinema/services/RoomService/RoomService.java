@@ -2,12 +2,12 @@ package com.awbd.cinema.services.RoomService;
 
 import com.awbd.cinema.DTOs.RoomDTOs.RoomDTO;
 import com.awbd.cinema.DTOs.RoomDTOs.SaveRoomDTO;
-import org.springframework.data.domain.Page;
+import com.awbd.cinema.utils.RestPage;
 import org.springframework.data.domain.Pageable;
 
 public interface RoomService {
     RoomDTO createRoom(SaveRoomDTO dto);
-    Page<RoomDTO> getRooms(Pageable pageable);
+    RestPage<RoomDTO> getRooms(Pageable pageable);
     RoomDTO getRoom(Long id);
     RoomDTO updateRoom(Long id, SaveRoomDTO dto);
     void deleteRoom(Long id);

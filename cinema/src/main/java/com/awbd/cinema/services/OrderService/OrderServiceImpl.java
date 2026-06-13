@@ -21,6 +21,7 @@ import com.awbd.cinema.repositories.OrderRepository;
 import com.awbd.cinema.repositories.TicketInfoRepository;
 import com.awbd.cinema.repositories.TicketRepository;
 import com.awbd.cinema.repositories.UserRepository;
+import com.awbd.cinema.utils.RestPage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -29,7 +30,6 @@ import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -166,19 +166,19 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(readOnly = true)
     @Cacheable(value = "order_lists")
-    public Page<OrderDTO> getOrders(String status, Pageable pageable) {
+    public RestPage<OrderDTO> getOrders(String status, Pageable pageable) {
         if (status != null && !status.isBlank()) {
             OrderStatus orderStatus = OrderStatus.valueOf(status.toUpperCase());
-            return orderRepository.findByStatus(orderStatus, pageable).map(OrderDTO::from);
+            return new RestPage<>(orderRepository.findByStatus(orderStatus, pageable).map(OrderDTO::from));
         }
-        return orderRepository.findAll(pageable).map(OrderDTO::from);
+        return new RestPage<>(orderRepository.findAll(pageable).map(OrderDTO::from));
     }
 
     @Override
     @Transactional(readOnly = true)
     @Cacheable(value = "user_orders")
-    public Page<OrderDTO> getMyOrders(Long userId, Pageable pageable) {
-        return orderRepository.findByUserId(userId, pageable).map(OrderDTO::from);
+    public RestPage<OrderDTO> getMyOrders(Long userId, Pageable pageable) {
+        return new RestPage<>(orderRepository.findByUserId(userId, pageable).map(OrderDTO::from));
     }
 
     @Override
@@ -195,10 +195,10 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(readOnly = true)
     @Cacheable(value = "user_past_orders")
-    public Page<OrderDTO> getMyPastOrders(Long userId, Pageable pageable) {
-        return orderRepository.findByUserIdAndStatusIn(
+    public RestPage<OrderDTO> getMyPastOrders(Long userId, Pageable pageable) {
+        return new RestPage<>(orderRepository.findByUserIdAndStatusIn(
                 userId, List.of(OrderStatus.PAID, OrderStatus.CANCELLED), pageable)
-                .map(OrderDTO::from);
+                .map(OrderDTO::from));
     }
 
     @Override

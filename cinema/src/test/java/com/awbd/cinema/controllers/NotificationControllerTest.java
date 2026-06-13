@@ -15,7 +15,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -26,17 +25,17 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.mockito.Mockito;
+import com.awbd.cinema.utils.RestPage;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(NotificationController.class)
@@ -46,7 +45,7 @@ class NotificationControllerTest extends BaseControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    private static final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());;
+    private static final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     @MockitoBean
     private NotificationService notificationService;
@@ -137,7 +136,7 @@ class NotificationControllerTest extends BaseControllerTest {
                     1L, NotificationType.MOVIE_REMINDER, "The movie starts soon!",
                     LocalDateTime.now(), null, mockUserId, null
             );
-            Page<NotificationDTO> pageResponse = new PageImpl<>(List.of(notification), PageRequest.of(0, 20), 1);
+            RestPage<NotificationDTO> pageResponse = new RestPage<>(new PageImpl<>(List.of(notification), PageRequest.of(0, 20), 1));
 
             when(notificationService.getMyNotifications(eq(mockUserId), any(Pageable.class)))
                     .thenReturn(pageResponse);
