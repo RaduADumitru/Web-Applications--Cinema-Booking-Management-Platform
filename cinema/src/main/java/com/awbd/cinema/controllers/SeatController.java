@@ -5,7 +5,7 @@ import com.awbd.cinema.DTOs.SeatDTOs.SaveSeatDTO;
 import com.awbd.cinema.services.SeatService.SeatService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
+import com.awbd.cinema.utils.RestPage;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
@@ -27,7 +27,7 @@ public class SeatController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<SeatDTO>> getSeats(
+    public ResponseEntity<RestPage<SeatDTO>> getSeats(
             @RequestParam(required = false) String roomType,
             @RequestParam(required = false) Long screenSessionId,
             @RequestParam(required = false) Long movieId,

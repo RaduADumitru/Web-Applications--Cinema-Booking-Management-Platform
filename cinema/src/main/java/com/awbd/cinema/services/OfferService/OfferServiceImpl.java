@@ -10,10 +10,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.awbd.cinema.utils.RestPage;
 
 @Service
 @RequiredArgsConstructor
@@ -38,8 +38,8 @@ public class OfferServiceImpl implements OfferService {
     @Override
     @Transactional(readOnly = true)
     @Cacheable(value = "offer_lists")
-    public Page<OfferDTO> getOffers(Pageable pageable) {
-        return offerRepository.findAll(pageable).map(OfferDTO::from);
+    public RestPage<OfferDTO> getOffers(Pageable pageable) {
+        return new RestPage<>(offerRepository.findAll(pageable).map(OfferDTO::from));
     }
 
     @Override

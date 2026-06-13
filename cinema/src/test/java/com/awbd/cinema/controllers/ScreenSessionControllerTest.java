@@ -5,6 +5,7 @@ import com.awbd.cinema.DTOs.ScreenSessionDTOs.ScreenSessionDTO;
 import com.awbd.cinema.enums.Format;
 import com.awbd.cinema.enums.Role;
 import com.awbd.cinema.services.ScreenSessionService.ScreenSessionService;
+import com.awbd.cinema.utils.RestPage;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.DisplayName;
@@ -36,7 +37,7 @@ class ScreenSessionControllerTest extends BaseControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    private static final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());;
+    private static final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     @MockitoBean
     private ScreenSessionService screenSessionService;
@@ -134,7 +135,7 @@ class ScreenSessionControllerTest extends BaseControllerTest {
             loginAsDefaultUser();
             ScreenSessionDTO sessionDto = createSampleSessionDTO();
             when(screenSessionService.getScreenSessions(eq(500L), eq("THREE_D"), any(Pageable.class)))
-                    .thenReturn(new PageImpl<>(List.of(sessionDto)));
+                    .thenReturn(new RestPage<>(new PageImpl<>(List.of(sessionDto))));
 
             mockMvc.perform(get("/screen-sessions")
                             .param("movieId", "500")
@@ -152,7 +153,7 @@ class ScreenSessionControllerTest extends BaseControllerTest {
             loginAsDefaultUser();
             ScreenSessionDTO sessionDto = createSampleSessionDTO();
             when(screenSessionService.getScreenSessionsByMovie(eq(500L), any(Pageable.class)))
-                    .thenReturn(new PageImpl<>(List.of(sessionDto)));
+                    .thenReturn(new RestPage<>(new PageImpl<>(List.of(sessionDto))));
 
             mockMvc.perform(get("/screen-sessions/movie/500"))
                     .andExpect(status().isOk())

@@ -23,8 +23,8 @@ import com.awbd.cinema.exceptions.NotFoundException;
 import com.awbd.cinema.repositories.MovieRepository;
 import com.awbd.cinema.repositories.RoomRepository;
 import com.awbd.cinema.repositories.ScreenSessionRepository;
+import com.awbd.cinema.utils.RestPage;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -75,7 +75,7 @@ public class ScreenSessionServiceImpl implements ScreenSessionService {
     @Override
     @Transactional(readOnly = true)
     @Cacheable(value = "screen_session_lists")
-    public Page<ScreenSessionDTO> getScreenSessions(Long movieId, String format, Pageable pageable) {
+    public RestPage<ScreenSessionDTO> getScreenSessions(Long movieId, String format, Pageable pageable) {
         Specification<ScreenSession> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
@@ -92,17 +92,17 @@ public class ScreenSessionServiceImpl implements ScreenSessionService {
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
-        return screenSessionRepository.findAll(spec, pageable).map(ScreenSessionDTO::from);
+        return new RestPage<>(screenSessionRepository.findAll(spec, pageable).map(ScreenSessionDTO::from));
     }
 
     @Override
     @Transactional(readOnly = true)
     @Cacheable(value = "movie_session_lists")
-    public Page<ScreenSessionDTO> getScreenSessionsByMovie(Long movieId, Pageable pageable) {
+    public RestPage<ScreenSessionDTO> getScreenSessionsByMovie(Long movieId, Pageable pageable) {
         if (!movieRepository.existsById(movieId)) {
             throw new NotFoundException("Movie not found.");
         }
-        return screenSessionRepository.findByMovieId(movieId, pageable).map(ScreenSessionDTO::from);
+        return new RestPage<>(screenSessionRepository.findByMovieId(movieId, pageable).map(ScreenSessionDTO::from));
     }
 
     @Override

@@ -16,6 +16,7 @@ import com.awbd.cinema.DTOs.TicketDTOs.TicketDTO;
 import com.awbd.cinema.enums.Role;
 import com.awbd.cinema.enums.TicketType;
 import com.awbd.cinema.services.TicketService.TicketService;
+import com.awbd.cinema.utils.RestPage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -23,7 +24,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -110,8 +110,7 @@ class TicketControllerTest extends BaseControllerTest {
         @DisplayName("Should return paginated tickets list successfully")
         void getTickets_ReturnsPagedData() throws Exception {
             loginAsDefaultUser();
-            Pageable pageable = PageRequest.of(0, 20);
-            PageImpl<TicketDTO> ticketPage = new PageImpl<>(Collections.singletonList(sampleTicketDto));
+            RestPage<TicketDTO> ticketPage = new RestPage<>(new PageImpl<>(Collections.singletonList(sampleTicketDto)));
 
             when(ticketService.getTickets(eq(3L), eq(2L), eq(true), any(Pageable.class)))
                     .thenReturn(ticketPage);
