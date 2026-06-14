@@ -27,6 +27,7 @@
         <module>user-service</module>
         <module>catalog-service</module>
         <module>booking-service</module>
+        <module>gateway</module>
     </modules>
 
     <dependencyManagement>
