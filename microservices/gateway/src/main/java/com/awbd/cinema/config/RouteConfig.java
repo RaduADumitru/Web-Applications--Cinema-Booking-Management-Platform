@@ -1,5 +1,6 @@
 package com.awbd.cinema.config;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.ratelimit.KeyResolver;
 import org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter;
@@ -21,7 +22,7 @@ public class RouteConfig {
     private String bookingUri;
 
     @Bean
-    public RouteLocator routeLocator(RouteLocatorBuilder builder, RedisRateLimiter rateLimiter, KeyResolver keyResolver) {
+    public RouteLocator routeLocator(RouteLocatorBuilder builder, RedisRateLimiter rateLimiter, @Qualifier("ipKeyResolver") KeyResolver keyResolver) {
         return builder.routes()
                 .route("user-service", r -> r
                         .path("/api/v1/auth/**", "/api/v1/user/**")
