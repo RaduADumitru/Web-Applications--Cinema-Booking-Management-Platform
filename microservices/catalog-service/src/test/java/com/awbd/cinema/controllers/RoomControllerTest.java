@@ -6,7 +6,7 @@ import com.awbd.cinema.enums.Role;
 import com.awbd.cinema.enums.RoomType;
 import com.awbd.cinema.services.RoomService.RoomService;
 import com.awbd.cinema.utils.RestPage;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
