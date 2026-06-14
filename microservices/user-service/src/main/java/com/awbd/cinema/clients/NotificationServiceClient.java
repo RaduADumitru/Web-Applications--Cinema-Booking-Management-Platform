@@ -1,0 +1,17 @@
+package com.awbd.cinema.clients;
+
+import com.awbd.cinema.DTOs.NotificationDTOs.CreateNotificationDTO;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+
+@FeignClient(
+        name = "booking-service",
+        url = "${services.booking.url}",
+        fallback = NotificationServiceClientFallback.class
+)
+public interface NotificationServiceClient {
+
+    @PostMapping("/internal/notifications")
+    void createNotification(@RequestBody CreateNotificationDTO dto);
+}
