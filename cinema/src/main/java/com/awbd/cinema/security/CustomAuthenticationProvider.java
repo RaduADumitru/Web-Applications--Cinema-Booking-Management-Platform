@@ -1,7 +1,6 @@
 package com.awbd.cinema.security;
 
 import com.awbd.cinema.services.LoginAttemptService.LoginAttemptService;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;

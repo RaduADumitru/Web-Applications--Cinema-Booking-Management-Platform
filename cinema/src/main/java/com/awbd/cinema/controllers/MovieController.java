@@ -1,8 +1,8 @@
 package com.awbd.cinema.controllers;
 
 import com.awbd.cinema.DTOs.MovieDTOs.AdminMovieDTO;
-import com.awbd.cinema.DTOs.MovieDTOs.SaveMovieDTO;
 import com.awbd.cinema.DTOs.MovieDTOs.MovieDTO;
+import com.awbd.cinema.DTOs.MovieDTOs.SaveMovieDTO;
 import com.awbd.cinema.services.MovieService.MovieService;
 import com.awbd.cinema.utils.RestPage;
 import lombok.RequiredArgsConstructor;

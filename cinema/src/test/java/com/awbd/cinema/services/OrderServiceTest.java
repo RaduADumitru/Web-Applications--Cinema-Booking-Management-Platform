@@ -1,7 +1,15 @@
 package com.awbd.cinema.services;
 
+import com.awbd.cinema.DTOs.OrderDTOs.CreateOrderDTO;
+import com.awbd.cinema.DTOs.OrderDTOs.DiscountPreviewDTO;
+import com.awbd.cinema.DTOs.OrderDTOs.OrderDTO;
+import com.awbd.cinema.DTOs.OrderDTOs.OrderItemDTO;
 import com.awbd.cinema.entities.*;
+import com.awbd.cinema.enums.OrderStatus;
 import com.awbd.cinema.enums.TicketType;
+import com.awbd.cinema.exceptions.BadRequestException;
+import com.awbd.cinema.exceptions.NotFoundException;
+import com.awbd.cinema.repositories.*;
 import com.awbd.cinema.services.OrderService.OrderServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -20,27 +28,10 @@ import org.springframework.data.domain.Pageable;
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-
-
-import com.awbd.cinema.DTOs.OrderDTOs.CreateOrderDTO;
-import com.awbd.cinema.DTOs.OrderDTOs.DiscountPreviewDTO;
-import com.awbd.cinema.DTOs.OrderDTOs.OrderDTO;
-import com.awbd.cinema.DTOs.OrderDTOs.OrderItemDTO;
-import com.awbd.cinema.enums.NotificationType;
-import com.awbd.cinema.enums.OrderStatus;
-import com.awbd.cinema.exceptions.BadRequestException;
-import com.awbd.cinema.exceptions.NotFoundException;
-import com.awbd.cinema.repositories.NotificationRepository;
-import com.awbd.cinema.repositories.OfferRepository;
-import com.awbd.cinema.repositories.OrderRepository;
-import com.awbd.cinema.repositories.TicketInfoRepository;
-import com.awbd.cinema.repositories.TicketRepository;
-import com.awbd.cinema.repositories.UserRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

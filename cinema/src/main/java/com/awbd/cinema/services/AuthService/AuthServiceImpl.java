@@ -15,18 +15,16 @@ import com.awbd.cinema.utils.JwtUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
-import java.time.LocalDateTime;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.HtmlUtils;
+
+import java.time.LocalDateTime;
 
 @Slf4j
 @Service
@@ -71,6 +69,7 @@ public class AuthServiceImpl implements AuthService{
     @Override
     public LoginActionDTO login(LoginDTO login){
         if (loginAttemptService.isBlocked(login.username())) {
+            log.warn("Blocked login attempt for user '{}': too many failed attempts.", login.username());
             throw new TooManyRequestsException("Too many attempts. Try again later.");
         }
         Authentication auth;
@@ -80,11 +79,14 @@ public class AuthServiceImpl implements AuthService{
                             new UsernamePasswordAuthenticationToken(login.username(), login.password()));
             SecurityContextHolder.getContext().setAuthentication(auth);
         } catch (BadCredentialsException e) {
+            log.warn("Failed login attempt for user '{}': invalid credentials.", login.username());
             loginAttemptService.loginFailed(login.username());
             throw new InvalidFieldException("Invalid account details.");
         } catch (LockedException e) {
+            log.warn("Login attempt for locked account '{}'.", login.username());
             throw new TooManyRequestsException("Too many attempts. Try again later.");
         } catch (DisabledException e) {
+            log.warn("Login attempt for unverified account '{}'.", login.username());
             throw new InvalidFieldException("Email is not verified.");
         }
 
@@ -94,6 +96,7 @@ public class AuthServiceImpl implements AuthService{
                         .orElseThrow(() -> new InvalidFieldException("Invalid account details."));
 
         if (u.getDeletedAt() != null) {
+            log.warn("Login attempt for deleted account '{}'.", login.username());
             loginAttemptService.loginFailed(login.username());
             throw new InvalidFieldException("Invalid account details.");
         }

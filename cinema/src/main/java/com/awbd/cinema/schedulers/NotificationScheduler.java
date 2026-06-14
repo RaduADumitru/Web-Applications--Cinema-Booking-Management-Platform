@@ -1,10 +1,6 @@
 package com.awbd.cinema.schedulers;
 
-import com.awbd.cinema.entities.Notification;
-import com.awbd.cinema.entities.Order;
-import com.awbd.cinema.entities.ScreenSession;
-import com.awbd.cinema.entities.Ticket;
-import com.awbd.cinema.entities.User;
+import com.awbd.cinema.entities.*;
 import com.awbd.cinema.enums.NotificationType;
 import com.awbd.cinema.repositories.NotificationRepository;
 import com.awbd.cinema.repositories.OrderRepository;

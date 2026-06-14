@@ -3,7 +3,6 @@ package com.awbd.cinema.services.UserService;
 import com.awbd.cinema.DTOs.UserDTOs.ProfileDTO;
 import com.awbd.cinema.DTOs.UserDTOs.PromoteDTO;
 import com.awbd.cinema.DTOs.UserDTOs.UpdateProfileDTO;
-import com.awbd.cinema.enums.Role;
 import com.awbd.cinema.security.CustomUserDetails;
 
 import java.util.Map;
