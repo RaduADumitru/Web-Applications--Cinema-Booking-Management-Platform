@@ -2,9 +2,9 @@ name: Java CI with Maven
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ "main", "dev" ]
   pull_request:
-    branches: [ "main", "master" ]
+    branches: [ "main", "dev" ]
 
 jobs:
   build-and-test:
@@ -31,3 +31,29 @@ jobs:
 
       - name: Build and Run Tests
         run: ./mvnw clean test
+
+  microservices-tests:
+    name: Microservices reactor build & test
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: microservices
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+          cache-dependency-path: 'microservices/**/pom.xml'
+
+      # The microservices reactor has no Maven wrapper; ubuntu-latest ships Maven.
+      # `verify` runs every module's tests (common, user/catalog/booking services, gateway),
+      # including the H2-backed integration tests — no external DB/Redis/services required.
+      - name: Build and Run Tests
+        run: mvn -B -ntp clean verify

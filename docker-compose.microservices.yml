@@ -1,0 +1,201 @@
+name: cinema-microservices
+
+x-ms-common: &ms-common
+  build:
+    context: ./microservices
+    dockerfile: Dockerfile
+  working_dir: /workspace
+  env_file:
+    - .env
+  networks:
+    - microservices-network
+
+services:
+  user-db:
+    image: postgres:15
+    container_name: ms-user-db
+    environment:
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: ${USER_DB_NAME}
+    volumes:
+      - user_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB} || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    networks:
+      - microservices-network
+
+  catalog-db:
+    image: postgres:15
+    container_name: ms-catalog-db
+    environment:
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: ${CATALOG_DB_NAME}
+    volumes:
+      - catalog_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB} || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    networks:
+      - microservices-network
+
+  booking-db:
+    image: postgres:15
+    container_name: ms-booking-db
+    environment:
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: ${BOOKING_DB_NAME}
+    volumes:
+      - booking_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB} || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    networks:
+      - microservices-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: ms-redis
+    networks:
+      - microservices-network
+
+  user-service:
+    <<: *ms-common
+    container_name: ms-user-service
+    command: sh -c "mvn -o -pl user-service spring-boot:run"
+    environment:
+      SERVER_PORT: 8080
+      DATABASE_URL: jdbc:postgresql://user-db:5432/${USER_DB_NAME}
+      BOOKING_SERVICE_URL: http://booking-service:8080/api/v1
+      SECURITY_CORS_ALLOWED_ORIGINS: http://localhost:4200
+    ports:
+      - "8081:8080"
+    depends_on:
+      user-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/api/v1/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 40
+      start_period: 180s
+    networks:
+      - microservices-network
+
+  catalog-service:
+    <<: *ms-common
+    container_name: ms-catalog-service
+    command: sh -c "mvn -o -pl catalog-service spring-boot:run"
+    environment:
+      SERVER_PORT: 8080
+      DATABASE_URL: jdbc:postgresql://catalog-db:5432/${CATALOG_DB_NAME}
+      REDIS_HOST: redis
+      SECURITY_CORS_ALLOWED_ORIGINS: http://localhost:4200
+    ports:
+      - "8082:8080"
+    depends_on:
+      catalog-db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/api/v1/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 40
+      start_period: 180s
+    networks:
+      - microservices-network
+
+  booking-service:
+    <<: *ms-common
+    container_name: ms-booking-service
+    command: sh -c "mvn -o -pl booking-service spring-boot:run"
+    environment:
+      SERVER_PORT: 8080
+      DATABASE_URL: jdbc:postgresql://booking-db:5432/${BOOKING_DB_NAME}
+      REDIS_HOST: redis
+      CATALOG_SERVICE_URL: http://catalog-service:8080/api/v1
+      USER_SERVICE_URL: http://user-service:8080/api/v1
+      SECURITY_CORS_ALLOWED_ORIGINS: http://localhost:4200
+    ports:
+      - "8083:8080"
+    depends_on:
+      booking-db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/api/v1/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 40
+      start_period: 180s
+    networks:
+      - microservices-network
+
+  gateway:
+    <<: *ms-common
+    container_name: ms-gateway
+    command: sh -c "mvn -o -pl gateway spring-boot:run"
+    environment:
+      USER_SERVICE_URI: http://user-service:8080
+      CATALOG_SERVICE_URI: http://catalog-service:8080
+      BOOKING_SERVICE_URI: http://booking-service:8080
+      REDIS_HOST: redis
+    ports:
+      - "8080:8080"
+    depends_on:
+      user-service:
+        condition: service_healthy
+      catalog-service:
+        condition: service_healthy
+      booking-service:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+    networks:
+      - microservices-network
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: ms-client
+    environment:
+      API_URL: http://localhost:8080/api/v1
+    ports:
+      - "4200:4200"
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+      - /app/.angular
+    depends_on:
+      gateway:
+        condition: service_healthy
+    networks:
+      - microservices-network
+
+networks:
+  microservices-network:
+    driver: bridge
+
+volumes:
+  user_db_data:
+  catalog_db_data:
+  booking_db_data:
