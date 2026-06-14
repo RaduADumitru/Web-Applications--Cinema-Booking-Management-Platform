@@ -1,0 +1,116 @@
+<nav class="sticky top-0 z-50 border-b backdrop-blur-md transition-colors duration-300" 
+     style="background-color: color-mix(in srgb, var(--surface) 85%, transparent); border-color: var(--border);">
+  
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16">
+      
+      <div class="flex-shrink-0 flex items-center">
+        <a routerLink="/home" (click)="closeMobileMenu()" class="font-serif text-xl md:text-2xl font-normal tracking-tight" style="color: var(--foreground);">
+        Absolute <span style="color: var(--primary);">Cinema</span>
+        </a>
+      </div>
+
+      <div class="hidden md:flex items-center space-x-1">
+        <ng-container *ngIf="userService.isAuthenticated()">
+          <a routerLink="/home" routerLinkActive="active-link"
+             class="px-4 py-2 text-xs font-bold uppercase tracking-widest opacity-70 hover:opacity-100 transition-opacity"
+             style="color: var(--foreground-muted);">
+            Home
+          </a>
+          <a *ngIf="userService.hasRole('STAFF') || userService.hasRole('OWNER')" routerLink="/users" routerLinkActive="active-link"
+             class="px-4 py-2 text-xs font-bold uppercase tracking-widest opacity-70 hover:opacity-100 transition-opacity"
+             style="color: var(--foreground-muted);">
+            Manage Users
+          </a>
+          <a *ngIf="userService.hasRole('OWNER')" routerLink="/admin" routerLinkActive="active-link"
+             class="px-4 py-2 text-xs font-bold uppercase tracking-widest opacity-70 hover:opacity-100 transition-opacity"
+             style="color: var(--foreground-muted);">
+            Admin Portal
+          </a>
+        </ng-container>
+
+        <ng-container *ngIf="!userService.isAuthenticated()">
+          <a routerLink="/login" routerLinkActive="active-link"
+             class="px-4 py-2 text-xs font-bold uppercase tracking-widest opacity-70 hover:opacity-100 transition-opacity"
+             style="color: var(--foreground-muted);">
+            Sign In
+          </a>
+          <a routerLink="/register" routerLinkActive="active-link"
+             class="px-4 py-2 text-xs font-bold uppercase tracking-widest opacity-70 hover:opacity-100 transition-opacity"
+             style="color: var(--foreground-muted);">
+            Join Club
+          </a>
+        </ng-container>
+      </div>
+
+      <div class="hidden md:flex items-center gap-4">
+        <button (click)="themeService.toggleTheme()" type="button" 
+                class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-all duration-200 hover:shadow-sm"
+                style="background-color: var(--surface); border-color: var(--border); color: var(--foreground-muted);">
+          <ng-container *ngIf="!themeService.isDarkMode()">
+            <span>🌙 Go Noir</span>
+          </ng-container>
+          <ng-container *ngIf="themeService.isDarkMode()">
+            <span>☀️ Go Editorial</span>
+          </ng-container>
+        </button>
+
+        <app-notifications *ngIf="userService.isAuthenticated()"></app-notifications>
+
+        <div *ngIf="userService.isAuthenticated()" routerLink="/profile" class="cursor-pointer flex items-center gap-3 pl-3 border-l" style="border-color: var(--border);">
+          <div class="text-right">
+            <p class="text-[10px] font-bold tracking-wider uppercase opacity-50" style="color: var(--foreground-muted);">
+              {{ userService.currentUser()?.loyaltyPoints }} Pts
+            </p>
+            <p class="text-xs font-serif font-normal" style="color: var(--foreground);">
+              {{ userService.currentUser()?.firstName }}
+            </p>
+          </div>
+          <div class="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-serif font-normal select-none border bg-stone-100 shadow-sm" 
+               style="color: var(--foreground); border-color: var(--border);">
+            {{ userService.currentUser()?.firstName?.charAt(0) }}{{ userService.currentUser()?.lastName?.charAt(0) }}
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center md:hidden gap-3">
+        <button (click)="themeService.toggleTheme()" type="button" class="text-sm p-1.5 opacity-80" style="color: var(--foreground);">
+          {{ themeService.isDarkMode() ? '☀️' : '🌙' }}
+        </button>
+        
+        <button (click)="toggleMobileMenu()" type="button" class="p-2 rounded-lg focus:outline-none" style="color: var(--foreground);">
+          <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path *ngIf="!isMobileMenuOpen()" stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            <path *ngIf="isMobileMenuOpen()" stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <div *ngIf="isMobileMenuOpen()" class="md:hidden border-t transition-all duration-300 animate-fadeIn" 
+       style="background-color: var(--surface); border-color: var(--border);">
+    <div class="px-2 pt-2 pb-4 space-y-1 sm:px-3">
+      
+      <ng-container *ngIf="userService.isAuthenticated()">
+        <a routerLink="/home" routerLinkActive="mobile-active-link" (click)="closeMobileMenu()"
+           class="block px-3 py-3 rounded-xl text-xs font-bold uppercase tracking-widest" style="color: var(--foreground-muted);">
+          Home
+        </a>
+        <a *ngIf="userService.hasRole('STAFF') || userService.hasRole('OWNER')" routerLink="/users" routerLinkActive="mobile-active-link" (click)="closeMobileMenu()"
+           class="block px-3 py-3 rounded-xl text-xs font-bold uppercase tracking-widest" style="color: var(--foreground-muted);">
+          Manage Users
+        </a>
+        <a *ngIf="userService.hasRole('OWNER')" routerLink="/admin" routerLinkActive="mobile-active-link" (click)="closeMobileMenu()"
+           class="block px-3 py-3 rounded-xl text-xs font-bold uppercase tracking-widest" style="color: var(--foreground-muted);">
+          Admin Portal
+        </a>
+        <a routerLink="/profile" routerLinkActive="mobile-active-link" (click)="closeMobileMenu()"
+           class="block px-3 py-3 rounded-xl text-xs font-bold uppercase tracking-widest border-t mt-2 pt-4" style="color: var(--foreground); border-color: var(--border);">
+          Your Profile ({{ userService.currentUser()?.loyaltyPoints }} Points)
+        </a>
+      </ng-container>
+    </div>
+  </div>
+</nav>

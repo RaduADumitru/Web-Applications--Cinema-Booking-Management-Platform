@@ -1,28 +1,73 @@
-<div class="home-container">
-    <div *ngIf="isLoading()" class="loading-state">
-        <p>Loading movies...</p>
+<div class="min-h-screen p-6 md:p-8" style="background-color: var(--background);">
+    <!-- Header -->
+    <div class="mb-12">
+        <h1 class="text-5xl font-bold mb-2" style="color: var(--foreground);">Featured Movies</h1>
+        <p class="text-lg" style="color: var(--foreground-muted);">Browse our complete cinema catalog</p>
     </div>
 
+    <!-- Loading State -->
+    <div *ngIf="isLoading()" class="flex items-center justify-center min-h-96">
+        <div class="text-center">
+            <div class="w-12 h-12 border-4 rounded-full mb-4 mx-auto" style="border-color: var(--primary); border-top-color: var(--border);"></div>
+            <p class="text-lg font-semibold" style="color: var(--foreground-muted);">Loading movies...</p>
+        </div>
+    </div>
+
+    <!-- Movies Grid -->
     <ng-container *ngIf="!isLoading()">
-        <div class="movies-grid" *ngIf="movies().length > 0; else noMovies">
-            <div class="movie-card" *ngFor="let movie of movies()">
-                <div class="movie-body">
-                    <h3 class="movie-title">{{ movie.title }}</h3>
-                    <div class="movie-meta">
-                        <span class="rating">{{ movie.rating }}</span>
-                        <span class="duration">• {{ movie.duration }} min</span>
-                        <span class="age">• {{ movie.ageRating }}</span>
-                    </div>
-                    <div class="release">Released: {{ movie.releaseDate | date:'mediumDate' }}</div>
-                    <p class="description">{{ movie.description }}</p>
+    <div *ngIf="movies().length > 0; else noMovies" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <article 
+            class="relative group rounded-lg overflow-hidden shadow-lg transition-all duration-300 hover:shadow-2xl hover:scale-105" 
+            *ngFor="let movie of movies()"
+            [style]="'background-color: var(--surface); border: 1px solid var(--border);'"
+        >
+            <button *ngIf="isAdmin()" (click)="deleteMovie(movie.id)" class="absolute top-3 right-3 text-sm font-bold text-red-500 bg-red-100 rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                &times;
+            </button>
+            
+            <div class="p-6">
+                <h3 class="text-xl font-bold mb-3" style="color: var(--foreground);">{{ movie.title }}</h3>
+                
+                <div class="flex items-center gap-3 mb-4 text-sm" style="color: var(--foreground-muted);">
+                    <span class="px-3 py-1 rounded-full font-semibold" style="background-color: var(--primary); color: black;">{{ movie.rating }}</span>
+                    <span>{{ movie.duration }} min</span>
+                    <span class="px-2 py-1 rounded border" style="border-color: var(--border);">{{ movie.ageRating }}</span>
                 </div>
+
+                <p class="text-sm mb-4" style="color: var(--foreground-muted);">
+                    <span class="font-semibold">Released:</span> {{ movie.releaseDate | date:'mediumDate' }}
+                </p>
+
+                <p class="text-sm leading-relaxed mb-6" style="color: var(--foreground);">{{ movie.description }}</p>
+
+                <button 
+                    class="w-full py-2 px-4 rounded-lg font-semibold transition-all duration-200 text-black"
+                    [style]="'background-color: var(--primary);'"
+                >
+                    Book Tickets
+                </button>
+            </div>
+        </article>
+    </div>
+</ng-container>
+    <!-- No Movies State -->
+    <ng-template #noMovies>
+        <div class="flex items-center justify-center min-h-96">
+            <div class="text-center">
+                <p class="text-2xl font-semibold mb-2" style="color: var(--foreground);">No movies available</p>
+                <p class="text-sm" style="color: var(--foreground-muted);">Please check back later</p>
             </div>
         </div>
-    </ng-container>
-
-    <ng-template #noMovies>
-        <div class="no-movies">No movies available.</div>
     </ng-template>
 
-    <button (click)="goToAdminDashboard()">Go to Admin Dashboard</button>
+    <!-- Admin Button -->
+    <div class="mt-12 flex justify-center" *ngIf="isAdmin()">
+        <button 
+            (click)="goToAdminDashboard()"
+            class="px-8 py-3 rounded-lg font-semibold transition-all duration-200 border-2"
+            [style]="'background-color: transparent; border-color: var(--primary); color: var(--primary);'"
+        >
+            Admin Dashboard
+        </button>
+    </div>
 </div>

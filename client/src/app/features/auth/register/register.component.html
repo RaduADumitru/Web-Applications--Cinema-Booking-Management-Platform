@@ -1,141 +1,149 @@
-<div class="min-h-screen flex items-center justify-center bg-surface">
-  <div class="w-full max-w-md p-8 bg-background rounded-lg shadow-lg">
-    <h1 class="text-3xl font-bold text-center mb-8 text-accent">Create Account</h1>
+<div class="min-h-screen flex items-center justify-center p-4" style="background-color: var(--background);">
+  <div class="w-full max-w-md p-8 rounded-xl shadow-2xl" style="background-color: var(--surface); border: 1px solid var(--border);">
+    <h1 class="text-4xl font-bold text-center mb-2" style="color: var(--primary);">Create Account</h1>
+    <p class="text-center text-sm mb-8" style="color: var(--foreground-muted);">Join our cinema booking platform</p>
 
-    <div *ngIf="error" class="mb-4 p-4 bg-error bg-opacity-20 text-error rounded-lg border border-error">
-      {{ error }}
+    <div *ngIf="error" class="mb-6 p-4 rounded-lg border-l-4" style="background-color: rgba(220, 38, 38, 0.1); border-color: var(--error); color: var(--error);">
+      <p class="font-semibold text-sm">{{ error }}</p>
     </div>
 
     <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="space-y-4">
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label for="firstName" class="block text-sm font-medium mb-2">First Name</label>
+          <label for="firstName" class="block text-sm font-semibold mb-3" style="color: var(--foreground);">First Name</label>
           <input
             id="firstName"
             type="text"
             formControlName="firstName"
-            class="w-full px-4 py-2 border border-secondary rounded-lg bg-surface text-foreground focus:outline-none focus:border-primary"
-            [class.border-error]="submitted && f['firstName'].errors"
-            placeholder="First name"
+            class="w-full px-4 py-3 rounded-lg border-2 transition focus:outline-none"
+            [style]="submitted && f['firstName'].errors ? 'border-color: var(--error); background-color: var(--surface);' : 'border-color: var(--border); background-color: var(--surface-secondary);'"
+            [style.color]="'var(--foreground)'"
+            placeholder="John"
           />
-          <div *ngIf="submitted && f['firstName'].errors" class="mt-1 text-xs text-error">
-            <div *ngIf="f['firstName'].hasError('required')">First name cannot be empty.</div>
-            <div *ngIf="f['firstName'].hasError('pattern')">First name is invalid.</div>
+          <div *ngIf="submitted && f['firstName'].errors" class="mt-2 text-xs font-medium" style="color: var(--error);">
+            <div *ngIf="f['firstName'].hasError('required')">First name is required</div>
+            <div *ngIf="f['firstName'].hasError('pattern')">First name contains invalid characters</div>
           </div>
         </div>
 
         <div>
-          <label for="lastName" class="block text-sm font-medium mb-2">Last Name</label>
+          <label for="lastName" class="block text-sm font-semibold mb-3" style="color: var(--foreground);">Last Name</label>
           <input
             id="lastName"
             type="text"
             formControlName="lastName"
-            class="w-full px-4 py-2 border border-secondary rounded-lg bg-surface text-foreground focus:outline-none focus:border-primary"
-            [class.border-error]="submitted && f['lastName'].errors"
-            placeholder="Last name"
+            class="w-full px-4 py-3 rounded-lg border-2 transition focus:outline-none"
+            [style]="submitted && f['lastName'].errors ? 'border-color: var(--error); background-color: var(--surface);' : 'border-color: var(--border); background-color: var(--surface-secondary);'"
+            [style.color]="'var(--foreground)'"
+            placeholder="Doe"
           />
-          <div *ngIf="submitted && f['lastName'].errors" class="mt-1 text-xs text-error">
-            <div *ngIf="f['lastName'].hasError('required')">Last name cannot be empty.</div>
-            <div *ngIf="f['lastName'].hasError('pattern')">Last name is invalid.</div>
+          <div *ngIf="submitted && f['lastName'].errors" class="mt-2 text-xs font-medium" style="color: var(--error);">
+            <div *ngIf="f['lastName'].hasError('required')">Last name is required</div>
+            <div *ngIf="f['lastName'].hasError('pattern')">Last name contains invalid characters</div>
           </div>
         </div>
       </div>
 
       <div>
-        <label for="email" class="block text-sm font-medium mb-2">Email</label>
+        <label for="email" class="block text-sm font-semibold mb-3" style="color: var(--foreground);">Email</label>
         <input
           id="email"
           type="email"
           formControlName="email"
-          class="w-full px-4 py-2 border border-secondary rounded-lg bg-surface text-foreground focus:outline-none focus:border-primary"
-          [class.border-error]="submitted && f['email'].errors"
-          placeholder="your@email.com"
+          class="w-full px-4 py-3 rounded-lg border-2 transition focus:outline-none"
+          [style]="submitted && f['email'].errors ? 'border-color: var(--error); background-color: var(--surface);' : 'border-color: var(--border); background-color: var(--surface-secondary);'"
+          [style.color]="'var(--foreground)'"
+          placeholder="you@example.com"
         />
-        <div *ngIf="submitted && f['email'].errors" class="mt-1 text-sm text-error">
-          <div *ngIf="f['email'].hasError('required')">Email address cannot be empty.</div>
-          <div *ngIf="f['email'].hasError('email')">Email address is invalid.</div>
+        <div *ngIf="submitted && f['email'].errors" class="mt-2 text-sm font-medium" style="color: var(--error);">
+          <div *ngIf="f['email'].hasError('required')">Email is required</div>
+          <div *ngIf="f['email'].hasError('email')">Please enter a valid email address</div>
         </div>
       </div>
 
       <div>
-        <label for="username" class="block text-sm font-medium mb-2">Username</label>
+        <label for="username" class="block text-sm font-semibold mb-3" style="color: var(--foreground);">Username</label>
         <input
           id="username"
           type="text"
           formControlName="username"
-          class="w-full px-4 py-2 border border-secondary rounded-lg bg-surface text-foreground focus:outline-none focus:border-primary"
-          [class.border-error]="submitted && f['username'].errors"
-          placeholder="username"
+          class="w-full px-4 py-3 rounded-lg border-2 transition focus:outline-none"
+          [style]="submitted && f['username'].errors ? 'border-color: var(--error); background-color: var(--surface);' : 'border-color: var(--border); background-color: var(--surface-secondary);'"
+          [style.color]="'var(--foreground)'"
+          placeholder="johndoe"
         />
-        <div *ngIf="submitted && f['username'].errors" class="mt-1 text-sm text-error">
-          <div *ngIf="f['username'].hasError('required')">Username cannot be empty.</div>
-          <div *ngIf="f['username'].hasError('pattern')">Username contains invalid characters or does not meet the length requirements (3-20 characters).</div>
+        <div *ngIf="submitted && f['username'].errors" class="mt-2 text-sm font-medium" style="color: var(--error);">
+          <div *ngIf="f['username'].hasError('required')">Username is required</div>
+          <div *ngIf="f['username'].hasError('pattern')">Username must be 3-20 characters, alphanumeric only</div>
         </div>
       </div>
 
       <div>
-        <label for="password" class="block text-sm font-medium mb-2">Password</label>
+        <label for="password" class="block text-sm font-semibold mb-3" style="color: var(--foreground);">Password</label>
         <input
           id="password"
           type="password"
           formControlName="password"
-          class="w-full px-4 py-2 border border-secondary rounded-lg bg-surface text-foreground focus:outline-none focus:border-primary"
-          [class.border-error]="submitted && f['password'].errors"
-          placeholder="Include uppercase, lowercase, special character, and at least 8 characters"
+          class="w-full px-4 py-3 rounded-lg border-2 transition focus:outline-none"
+          [style]="submitted && f['password'].errors ? 'border-color: var(--error); background-color: var(--surface);' : 'border-color: var(--border); background-color: var(--surface-secondary);'"
+          [style.color]="'var(--foreground)'"
+          placeholder="Min 8 chars: uppercase, lowercase, number, symbol"
         />
-        <div *ngIf="submitted && f['password'].errors" class="mt-1 text-sm text-error">
-          <div *ngIf="f['password'].hasError('required')">Password cannot be empty.</div>
-          <div *ngIf="f['password'].hasError('minlength')">Password must include at least one uppercase letter, one lowercase letter, one special character, and be at least 8 characters long.</div>
-          <div *ngIf="f['password'].hasError('pattern')">Password must include at least one uppercase letter, one lowercase letter, one special character, and be at least 8 characters long.</div>
+        <div *ngIf="submitted && f['password'].errors" class="mt-2 text-sm font-medium" style="color: var(--error);">
+          <div *ngIf="f['password'].hasError('required')">Password is required</div>
+          <div *ngIf="f['password'].hasError('minlength')">Password must be at least 8 characters</div>
+          <div *ngIf="f['password'].hasError('pattern')">Must contain uppercase, lowercase, number, and special character</div>
         </div>
       </div>
 
       <div>
-        <label for="confirmPassword" class="block text-sm font-medium mb-2">Confirm Password</label>
+        <label for="confirmPassword" class="block text-sm font-semibold mb-3" style="color: var(--foreground);">Confirm Password</label>
         <input
           id="confirmPassword"
           type="password"
           formControlName="confirmPassword"
-          class="w-full px-4 py-2 border border-secondary rounded-lg bg-surface text-foreground focus:outline-none focus:border-primary"
-          [class.border-error]="submitted && (f['confirmPassword'].errors || registerForm.hasError('passwordMismatch'))"
-          placeholder="Confirm password"
+          class="w-full px-4 py-3 rounded-lg border-2 transition focus:outline-none"
+          [style]="submitted && (f['confirmPassword'].errors || registerForm.hasError('passwordMismatch')) ? 'border-color: var(--error); background-color: var(--surface);' : 'border-color: var(--border); background-color: var(--surface-secondary);'"
+          [style.color]="'var(--foreground)'"
+          placeholder="Re-enter your password"
         />
-        <div *ngIf="submitted && (f['confirmPassword'].errors || registerForm.hasError('passwordMismatch'))" class="mt-1 text-sm text-error">
-          <div *ngIf="f['confirmPassword'].hasError('required')">Password cannot be empty.</div>
-          <div *ngIf="f['confirmPassword'].hasError('minlength')">Password must include at least one uppercase letter, one lowercase letter, one special character, and be at least 8 characters long.</div>
-          <div *ngIf="f['confirmPassword'].hasError('pattern')">Password must include at least one uppercase letter, one lowercase letter, one special character, and be at least 8 characters long.</div>
-          <div *ngIf="registerForm.hasError('passwordMismatch')">Passwords do not match</div>
+        <div *ngIf="submitted && (f['confirmPassword'].errors || registerForm.hasError('passwordMismatch'))" class="mt-2 text-sm font-medium" style="color: var(--error);">
+          <div *ngIf="f['confirmPassword'].hasError('required')">Password confirmation is required</div>
+          <div *ngIf="f['confirmPassword'].hasError('minlength')">Password must be at least 8 characters</div>
+          <div *ngIf="registerForm.hasError('passwordMismatch')">Passwords must match</div>
         </div>
       </div>
 
       <div>
-        <label for="phoneNumber" class="block text-sm font-medium mb-2">Phone Number</label>
+        <label for="phoneNumber" class="block text-sm font-semibold mb-3" style="color: var(--foreground);">Phone Number</label>
         <input
           id="phoneNumber"
           type="tel"
           formControlName="phoneNumber"
-          class="w-full px-4 py-2 border border-secondary rounded-lg bg-surface text-foreground focus:outline-none focus:border-primary"
-          [class.border-error]="submitted && f['phoneNumber'].errors"
-          placeholder="+1234567890"
+          class="w-full px-4 py-3 rounded-lg border-2 transition focus:outline-none"
+          [style]="submitted && f['phoneNumber'].errors ? 'border-color: var(--error); background-color: var(--surface);' : 'border-color: var(--border); background-color: var(--surface-secondary);'"
+          [style.color]="'var(--foreground)'"
+          placeholder="+1 (555) 123-4567"
         />
-        <div *ngIf="submitted && f['phoneNumber'].errors" class="mt-1 text-sm text-error">
-          <div *ngIf="f['phoneNumber'].hasError('required')">Please enter your phone number.</div>
-          <div *ngIf="f['phoneNumber'].hasError('pattern')">Phone number is invalid.</div>
+        <div *ngIf="submitted && f['phoneNumber'].errors" class="mt-2 text-sm font-medium" style="color: var(--error);">
+          <div *ngIf="f['phoneNumber'].hasError('required')">Phone number is required</div>
+          <div *ngIf="f['phoneNumber'].hasError('pattern')">Please enter a valid phone number</div>
         </div>
       </div>
 
       <button
         type="submit"
         [disabled]="loading"
-        class="w-full py-2 px-4 bg-primary text-background font-semibold rounded-lg hover:bg-accent-light transition disabled:opacity-50 disabled:cursor-not-allowed"
+        class="w-full py-3 px-4 font-semibold rounded-lg transition-all duration-200 text-black font-bold text-lg hover:opacity-90 disabled:opacity-50"
+        [style]="!loading ? 'background-color: var(--primary); color: white;' : ''"
       >
-        {{ loading ? 'Creating account...' : 'Register' }}
+        {{ loading ? 'Creating account...' : 'Create Account' }}
       </button>
     </form>
 
-    <p class="text-center mt-6 text-sm">
+    <p class="text-center mt-8 text-sm" style="color: var(--foreground-muted);">
       Already have an account?
-      <a routerLink="/login" class="text-primary hover:text-accent-light font-semibold">Login here</a>
+      <a routerLink="/login" class="font-semibold transition-colors" style="color: var(--primary); text-decoration: none;">Sign in here</a>
     </p>
   </div>
 </div>

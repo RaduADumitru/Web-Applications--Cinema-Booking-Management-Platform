@@ -9,3 +9,59 @@
 :global(.error-snackbar .mdc-button__label) {
   color: white !important;
 }
+
+
+/* Default: Warm Editorial (Light Mode) */
+:root {
+  --background: #fdfbf7;
+  --surface: #f5f0e5;
+  --foreground: #1e1b18;
+  --foreground-muted: #756f67;
+  --border: #e6dfd3;
+  --primary: #942917;
+  --error: #b53526;
+}
+
+/* Toggled State: Noir Cinema (Dark Mode) */
+.theme-dark {
+  --background: #131211;
+  --surface: #1c1a18;
+  --foreground: #f4f0eb;
+  --foreground-muted: #9c958d;
+  --border: #2d2a27;
+  --primary: #e0a96d;
+  --error: #e05343;
+}
+
+/* Active state indicators matching the 'Editorial' design concept */
+.active-link {
+  color: var(--primary) !important;
+  opacity: 1 !important;
+  position: relative;
+}
+
+.active-link::after {
+  content: '';
+  position: absolute;
+  bottom: -20px;
+  left: 1rem;
+  right: 1rem;
+  height: 2px;
+  background-color: var(--primary);
+  border-top-left-radius: 2px;
+  border-top-right-radius: 2px;
+}
+
+.mobile-active-link {
+  background-color: var(--background);
+  color: var(--primary) !important;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.20s ease-out forwards;
+}

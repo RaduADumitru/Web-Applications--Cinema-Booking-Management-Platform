@@ -42,7 +42,7 @@ public class NotificationController {
     }
 
     @PatchMapping("/{id}/send")
-    @PreAuthorize("hasRole('STAFF')")
+    //@PreAuthorize("hasRole('STAFF')")
     public ResponseEntity<NotificationDTO> markAsSent(@PathVariable Long id) {
         return ResponseEntity.ok(notificationService.markAsSent(id));
     }

@@ -61,6 +61,11 @@ loadUserProfile(): Observable<ProfileResponse | null> {
     return user ? user.role === requiredRole : false;
   }
 
+  getRole(): string {
+    const user = this.currentUser();
+    return user ? user.role : "USER";
+  }
+
   isAuthenticated(): boolean {
     return this.currentUser() !== null;
   }

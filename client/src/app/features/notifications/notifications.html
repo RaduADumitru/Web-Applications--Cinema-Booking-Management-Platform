@@ -1,0 +1,73 @@
+<div class="relative inline-block text-left">
+  <button 
+    (click)="toggleDropdown()" 
+    type="button" 
+    class="relative p-2 rounded-xl border transition-all duration-200 hover:shadow-sm flex items-center justify-center w-8 h-8"
+    style="background-color: var(--surface); border-color: var(--border); color: var(--foreground-muted);"
+  >
+    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+    </svg>
+    
+    <span 
+      *ngIf="unreadCount() > 0"
+      class="absolute -top-1 -right-1 text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center animate-pulse"
+      style="background-color: var(--primary); color: black;"
+    >
+      {{ unreadCount() }}
+    </span>
+  </button>
+
+  <div 
+    *ngIf="isOpen()" 
+    class="absolute right-0 mt-3 w-80 rounded-xl shadow-xl border overflow-hidden z-50 transition-all duration-300 animate-fadeIn"
+    style="background-color: var(--surface); border-color: var(--border);"
+  >
+    <div class="px-4 py-3 border-b flex justify-between items-center" style="border-color: var(--border);">
+      <span class="text-[10px] font-bold tracking-widest uppercase" style="color: var(--foreground-muted);">
+        Notifications
+      </span>
+      <span *ngIf="unreadCount() > 0" class="text-[10px] font-bold uppercase tracking-wider" style="color: var(--primary);">
+        {{ unreadCount() }} New
+      </span>
+    </div>
+
+<div class="max-h-72 overflow-y-auto divide-y" style="border-color: var(--border);">
+  <ng-container *ngIf="notifications().length > 0; else emptyState">
+    <div 
+      *ngFor="let item of notifications()" 
+      class="p-4 transition-colors duration-150 flex gap-3 relative group"
+      [style.background-color]="item.sentDate == null ? 'color-mix(in srgb, var(--primary) 4%, transparent)' : 'transparent'"
+    >
+      <div class="flex-1">
+        <div class="block text-[10px] uppercase tracking-wider mb-1 font-sans opacity-60" style="color: var(--foreground);">
+          {{ item.createdDate ? (item.createdDate | date:'short') : 'No Date Available' }}
+        </div>
+        
+        <p class="text-xs font-serif leading-relaxed" [style.color]="item.sentDate == null ? 'var(--foreground)' : 'var(--foreground-muted)'">
+          {{ item.content }}
+        </p>
+      </div>
+
+      <button 
+        *ngIf="item.sentDate == null" 
+        (click)="markAsRead(item.id, $event)"
+        class="text-[10px] font-bold uppercase tracking-wider self-start opacity-70 hover:opacity-100 transition-opacity whitespace-nowrap"
+        style="color: var(--primary);"
+      >
+        Dismiss
+      </button>
+    </div>
+  </ng-container>
+</div>
+  </div>
+</div>
+
+<div *ngIf="isOpen()" class="fixed inset-0 z-40" (click)="closeDropdown()"></div>
+
+<ng-template #emptyState>
+  <div class="p-8 text-center">
+    <p class="text-xs font-serif mb-1" style="color: var(--foreground-muted);">All caught up</p>
+    <p class="text-[10px] uppercase tracking-widest opacity-40" style="color: var(--foreground-muted);">No new alerts</p>
+  </div>
+</ng-template>
