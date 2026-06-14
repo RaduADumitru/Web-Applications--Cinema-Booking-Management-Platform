@@ -1,25 +1,33 @@
 package com.awbd.cinema.services.MovieService;
 
 import com.awbd.cinema.DTOs.MovieDTOs.AdminMovieDTO;
-import com.awbd.cinema.DTOs.MovieDTOs.SaveMovieDTO;
 import com.awbd.cinema.DTOs.MovieDTOs.MovieDTO;
+import com.awbd.cinema.DTOs.MovieDTOs.SaveMovieDTO;
 import com.awbd.cinema.entities.Genre;
 import com.awbd.cinema.entities.Movie;
 import com.awbd.cinema.enums.GenreType;
-import com.awbd.cinema.repositories.GenreRepository;
 import com.awbd.cinema.exceptions.AlreadyExistsException;
 import com.awbd.cinema.exceptions.BadRequestException;
 import com.awbd.cinema.exceptions.NotFoundException;
+import com.awbd.cinema.repositories.GenreRepository;
 import com.awbd.cinema.repositories.MovieRepository;
 import com.awbd.cinema.utils.RestPage;
 import info.movito.themoviedbapi.TmdbApi;
 import info.movito.themoviedbapi.model.movies.MovieDb;
 import info.movito.themoviedbapi.tools.TmdbException;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,15 +40,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
-import jakarta.persistence.criteria.Join;
-import jakarta.persistence.criteria.JoinType;
-import jakarta.persistence.criteria.Predicate;
 
 @Service
 @RequiredArgsConstructor

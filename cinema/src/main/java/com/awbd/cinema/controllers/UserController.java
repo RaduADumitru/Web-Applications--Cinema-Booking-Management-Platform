@@ -5,7 +5,6 @@ import com.awbd.cinema.DTOs.UserDTOs.ProfileDTO;
 import com.awbd.cinema.DTOs.UserDTOs.PromoteDTO;
 import com.awbd.cinema.DTOs.UserDTOs.UpdateProfileDTO;
 import com.awbd.cinema.exceptions.BadRequestException;
-import com.awbd.cinema.exceptions.InvalidFieldException;
 import com.awbd.cinema.security.CustomUserDetails;
 import com.awbd.cinema.services.UserService.UserService;
 import jakarta.validation.Valid;

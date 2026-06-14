@@ -1,31 +1,14 @@
 package com.awbd.cinema.services;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-
-import java.math.BigDecimal;
-import java.util.Collections;
-import java.util.Optional;
-
 import com.awbd.cinema.DTOs.TicketDTOs.BookTicketDTO;
 import com.awbd.cinema.DTOs.TicketDTOs.SaveTicketDTO;
 import com.awbd.cinema.DTOs.TicketDTOs.TicketDTO;
-import com.awbd.cinema.entities.Room;
-import com.awbd.cinema.entities.ScreenSession;
-import com.awbd.cinema.entities.Seat;
-import com.awbd.cinema.entities.Ticket;
-import com.awbd.cinema.entities.TicketInfo;
+import com.awbd.cinema.entities.*;
 import com.awbd.cinema.enums.TicketType;
 import com.awbd.cinema.exceptions.AlreadyExistsException;
 import com.awbd.cinema.exceptions.BadRequestException;
 import com.awbd.cinema.exceptions.NotFoundException;
-import com.awbd.cinema.repositories.RoomRepository;
-import com.awbd.cinema.repositories.ScreenSessionRepository;
-import com.awbd.cinema.repositories.SeatRepository;
-import com.awbd.cinema.repositories.TicketInfoRepository;
-import com.awbd.cinema.repositories.TicketRepository;
-
+import com.awbd.cinema.repositories.*;
 import com.awbd.cinema.services.TicketService.TicketServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -39,6 +22,14 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+
+import java.math.BigDecimal;
+import java.util.Collections;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class TicketServiceTest {

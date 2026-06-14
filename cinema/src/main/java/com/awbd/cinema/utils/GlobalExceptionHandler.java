@@ -1,6 +1,7 @@
 package com.awbd.cinema.utils;
 
 import com.awbd.cinema.exceptions.*;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -15,6 +16,7 @@ import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -53,6 +55,7 @@ public class GlobalExceptionHandler {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
         if (auth == null || !auth.isAuthenticated() || auth instanceof AnonymousAuthenticationToken) {
+            log.warn("Unauthenticated access attempt to a protected resource.");
             return ResponseEntity
                     .status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of(
@@ -61,6 +64,7 @@ public class GlobalExceptionHandler {
                     ));
         }
 
+        log.warn("User '{}' was denied access to a protected resource.", auth.getName());
         return ResponseEntity
                 .status(HttpStatus.FORBIDDEN)
                 .body(Map.of(
@@ -77,6 +81,12 @@ public class GlobalExceptionHandler {
         );
 
         return buildResponse(HttpStatus.UNPROCESSABLE_CONTENT, "Validation failed.", errors);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, Object>> handleUnexpected(Exception e) {
+        log.error("Unhandled exception while processing request.", e);
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred.", null);
     }
 
     private ResponseEntity<Map<String, Object>> buildResponse(HttpStatus status, String message, Object details) {

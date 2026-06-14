@@ -4,33 +4,22 @@ import com.awbd.cinema.DTOs.OrderDTOs.CreateOrderDTO;
 import com.awbd.cinema.DTOs.OrderDTOs.DiscountPreviewDTO;
 import com.awbd.cinema.DTOs.OrderDTOs.OrderDTO;
 import com.awbd.cinema.DTOs.OrderDTOs.OrderItemDTO;
-import com.awbd.cinema.entities.Notification;
-import com.awbd.cinema.entities.Offer;
-import com.awbd.cinema.entities.Order;
-import com.awbd.cinema.entities.PointsSpend;
-import com.awbd.cinema.entities.Ticket;
-import com.awbd.cinema.entities.TicketInfo;
-import com.awbd.cinema.entities.User;
+import com.awbd.cinema.entities.*;
 import com.awbd.cinema.enums.NotificationType;
 import com.awbd.cinema.enums.OrderStatus;
 import com.awbd.cinema.exceptions.BadRequestException;
 import com.awbd.cinema.exceptions.NotFoundException;
-import com.awbd.cinema.repositories.NotificationRepository;
-import com.awbd.cinema.repositories.OfferRepository;
-import com.awbd.cinema.repositories.OrderRepository;
-import com.awbd.cinema.repositories.TicketInfoRepository;
-import com.awbd.cinema.repositories.TicketRepository;
-import com.awbd.cinema.repositories.UserRepository;
+import com.awbd.cinema.repositories.*;
 import com.awbd.cinema.utils.RestPage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import org.springframework.data.domain.Pageable;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
@@ -73,6 +62,7 @@ public class OrderServiceImpl implements OrderService {
                     .orElseThrow(() -> new NotFoundException("Ticket " + item.ticketId() + " not found."));
 
             if (!ticket.isAvailable()) {
+                log.warn("User {} attempted to order ticket {} which is no longer available.", userId, item.ticketId());
                 throw new BadRequestException("Ticket " + item.ticketId() + " is no longer available.");
             }
 

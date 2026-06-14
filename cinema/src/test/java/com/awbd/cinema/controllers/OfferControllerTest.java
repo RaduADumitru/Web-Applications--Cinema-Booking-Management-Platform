@@ -1,13 +1,5 @@
 package com.awbd.cinema.controllers;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-
-import java.time.DayOfWeek;
-import java.util.Collections;
-
 import com.awbd.cinema.DTOs.OfferDTOs.OfferDTO;
 import com.awbd.cinema.DTOs.OfferDTOs.SaveOfferDTO;
 import com.awbd.cinema.enums.Role;
@@ -15,6 +7,7 @@ import com.awbd.cinema.exceptions.AlreadyExistsException;
 import com.awbd.cinema.exceptions.NotFoundException;
 import com.awbd.cinema.services.OfferService.OfferService;
 import com.awbd.cinema.utils.RestPage;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -26,7 +19,14 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.DayOfWeek;
+import java.util.Collections;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(OfferController.class)
 class OfferControllerTest extends BaseControllerTest {

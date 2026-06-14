@@ -1,10 +1,10 @@
 package com.awbd.cinema.entities;
 
+import com.awbd.cinema.enums.Format;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.*;
-import com.awbd.cinema.enums.Format;
 
 import java.util.List;
 

@@ -1,9 +1,9 @@
 package com.awbd.cinema.entities;
 
+import com.awbd.cinema.enums.GenreType;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
-import com.awbd.cinema.enums.GenreType;
 
 import java.util.List;
 

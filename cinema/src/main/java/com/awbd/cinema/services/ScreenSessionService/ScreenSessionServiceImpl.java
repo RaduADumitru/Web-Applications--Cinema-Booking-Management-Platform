@@ -7,27 +7,27 @@ import com.awbd.cinema.entities.Room;
 import com.awbd.cinema.entities.ScreenSession;
 import com.awbd.cinema.entities.SessionInfo;
 import com.awbd.cinema.enums.Format;
-import com.awbd.cinema.repositories.SessionInfoRepository;
-import jakarta.persistence.criteria.Join;
-import jakarta.persistence.criteria.JoinType;
-import jakarta.persistence.criteria.Predicate;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.Caching;
-import org.springframework.data.jpa.domain.Specification;
-
-import java.util.ArrayList;
-import java.util.List;
 import com.awbd.cinema.exceptions.BadRequestException;
 import com.awbd.cinema.exceptions.NotFoundException;
 import com.awbd.cinema.repositories.MovieRepository;
 import com.awbd.cinema.repositories.RoomRepository;
 import com.awbd.cinema.repositories.ScreenSessionRepository;
+import com.awbd.cinema.repositories.SessionInfoRepository;
 import com.awbd.cinema.utils.RestPage;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor

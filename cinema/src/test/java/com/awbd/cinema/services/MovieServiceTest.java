@@ -1,17 +1,5 @@
 package com.awbd.cinema.services;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
-
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-
 import com.awbd.cinema.DTOs.MovieDTOs.AdminMovieDTO;
 import com.awbd.cinema.DTOs.MovieDTOs.MovieDTO;
 import com.awbd.cinema.DTOs.MovieDTOs.SaveMovieDTO;
@@ -24,6 +12,11 @@ import com.awbd.cinema.exceptions.NotFoundException;
 import com.awbd.cinema.repositories.GenreRepository;
 import com.awbd.cinema.repositories.MovieRepository;
 import com.awbd.cinema.services.MovieService.MovieServiceImpl;
+import info.movito.themoviedbapi.TmdbApi;
+import info.movito.themoviedbapi.TmdbMovieLists;
+import info.movito.themoviedbapi.TmdbMovies;
+import info.movito.themoviedbapi.model.core.MovieResultsPage;
+import info.movito.themoviedbapi.model.movies.MovieDb;
 import info.movito.themoviedbapi.tools.TmdbException;
 import jakarta.persistence.criteria.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,12 +33,18 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.eq;
+
 // Assuming these are your custom exceptions and models
-import info.movito.themoviedbapi.TmdbApi;
-import info.movito.themoviedbapi.TmdbMovies;
-import info.movito.themoviedbapi.TmdbMovieLists;
-import info.movito.themoviedbapi.model.core.MovieResultsPage;
-import info.movito.themoviedbapi.model.movies.MovieDb;
 
 @ExtendWith(MockitoExtension.class)
 class MovieServiceTest {

@@ -1,7 +1,7 @@
 package com.awbd.cinema.services.SeatService;
 
-import com.awbd.cinema.DTOs.SeatDTOs.SeatDTO;
 import com.awbd.cinema.DTOs.SeatDTOs.SaveSeatDTO;
+import com.awbd.cinema.DTOs.SeatDTOs.SeatDTO;
 import com.awbd.cinema.utils.RestPage;
 import org.springframework.data.domain.Pageable;
 

@@ -6,6 +6,7 @@ import com.awbd.cinema.entities.Offer;
 import com.awbd.cinema.exceptions.AlreadyExistsException;
 import com.awbd.cinema.exceptions.NotFoundException;
 import com.awbd.cinema.repositories.OfferRepository;
+import com.awbd.cinema.utils.RestPage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -13,7 +14,6 @@ import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.awbd.cinema.utils.RestPage;
 
 @Service
 @RequiredArgsConstructor
