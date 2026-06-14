@@ -12,6 +12,7 @@ import { provideAnimations } from '@angular/platform-browser/animations';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 
 import { routes } from './app.routes';
+import { authInterceptor } from './core/auth/auth-interceptor';
 import { errorInterceptor } from './core/auth/error-interceptor';
 import { UserService } from './core/services/user.service';
 import { ConfigService } from './core/services/config.service';
@@ -20,7 +21,7 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
-    provideHttpClient(withInterceptors([errorInterceptor])),
+    provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
     provideAnimations(),
     importProvidersFrom(MatSnackBarModule),
         provideAppInitializer(() => {

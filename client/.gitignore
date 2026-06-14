@@ -39,6 +39,9 @@ testem.log
 /typings
 __screenshots__/
 
+# Generated at container startup by entrypoint.sh
+/public/runtime-config.json
+
 # System files
 .DS_Store
 Thumbs.db
