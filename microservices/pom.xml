@@ -26,6 +26,7 @@
         <module>common</module>
         <module>user-service</module>
         <module>catalog-service</module>
+        <module>booking-service</module>
     </modules>
 
     <dependencyManagement>
