@@ -206,6 +206,7 @@ public class OrderServiceImpl implements OrderService {
     @Cacheable(value = "single_orders", key = "#id")
     public OrderDTO getOrder(Long id) {
         return orderRepository.findById(id)
+                .filter(o -> o.getDeletedAt() == null)
                 .map(OrderDTO::from)
                 .orElseThrow(() -> new NotFoundException("Order not found."));
     }

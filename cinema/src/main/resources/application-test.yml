@@ -1,0 +1,41 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;NON_KEYWORDS=ROW,DAY,VALUE,KEY,YEAR
+    driverClassName: org.h2.Driver
+    username: sa
+    password: password
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+  h2:
+    console:
+      enabled: true
+
+jwt:
+  secret:
+    key: test-jwt-secret-key-which-is-long-enough-for-hmac-sha-algorithms-1234567890
+
+auth:
+  cookie:
+    secure: false
+    same-site: Lax
+
+security:
+  csrf:
+    enabled: true
+  max-attempts: 5
+  website:
+    domain: localhost
+
+tmdb:
+  api:
+    key: test-tmdb-api-key
+
+bootstrap:
+  owner-username: test_owner
+  owner-password: TestPassword123!
+  owner-email: test_owner@example.com
+  owner-first-name: Test
+  owner-last-name: Owner
+  owner-phone-number: "+10000000000"

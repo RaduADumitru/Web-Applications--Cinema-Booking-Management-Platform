@@ -248,7 +248,7 @@ public class MovieServiceImpl implements MovieService {
         Movie movie = movieRepository.findById(id).orElseThrow(() -> new NotFoundException("Movie not found."));
         if (movie.getDeletedAt() == null) {
             movie.setDeletedAt(LocalDateTime.now());
-            movie.setGenres(List.of());
+            movie.setGenres(new ArrayList<>());
             movieRepository.save(movie);
         }
     }
