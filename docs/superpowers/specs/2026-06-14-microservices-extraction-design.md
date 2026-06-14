@@ -91,6 +91,8 @@ graph (see §6) for the discovery/resilience requirements.
 - `LoginAttemptServiceImpl` (Caffeine-based, in-memory — no Redis needed).
 - Bootstrap owner creation (`StartupListener` + `bootstrap.owner-*` env vars).
 - `UserController` (`/user/**`).
+- Exposes internal endpoints for booking-service: `GET`/`PATCH
+  /internal/users/{id}/loyalty-points` (§6.3 ②).
 - No Redis dependency.
 
 ### 5.2 `catalog-service` (container port 8080, host 8082)
@@ -119,8 +121,8 @@ graph (see §6) for the discovery/resilience requirements.
   `single_offers`, `ticket_lists`, `single_ticket`, `ticket_infos`,
   `single_ticket_info`, `single_orders`, `order_lists`, `user_orders`,
   `user_past_orders`, `user_discount_previews`.
-- Exposes two internal endpoints (loyalty points awarding side-effect lives
-  in user-service instead — see §6.3 ②/③).
+- Exposes one internal endpoint for user-service: `POST /internal/notifications`
+  (§6.3 ③).
 
 ### 5.4 `gateway` (container port 8080, host 8080)
 Spring Cloud Gateway with **static routes** (no service discovery yet — that's
