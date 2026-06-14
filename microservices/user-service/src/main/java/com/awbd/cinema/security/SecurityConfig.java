@@ -60,7 +60,7 @@ public class SecurityConfig {
         CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
         requestHandler.setCsrfRequestAttributeName("_csrf");
 
-        http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
+        http.cors(AbstractHttpConfigurer::disable)
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint((request, response, authException) -> {
                             handlerExceptionResolver.resolveException(request, response, null,
@@ -70,6 +70,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authz -> authz
                         .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/internal/**").permitAll()
                         .anyRequest().authenticated())
