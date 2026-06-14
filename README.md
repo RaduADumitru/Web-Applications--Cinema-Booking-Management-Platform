@@ -1,29 +1,102 @@
 # Web-Applications--Cinema-Booking-Management-Platform
-Aplicația reprezintă o platformă de tip Cinema Booking & Management System, care permite utilizatorilor să vizualizeze filme disponibile, să selecteze proiecții și să efectueze rezervări de bilete, iar administratorilor să gestioneze conținutul platformei (filme, săli, program).
-Sistemul este proiectat inițial ca o aplicație monolitică, urmând ca ulterior să fie descompus într-o arhitectură bazată pe microservicii. Separarea se face pe baza responsabilităților principale ale aplicației: gestionarea utilizatorilor, gestionarea filmelor și gestionarea rezervărilor.
 
-# Management utilizatori
-Sistemul trebuie să permită înregistrarea utilizatorilor.
-Sistemul trebuie să permită autentificarea utilizatorilor.
-Sistemul trebuie să permită logout-ul utilizatorilor.
-Sistemul trebuie să gestioneze roluri.
-Sistemul trebuie să restricționeze accesul la anumite funcționalități pe baza rolului.
+The application is a Cinema Booking & Management System platform that lets users browse available movies, select screenings and book tickets, and lets administrators manage the platform's content (movies, rooms, schedule).
+The system was initially designed as a monolithic application, later to be decomposed into a microservices-based architecture. The split is based on the application's main responsibilities: user management, movie management, and booking management.
 
-# Management filme
-Sistemul trebuie să permită vizualizarea listei de filme.
-Sistemul trebuie să permită vizualizarea detaliilor unui film.
-Administratorii trebuie să poată: adăuga filme, edita filme, șterge filme.
-Sistemul trebuie să permită asocierea filmelor cu proiecții.
-Sistemul trebuie să permită căutarea și sortarea filmelor.
+# User Management
+The system must allow user registration.
+The system must allow user authentication.
+The system must allow users to log out.
+The system must manage roles.
+The system must restrict access to certain features based on role.
 
-# Management proiecții și săli
-Sistemul trebuie să permită crearea de proiecții pentru filme.
-Sistemul trebuie să permită asocierea unei proiecții cu o sală de cinema.
-Sistemul trebuie să gestioneze locurile disponibile într-o sală.
-Sistemul trebuie să permită vizualizarea locurilor disponibile pentru o proiecție.
+# Movie Management
+The system must allow viewing the list of movies.
+The system must allow viewing the details of a movie.
+Administrators must be able to: add movies, edit movies, delete movies.
+The system must allow associating movies with screenings.
+The system must allow searching and sorting movies.
 
-# Management rezervă
-Utilizatorii trebuie să poată: selecta o proiecție, selecta locuri disponibile, vizualiza rezervările proprii, anula rezervări.
-Sistemul trebuie să permită crearea unei rezervări.
-Sistemul trebuie să genereze bilete pentru fiecare loc rezervat.
-Sistemul trebuie să prevină rezervarea dublă a aceluiași loc.
+# Screening and Room Management
+The system must allow creating screenings for movies.
+The system must allow associating a screening with a cinema room.
+The system must manage the available seats in a room.
+The system must allow viewing the available seats for a screening.
+
+# Booking Management
+Users must be able to: select a screening, select available seats, view their own bookings, cancel bookings.
+The system must allow creating a booking.
+The system must generate tickets for each booked seat.
+The system must prevent double-booking of the same seat.
+
+# Running the Microservices Stack (Docker)
+
+The new microservices architecture lives in `microservices/` (a multi-module Maven
+reactor) and runs via `docker-compose.microservices.yml`. It is independent of the
+original monolith (`docker-compose.yml`) — run one or the other, not both at once
+(the gateway and the monolith both use host port 8080).
+
+## Prerequisites
+
+- Docker + Docker Compose v2.
+- A `.env` file at the repo root (copy from `.env.example`). It must include the
+  three microservices DB-name vars:
+
+  ```
+  USER_DB_NAME=user_db
+  CATALOG_DB_NAME=catalog_db
+  BOOKING_DB_NAME=booking_db
+  ```
+
+  All other vars (`DATABASE_USER`, `DATABASE_PASSWORD`, `JWT_SECRET_KEY`,
+  `TMDB_API_KEY`, `BOOTSTRAP_OWNER_*`, `SECURITY_*`) are shared with the monolith.
+
+## Start
+
+```bash
+docker compose -f docker-compose.microservices.yml up --build
+```
+
+First run is slow: the shared image compiles the whole reactor (`mvn install`), then
+each service container compiles + boots its module. Watch the healthchecks; the
+gateway only starts routing once `user-service`, `catalog-service`, and
+`booking-service` report healthy.
+
+## Ports
+
+| URL | Component |
+|---|---|
+| http://localhost:8080/api/v1 | **API gateway** (what the frontend uses) |
+| http://localhost:4200 | Angular client |
+| http://localhost:8081/api/v1 | user-service (direct, debugging) |
+| http://localhost:8082/api/v1 | catalog-service (direct) |
+| http://localhost:8083/api/v1 | booking-service (direct) |
+
+Internal `/internal/**` endpoints are **not** routed by the gateway — they are reachable
+only over the Docker network (service-to-service Feign calls).
+
+## Smoke test (through the gateway)
+
+```bash
+# Register (user-service via gateway). booking-service is up, so the welcome
+# notification is delivered via the user->booking Feign call.
+curl -i -X POST http://localhost:8080/api/v1/auth/register \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"demo","password":"Password123!","confirmPassword":"Password123!","email":"demo@example.com","firstName":"Demo","lastName":"User","phoneNumber":"+1234567890"}'
+
+# Log in (sets jwt + refresh + XSRF-TOKEN cookies)
+curl -i -X POST http://localhost:8080/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"demo","password":"Password123!"}'
+```
+
+Expect `201` then `200` with `Set-Cookie` headers — proving the gateway routes to
+user-service and the cross-service calls work. The gateway logs every request
+(`Gateway POST /api/v1/auth/login -> 200 OK (… ms)`).
+
+## Stop
+
+```bash
+docker compose -f docker-compose.microservices.yml down        # keep data
+docker compose -f docker-compose.microservices.yml down -v     # also drop DB volumes
+```
