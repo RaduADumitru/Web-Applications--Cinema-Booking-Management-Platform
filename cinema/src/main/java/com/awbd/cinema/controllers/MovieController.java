@@ -5,7 +5,6 @@ import com.awbd.cinema.DTOs.MovieDTOs.SaveMovieDTO;
 import com.awbd.cinema.DTOs.MovieDTOs.MovieDTO;
 import com.awbd.cinema.services.MovieService.MovieService;
 import com.awbd.cinema.utils.RestPage;
-import org.springframework.data.domain.Page;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -31,7 +30,7 @@ public class MovieController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<MovieDTO>> getMovies(
+    public ResponseEntity<RestPage<MovieDTO>> getMovies(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer size,
             @RequestParam(required = false) String title,

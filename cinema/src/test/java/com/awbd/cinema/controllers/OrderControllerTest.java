@@ -9,6 +9,7 @@ import com.awbd.cinema.enums.OrderStatus;
 import com.awbd.cinema.enums.Role;
 import com.awbd.cinema.enums.TicketType;
 import com.awbd.cinema.services.OrderService.OrderService;
+import com.awbd.cinema.utils.RestPage;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -105,7 +106,7 @@ class OrderControllerTest extends BaseControllerTest {
             loginAs(2L, "staff_member", Role.STAFF);
             OrderDTO orderDto = createSampleOrderDTO();
             when(orderService.getOrders(eq("PENDING"), any(Pageable.class)))
-                    .thenReturn(new PageImpl<>(List.of(orderDto)));
+                    .thenReturn(new RestPage<>(new PageImpl<>(List.of(orderDto))));
 
             mockMvc.perform(get("/orders")
                             .param("status", OrderStatus.PENDING.toString())
@@ -139,7 +140,7 @@ class OrderControllerTest extends BaseControllerTest {
             loginAsDefaultUser();
             OrderDTO orderDto = createSampleOrderDTO();
             when(orderService.getMyOrders(eq(1L), any(Pageable.class)))
-                    .thenReturn(new PageImpl<>(List.of(orderDto)));
+                    .thenReturn(new RestPage<>(new PageImpl<>(List.of(orderDto))));
 
             mockMvc.perform(get("/orders/my"))
                     .andExpect(status().isOk())
@@ -165,7 +166,7 @@ class OrderControllerTest extends BaseControllerTest {
             loginAsDefaultUser();
             OrderDTO historicOrder = createSampleOrderDTO();
             when(orderService.getMyPastOrders(eq(1L), any(Pageable.class)))
-                    .thenReturn(new PageImpl<>(List.of(historicOrder)));
+                    .thenReturn(new RestPage<>(new PageImpl<>(List.of(historicOrder))));
 
             mockMvc.perform(get("/orders/my/past"))
                     .andExpect(status().isOk())

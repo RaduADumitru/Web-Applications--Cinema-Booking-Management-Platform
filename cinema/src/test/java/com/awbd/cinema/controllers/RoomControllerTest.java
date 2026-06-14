@@ -5,6 +5,7 @@ import com.awbd.cinema.DTOs.RoomDTOs.SaveRoomDTO;
 import com.awbd.cinema.enums.Role;
 import com.awbd.cinema.enums.RoomType;
 import com.awbd.cinema.services.RoomService.RoomService;
+import com.awbd.cinema.utils.RestPage;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -98,7 +99,7 @@ class RoomControllerTest extends BaseControllerTest {
         void getRooms_ReturnsOk() throws Exception {
             loginAsDefaultUser();
             RoomDTO roomDto = createSampleRoomDTO();
-            when(roomService.getRooms(any(Pageable.class))).thenReturn(new PageImpl<>(List.of(roomDto)));
+            when(roomService.getRooms(any(Pageable.class))).thenReturn(new RestPage<>(new PageImpl<>(List.of(roomDto))));
 
             mockMvc.perform(get("/rooms"))
                     .andExpect(status().isOk())

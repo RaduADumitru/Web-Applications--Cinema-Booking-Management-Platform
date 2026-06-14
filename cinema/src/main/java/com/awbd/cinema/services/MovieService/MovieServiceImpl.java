@@ -33,7 +33,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -128,7 +127,7 @@ public class MovieServiceImpl implements MovieService {
 
     @Transactional(readOnly = true)
     @Cacheable(value = "public_movie_lists")
-    public Page<MovieDTO> getUserMovieList(Integer page, Integer size, String title, Double minRating, Double maxRating, String ageRating, String releaseFrom, String releaseTo, String genre) {
+    public RestPage<MovieDTO> getUserMovieList(Integer page, Integer size, String title, Double minRating, Double maxRating, String ageRating, String releaseFrom, String releaseTo, String genre) {
         try {
             int p = (page == null || page < 1) ? 0 : page - 1;
             int s = (size == null || size < 1) ? 10 : size;
@@ -172,7 +171,7 @@ public class MovieServiceImpl implements MovieService {
                 return cb.and(predicates.toArray(new Predicate[0]));
             };
 
-            return movieRepository.findAll(spec, pageable).map(MovieDTO::from);
+            return new RestPage<>(movieRepository.findAll(spec, pageable).map(MovieDTO::from));
         } catch (Exception e) {
             log.error("Error while fetching movies: {}", e.getMessage());
             throw new BadRequestException("Error while fetching movies.");
@@ -249,7 +248,7 @@ public class MovieServiceImpl implements MovieService {
         Movie movie = movieRepository.findById(id).orElseThrow(() -> new NotFoundException("Movie not found."));
         if (movie.getDeletedAt() == null) {
             movie.setDeletedAt(LocalDateTime.now());
-            movie.setGenres(List.of());
+            movie.setGenres(new ArrayList<>());
             movieRepository.save(movie);
         }
     }

@@ -5,6 +5,7 @@ import com.awbd.cinema.DTOs.SeatDTOs.SeatDTO;
 import com.awbd.cinema.enums.Role;
 import com.awbd.cinema.enums.SeatZone;
 import com.awbd.cinema.services.SeatService.SeatService;
+import com.awbd.cinema.utils.RestPage;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -126,7 +127,7 @@ class SeatControllerTest extends BaseControllerTest {
             SeatDTO seatDto = createSampleSeatDTO();
 
             when(seatService.getSeats(eq("STANDARD"), eq(100L), eq(200L), any(Pageable.class)))
-                    .thenReturn(new PageImpl<>(List.of(seatDto)));
+                    .thenReturn(new RestPage<>(new PageImpl<>(List.of(seatDto))));
 
             mockMvc.perform(get("/seats")
                             .param("roomType", "STANDARD")

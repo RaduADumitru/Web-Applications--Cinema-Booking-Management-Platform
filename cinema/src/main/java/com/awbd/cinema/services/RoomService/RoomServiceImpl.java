@@ -10,11 +10,11 @@ import com.awbd.cinema.exceptions.NotFoundException;
 import com.awbd.cinema.repositories.RoomRepository;
 import com.awbd.cinema.repositories.ScreenSessionRepository;
 import com.awbd.cinema.repositories.SeatRepository;
+import com.awbd.cinema.utils.RestPage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,8 +42,8 @@ public class RoomServiceImpl implements RoomService {
     @Override
     @Transactional(readOnly = true)
     @Cacheable(value = "room_lists")
-    public Page<RoomDTO> getRooms(Pageable pageable) {
-        return roomRepository.findAll(pageable).map(RoomDTO::from);
+    public RestPage<RoomDTO> getRooms(Pageable pageable) {
+        return new RestPage<>(roomRepository.findAll(pageable).map(RoomDTO::from));
     }
 
     @Override

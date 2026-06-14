@@ -7,7 +7,7 @@ import com.awbd.cinema.security.CustomUserDetails;
 import com.awbd.cinema.services.OrderService.OrderService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
+import com.awbd.cinema.utils.RestPage;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
@@ -32,14 +32,14 @@ public class OrderController {
 
     @GetMapping
     @PreAuthorize("hasRole('STAFF')")
-    public ResponseEntity<Page<OrderDTO>> getOrders(
+    public ResponseEntity<RestPage<OrderDTO>> getOrders(
             @RequestParam(required = false) String status,
             @PageableDefault(size = 20) Pageable pageable) {
         return ResponseEntity.ok(orderService.getOrders(status, pageable));
     }
 
     @GetMapping("/my")
-    public ResponseEntity<Page<OrderDTO>> getMyOrders(
+    public ResponseEntity<RestPage<OrderDTO>> getMyOrders(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PageableDefault(size = 20) Pageable pageable) {
         return ResponseEntity.ok(orderService.getMyOrders(userDetails.getId(), pageable));
@@ -51,7 +51,7 @@ public class OrderController {
     }
 
     @GetMapping("/my/past")
-    public ResponseEntity<Page<OrderDTO>> getMyPastOrders(
+    public ResponseEntity<RestPage<OrderDTO>> getMyPastOrders(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PageableDefault(size = 20) Pageable pageable) {
         return ResponseEntity.ok(orderService.getMyPastOrders(userDetails.getId(), pageable));

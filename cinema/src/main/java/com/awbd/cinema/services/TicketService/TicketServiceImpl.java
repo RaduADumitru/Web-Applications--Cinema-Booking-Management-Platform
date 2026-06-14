@@ -16,11 +16,11 @@ import com.awbd.cinema.repositories.ScreenSessionRepository;
 import com.awbd.cinema.repositories.SeatRepository;
 import com.awbd.cinema.repositories.TicketInfoRepository;
 import com.awbd.cinema.repositories.TicketRepository;
+import com.awbd.cinema.utils.RestPage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -69,21 +69,21 @@ public class TicketServiceImpl implements TicketService {
     @Override
     @Transactional(readOnly = true)
     @Cacheable(value = "ticket_lists")
-    public Page<TicketDTO> getTickets(Long sessionId, Long roomId, Boolean isAvailable, Pageable pageable) {
+    public RestPage<TicketDTO> getTickets(Long sessionId, Long roomId, Boolean isAvailable, Pageable pageable) {
         if (sessionId != null && roomId != null && isAvailable != null) {
-            return ticketRepository.findByScreenSessionIdAndRoomIdAndIsAvailable(sessionId, roomId, isAvailable, pageable)
-                    .map(TicketDTO::from);
+            return new RestPage<>(ticketRepository.findByScreenSessionIdAndRoomIdAndIsAvailable(sessionId, roomId, isAvailable, pageable)
+                    .map(TicketDTO::from));
         }
         if (sessionId != null && roomId != null) {
-            return ticketRepository.findByScreenSessionIdAndRoomId(sessionId, roomId, pageable).map(TicketDTO::from);
+            return new RestPage<>(ticketRepository.findByScreenSessionIdAndRoomId(sessionId, roomId, pageable).map(TicketDTO::from));
         }
         if (sessionId != null) {
-            return ticketRepository.findByScreenSessionId(sessionId, pageable).map(TicketDTO::from);
+            return new RestPage<>(ticketRepository.findByScreenSessionId(sessionId, pageable).map(TicketDTO::from));
         }
         if (roomId != null) {
-            return ticketRepository.findByRoomId(roomId, pageable).map(TicketDTO::from);
+            return new RestPage<>(ticketRepository.findByRoomId(roomId, pageable).map(TicketDTO::from));
         }
-        return ticketRepository.findAll(pageable).map(TicketDTO::from);
+        return new RestPage<>(ticketRepository.findAll(pageable).map(TicketDTO::from));
     }
 
     @Override

@@ -5,7 +5,7 @@ import com.awbd.cinema.DTOs.OfferDTOs.SaveOfferDTO;
 import com.awbd.cinema.services.OfferService.OfferService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
+import com.awbd.cinema.utils.RestPage;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
@@ -27,7 +27,7 @@ public class OfferController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<OfferDTO>> getOffers(@PageableDefault(size = 20) Pageable pageable) {
+    public ResponseEntity<RestPage<OfferDTO>> getOffers(@PageableDefault(size = 20) Pageable pageable) {
         return ResponseEntity.ok(offerService.getOffers(pageable));
     }
 
