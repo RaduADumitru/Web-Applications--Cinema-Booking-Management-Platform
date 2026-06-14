@@ -611,7 +611,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
 
 @Slf4j
 @Component
@@ -1210,7 +1209,7 @@ spring.cloud.openfeign.circuitbreaker.enabled=true
 logging.level.com.awbd.cinema=DEBUG
 ```
 
-> Note: the monolith's `AuthIntegrationTest` runs under `@ActiveProfiles("test")` against this DB config. It is ported verbatim in Task 11.
+> Note: the monolith's `AuthIntegrationTest` runs under `@ActiveProfiles("test")`, which loads `application-test.yml` (an H2 in-memory profile) — created in Task 11, not this base props file. So `AuthIntegrationTest` needs no external DB.
 
 - [ ] **Step 6: Port the unchanged files verbatim**
 
@@ -2343,10 +2342,69 @@ git commit -m "Add internal loyalty-points API to user-service"
 Port the rest of the user-service test suite. Three need edits because of the `CustomUserDetails` constructor change and the role-hierarchy bean move; the rest are verbatim copies. Then build the whole reactor green.
 
 **Files:**
+- Create: `microservices/user-service/src/main/resources/application-test.yml` (H2 in-memory profile for `@ActiveProfiles("test")`)
 - Copy (verbatim): `CustomUserDetailsServiceTest`, `LoginAttemptServiceTest`, `AuthControllerTest`, `UserControllerTest`, `UserServiceTest`, `AuthIntegrationTest`
 - Create (adapted): `BaseControllerTest`, `CustomAuthenticationProviderTest`
 
-- [ ] **Step 1: Port the verbatim test files**
+- [ ] **Step 1: Create the H2 test profile**
+
+`AuthIntegrationTest` is annotated `@ActiveProfiles("test")`, so Spring loads `application-test.yml` from **main** resources (this is exactly how the monolith does it — its profile file lives at `cinema/src/main/resources/application-test.yml`). This points the datasource at in-memory H2 (`ddl-auto: create-drop`), so the end-to-end test needs no external Postgres. Mirror the monolith's file, dropping the `tmdb` block (user-service has no TMDB) and adding the booking-service URL + Feign circuit-breaker + CORS origins so the full `@SpringBootTest` context (which wires `@EnableFeignClients` and the `NotificationServiceClient`) starts cleanly.
+
+Create `microservices/user-service/src/main/resources/application-test.yml`:
+
+```yaml
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;NON_KEYWORDS=ROW,DAY,VALUE,KEY,YEAR
+    driverClassName: org.h2.Driver
+    username: sa
+    password: password
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+  h2:
+    console:
+      enabled: true
+  cloud:
+    openfeign:
+      circuitbreaker:
+        enabled: true
+
+jwt:
+  secret:
+    key: test-jwt-secret-key-which-is-long-enough-for-hmac-sha-algorithms-1234567890
+
+auth:
+  cookie:
+    secure: false
+    same-site: Lax
+
+security:
+  csrf:
+    enabled: true
+  max-attempts: 5
+  website:
+    domain: localhost
+  cors:
+    allowed-origins: http://localhost:4200
+
+services:
+  booking:
+    url: http://localhost:8083/api/v1
+
+bootstrap:
+  owner-username: test_owner
+  owner-password: TestPassword123!
+  owner-email: test_owner@example.com
+  owner-first-name: Test
+  owner-last-name: Owner
+  owner-phone-number: "+10000000000"
+```
+
+> During `AuthIntegrationTest`'s register step, `AuthServiceImpl.register()` calls the `NotificationServiceClient`; booking-service isn't running, so the call fails fast (connection refused) → circuit-breaker → `NotificationServiceClientFallback` logs a warning → registration still returns `201`. The integration test thus also exercises the resilience fallback path.
+
+- [ ] **Step 2: Port the verbatim test files**
 
 From the repo root:
 
@@ -2361,7 +2419,7 @@ Copy-Item cinema/src/test/java/com/awbd/cinema/controllers/UserControllerTest.ja
 Copy-Item cinema/src/test/java/com/awbd/cinema/AuthIntegrationTest.java microservices/user-service/src/test/java/com/awbd/cinema/
 ```
 
-> These are confirmed unchanged: `CustomUserDetailsServiceTest` only asserts on the `UserDetails` interface (no `CustomUserDetails` constructor call); `UserServiceTest`/`UserControllerTest` use `mock(CustomUserDetails.class)`; `AuthControllerTest` mocks `AuthService`; `AuthIntegrationTest` exercises `/auth/register` + `/auth/login` end-to-end against the test DB and is package-root `com.awbd.cinema`, which exists in user-service.
+> These are confirmed unchanged: `CustomUserDetailsServiceTest` only asserts on the `UserDetails` interface (no `CustomUserDetails` constructor call); `UserServiceTest`/`UserControllerTest` use `mock(CustomUserDetails.class)`; `AuthControllerTest` mocks `AuthService`; `AuthIntegrationTest` exercises `/auth/register` + `/auth/login` end-to-end on H2 (via the `test` profile above) and is package-root `com.awbd.cinema`, which exists in user-service.
 
 - [ ] **Step 2: Create the adapted `BaseControllerTest`**
 
@@ -2444,7 +2502,7 @@ public abstract class BaseControllerTest {
 
 > The monolith `loginAs` built a `User` then wrapped it; the new version constructs `CustomUserDetails` directly (the `User` import is dropped). `emailVerifiedAt` is `null` here — harmless, since these MVC tests never hit `CustomAuthenticationProvider`.
 
-- [ ] **Step 3: Create the adapted `CustomAuthenticationProviderTest`**
+- [ ] **Step 4: Create the adapted `CustomAuthenticationProviderTest`**
 
 Port the monolith file, then change the two `new CustomUserDetails(rawUser)` calls to the primitive constructor. Copy it first:
 
@@ -2468,19 +2526,16 @@ with:
 
 (The first occurrence is in `authenticate_ShouldThrowDisabledException_WhenCustomUserDetailsHasNullEmailVerifiedAt` where `rawUser` has `emailVerifiedAt(null)`; the second is in `authenticate_ShouldFullySucceed_WhenCustomUserDetailsHasVerifiedEmail` where it has `emailVerifiedAt(LocalDateTime.now())`. Both still build a `User` via `User.builder()` and then derive the `CustomUserDetails`, preserving the exact test semantics.)
 
-- [ ] **Step 4: Run the full user-service test suite**
+- [ ] **Step 5: Build the entire reactor (self-contained — no external DB)**
 
-Run: `cd microservices ; ./mvnw -pl user-service test`
-Expected: all tests PASS (AuthServiceTest, UserServiceTest, UserServiceLoyaltyTest, CustomAuthenticationProviderTest, CustomUserDetailsServiceTest, LoginAttemptServiceTest, AuthControllerTest, UserControllerTest, AuthIntegrationTest).
+Because `AuthIntegrationTest` runs on the H2 `test` profile (Step 1), the whole reactor builds and tests without any external Postgres. From `microservices/`:
 
-> If `AuthIntegrationTest` fails to find a database, ensure the existing Postgres (`docker compose up postgres`) is running, or that the H2 runtime dependency resolves the `jdbc:postgresql` URL is reachable — for a pure unit-feedback loop you may run `-Dtest='!AuthIntegrationTest'` to skip it, but the full `verify` in Step 5 expects the DB up, consistent with how the monolith runs this test.
+Run: `mvn clean verify`
+Expected: `BUILD SUCCESS` for both `common` and `user-service`, with ALL tests green — `common`: JwtUtilTest, JwtAuthenticationFilterTest; `user-service`: AuthServiceTest, UserServiceTest, UserServiceLoyaltyTest, CustomAuthenticationProviderTest, CustomUserDetailsServiceTest, LoginAttemptServiceTest, AuthControllerTest, UserControllerTest, and the H2-backed `AuthIntegrationTest`.
 
-- [ ] **Step 5: Build the entire reactor**
+(Maven 3.9.11 + Java 21 are on PATH; there is no `mvnw` wrapper inside `microservices/`, so use plain `mvn`.)
 
-Run: `cd microservices ; ./mvnw clean verify`
-Expected: `BUILD SUCCESS` for both `common` and `user-service`.
-
-- [ ] **Step 6: Manual smoke test (optional but recommended)**
+- [ ] **Step 6: Manual smoke test (optional — needs the real Postgres + `.env`)**
 
 With the existing Postgres running and `.env` present at the repo root (or `microservices/user-service/`), start the service:
 
@@ -2494,8 +2549,8 @@ Then:
 - [ ] **Step 7: Commit**
 
 ```bash
-git add microservices/user-service/src/test
-git commit -m "Port and adapt remaining user-service tests; full reactor builds green"
+git add microservices/user-service/src/test microservices/user-service/src/main/resources/application-test.yml
+git commit -m "Port and adapt remaining user-service tests; add H2 test profile; full reactor builds green"
 ```
 
 ---
