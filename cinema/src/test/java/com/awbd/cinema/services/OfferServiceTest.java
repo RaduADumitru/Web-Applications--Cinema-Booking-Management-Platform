@@ -1,13 +1,5 @@
 package com.awbd.cinema.services;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-
-import java.time.DayOfWeek;
-import java.util.Collections;
-import java.util.Optional;
-
 import com.awbd.cinema.DTOs.OfferDTOs.OfferDTO;
 import com.awbd.cinema.DTOs.OfferDTOs.SaveOfferDTO;
 import com.awbd.cinema.entities.Offer;
@@ -27,6 +19,14 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+
+import java.time.DayOfWeek;
+import java.util.Collections;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class OfferServiceTest {

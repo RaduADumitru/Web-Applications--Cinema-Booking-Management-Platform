@@ -1,15 +1,5 @@
 package com.awbd.cinema.controllers;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-
-import java.math.BigDecimal;
-import java.util.Collections;
-
 import com.awbd.cinema.DTOs.TicketDTOs.BookTicketDTO;
 import com.awbd.cinema.DTOs.TicketDTOs.SaveTicketDTO;
 import com.awbd.cinema.DTOs.TicketDTOs.TicketDTO;
@@ -17,6 +7,7 @@ import com.awbd.cinema.enums.Role;
 import com.awbd.cinema.enums.TicketType;
 import com.awbd.cinema.services.TicketService.TicketService;
 import com.awbd.cinema.utils.RestPage;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -29,7 +20,17 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.math.BigDecimal;
+import java.util.Collections;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(TicketController.class)
 class TicketControllerTest extends BaseControllerTest {
@@ -70,6 +71,7 @@ class TicketControllerTest extends BaseControllerTest {
             when(ticketService.createTicket(any(SaveTicketDTO.class))).thenReturn(sampleTicketDto);
 
             mockMvc.perform(post("/tickets")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(dto)))
                     .andExpect(status().isCreated())
@@ -84,6 +86,7 @@ class TicketControllerTest extends BaseControllerTest {
             SaveTicketDTO dto = new SaveTicketDTO(1L, 2L, 3L);
 
             mockMvc.perform(post("/tickets")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(dto)))
                     .andExpect(status().isForbidden());
@@ -96,6 +99,7 @@ class TicketControllerTest extends BaseControllerTest {
             SaveTicketDTO invalidDto = new SaveTicketDTO(null, null, null);
 
             mockMvc.perform(post("/tickets")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(invalidDto)))
                     .andExpect(status().isUnprocessableContent());
@@ -161,6 +165,7 @@ class TicketControllerTest extends BaseControllerTest {
             when(ticketService.bookTicket(eq(100L), any(BookTicketDTO.class))).thenReturn(updatedTicketDto);
 
             mockMvc.perform(patch("/tickets/{id}/book", 100L)
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(bookDto)))
                     .andExpect(status().isOk())
@@ -179,7 +184,8 @@ class TicketControllerTest extends BaseControllerTest {
             loginAs(2L, "staff_user", Role.STAFF);
             doNothing().when(ticketService).deleteTicket(100L);
 
-            mockMvc.perform(delete("/tickets/{id}", 100L))
+            mockMvc.perform(delete("/tickets/{id}", 100L)
+                            .with(csrf()))
                     .andExpect(status().isNoContent());
         }
 
@@ -188,7 +194,8 @@ class TicketControllerTest extends BaseControllerTest {
         void deleteTicket_AsUser_ReturnsForbidden() throws Exception {
             loginAsDefaultUser();
 
-            mockMvc.perform(delete("/tickets/{id}", 100L))
+            mockMvc.perform(delete("/tickets/{id}", 100L)
+                            .with(csrf()))
                     .andExpect(status().isForbidden());
         }
     }

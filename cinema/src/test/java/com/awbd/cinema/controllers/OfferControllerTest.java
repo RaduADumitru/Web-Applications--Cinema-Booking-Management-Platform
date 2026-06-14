@@ -1,13 +1,5 @@
 package com.awbd.cinema.controllers;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-
-import java.time.DayOfWeek;
-import java.util.Collections;
-
 import com.awbd.cinema.DTOs.OfferDTOs.OfferDTO;
 import com.awbd.cinema.DTOs.OfferDTOs.SaveOfferDTO;
 import com.awbd.cinema.enums.Role;
@@ -15,6 +7,7 @@ import com.awbd.cinema.exceptions.AlreadyExistsException;
 import com.awbd.cinema.exceptions.NotFoundException;
 import com.awbd.cinema.services.OfferService.OfferService;
 import com.awbd.cinema.utils.RestPage;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -26,7 +19,15 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.DayOfWeek;
+import java.util.Collections;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(OfferController.class)
 class OfferControllerTest extends BaseControllerTest {
@@ -54,6 +55,7 @@ class OfferControllerTest extends BaseControllerTest {
             when(offerService.createOffer(any(SaveOfferDTO.class))).thenReturn(mockOfferDTO);
 
             mockMvc.perform(post("/offers")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(validSaveOfferDTO)))
                     .andExpect(status().isCreated())
@@ -68,6 +70,7 @@ class OfferControllerTest extends BaseControllerTest {
             loginAs(2L, "staff_user", Role.STAFF);
 
             mockMvc.perform(post("/offers")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(invalidSaveOfferDTO)))
                     .andExpect(status().isUnprocessableEntity())
@@ -84,6 +87,7 @@ class OfferControllerTest extends BaseControllerTest {
                     .thenThrow(new AlreadyExistsException("An offer for MONDAY already exists."));
 
             mockMvc.perform(post("/offers")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(validSaveOfferDTO)))
                     .andExpect(status().isConflict())
@@ -97,6 +101,7 @@ class OfferControllerTest extends BaseControllerTest {
             loginAsDefaultUser(); // Logs in as Role.USER
 
             mockMvc.perform(post("/offers")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(validSaveOfferDTO)))
                     .andExpect(status().isForbidden())
@@ -110,6 +115,7 @@ class OfferControllerTest extends BaseControllerTest {
             // No login action called, context is clear
 
             mockMvc.perform(post("/offers")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(validSaveOfferDTO)))
                     .andExpect(status().isUnauthorized());
@@ -178,6 +184,7 @@ class OfferControllerTest extends BaseControllerTest {
             when(offerService.updateOffer(eq(1L), any(SaveOfferDTO.class))).thenReturn(mockOfferDTO);
 
             mockMvc.perform(put("/offers/1")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(validSaveOfferDTO)))
                     .andExpect(status().isOk())
@@ -190,6 +197,7 @@ class OfferControllerTest extends BaseControllerTest {
             loginAsDefaultUser();
 
             mockMvc.perform(put("/offers/1")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(validSaveOfferDTO)))
                     .andExpect(status().isForbidden())
@@ -200,6 +208,7 @@ class OfferControllerTest extends BaseControllerTest {
         @DisplayName("Should return 401 Unauthorized when user is anonymous")
         void updateOffer_Unauthorized() throws Exception {
             mockMvc.perform(put("/offers/1")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(validSaveOfferDTO)))
                     .andExpect(status().isUnauthorized());
@@ -216,7 +225,8 @@ class OfferControllerTest extends BaseControllerTest {
             loginAs(2L, "staff_user", Role.STAFF);
             doNothing().when(offerService).deleteOffer(1L);
 
-            mockMvc.perform(delete("/offers/1"))
+            mockMvc.perform(delete("/offers/1")
+                            .with(csrf()))
                     .andExpect(status().isNoContent());
 
             verify(offerService, times(1)).deleteOffer(1L);
@@ -227,7 +237,8 @@ class OfferControllerTest extends BaseControllerTest {
         void deleteOffer_Forbidden() throws Exception {
             loginAsDefaultUser();
 
-            mockMvc.perform(delete("/offers/1"))
+            mockMvc.perform(delete("/offers/1")
+                            .with(csrf()))
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.error").value("Forbidden"));
         }
@@ -235,7 +246,8 @@ class OfferControllerTest extends BaseControllerTest {
         @Test
         @DisplayName("Should return 401 Unauthorized when user attempting deletion is anonymous")
         void deleteOffer_Unauthorized() throws Exception {
-            mockMvc.perform(delete("/offers/1"))
+            mockMvc.perform(delete("/offers/1")
+                            .with(csrf()))
                     .andExpect(status().isUnauthorized());
         }
     }

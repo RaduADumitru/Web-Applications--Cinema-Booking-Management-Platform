@@ -1,11 +1,11 @@
 package com.awbd.cinema.controllers;
 
-import com.awbd.cinema.DTOs.SeatDTOs.SeatDTO;
 import com.awbd.cinema.DTOs.SeatDTOs.SaveSeatDTO;
+import com.awbd.cinema.DTOs.SeatDTOs.SeatDTO;
 import com.awbd.cinema.services.SeatService.SeatService;
+import com.awbd.cinema.utils.RestPage;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import com.awbd.cinema.utils.RestPage;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
