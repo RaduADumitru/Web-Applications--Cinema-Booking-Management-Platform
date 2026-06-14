@@ -25,6 +25,7 @@
     <modules>
         <module>common</module>
         <module>user-service</module>
+        <module>catalog-service</module>
     </modules>
 
     <dependencyManagement>
