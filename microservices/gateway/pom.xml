@@ -13,7 +13,7 @@
     <artifactId>gateway</artifactId>
     <packaging>jar</packaging>
     <name>gateway</name>
-    <description>Reactive API gateway (Spring Cloud Gateway, static routes)</description>
+    <description>Reactive API gateway (Spring Cloud Gateway, Eureka-discovered lb:// routes)</description>
 
     <dependencies>
         <dependency>
