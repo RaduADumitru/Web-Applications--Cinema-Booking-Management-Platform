@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 @FeignClient(
         name = "booking-service",
-        url = "${services.booking.url}",
+        path = "/api/v1",
         fallback = NotificationServiceClientFallback.class
 )
 public interface NotificationServiceClient {
