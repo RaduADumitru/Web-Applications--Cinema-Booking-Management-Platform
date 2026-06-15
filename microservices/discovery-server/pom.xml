@@ -10,29 +10,17 @@
         <relativePath>..</relativePath>
     </parent>
 
-    <artifactId>gateway</artifactId>
+    <artifactId>discovery-server</artifactId>
     <packaging>jar</packaging>
-    <name>gateway</name>
-    <description>Reactive API gateway (Spring Cloud Gateway, Eureka-discovered lb:// routes)</description>
+    <name>discovery-server</name>
+    <description>Netflix Eureka service registry</description>
 
     <dependencies>
         <dependency>
             <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-starter-gateway-server-webflux</artifactId>
+            <artifactId>spring-cloud-starter-netflix-eureka-server</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-redis-reactive</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.github.cdimascio</groupId>
-            <artifactId>dotenv-java</artifactId>
-            <version>3.2.0</version>
-        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>

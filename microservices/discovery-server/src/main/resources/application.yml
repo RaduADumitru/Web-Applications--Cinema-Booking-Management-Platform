@@ -1,0 +1,30 @@
+server:
+  port: ${SERVER_PORT:8761}
+
+spring:
+  application:
+    name: discovery-server
+
+eureka:
+  client:
+    register-with-eureka: false
+    fetch-registry: false
+  instance:
+    hostname: ${EUREKA_INSTANCE_HOSTNAME:localhost}
+  server:
+    # PoC/dev registry tuned for fast, banner-free demos (NOT production):
+    # - self-preservation off so dead instances are actually evicted
+    # - low renewal-percent-threshold so stopping an instance in this tiny
+    #   cluster doesn't drop renewals below the threshold and trip the
+    #   dashboard banner (both the "EMERGENCY" and the "self preservation
+    #   turned off" warnings are gated by that same below-threshold condition)
+    # - short eviction sweep to match the clients' short lease timers
+    enable-self-preservation: false
+    renewal-percent-threshold: 0.49
+    eviction-interval-timer-in-ms: 5000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

@@ -7,7 +7,7 @@ import org.springframework.cloud.gateway.route.RouteLocator;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest
+@SpringBootTest(properties = "eureka.client.enabled=false")
 class GatewayApplicationTest {
 
     @Autowired

@@ -9,13 +9,14 @@ spring:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
 
-services:
-  user:
-    uri: ${USER_SERVICE_URI:http://localhost:8081}
-  catalog:
-    uri: ${CATALOG_SERVICE_URI:http://localhost:8082}
-  booking:
-    uri: ${BOOKING_SERVICE_URI:http://localhost:8083}
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 5
+    lease-expiration-duration-in-seconds: 10
 
 gateway:
   rate-limit:
@@ -31,3 +32,5 @@ management:
 logging:
   level:
     com.awbd.cinema: INFO
+    com.netflix.discovery: INFO
+    org.springframework.cloud.loadbalancer: DEBUG
