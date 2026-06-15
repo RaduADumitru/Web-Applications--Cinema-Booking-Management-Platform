@@ -1,3 +1,5 @@
+import { TicketType } from './ticket.models';
+
 export enum OrderStatus {
   PENDING = 'PENDING',
   PAID = 'PAID',
@@ -18,4 +20,14 @@ export interface OrderResponse {
   ticketIds: string[]; 
   offerPercent: number | null;
   offerMessage: string | null;
+}
+
+export interface OrderItemRequest {
+  ticketId: number;
+  type: TicketType;
+}
+
+export interface CreateOrderRequest {
+  items: OrderItemRequest[];
+  useDiscount: boolean;
 }

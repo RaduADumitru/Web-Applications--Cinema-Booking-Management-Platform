@@ -1,73 +1,138 @@
 <div class="min-h-screen p-6 md:p-8" style="background-color: var(--background);">
-    <!-- Header -->
-    <div class="mb-12">
+    <div class="mb-8">
         <h1 class="text-5xl font-bold mb-2" style="color: var(--foreground);">Featured Movies</h1>
         <p class="text-lg" style="color: var(--foreground-muted);">Browse our complete cinema catalog</p>
     </div>
 
-    <!-- Loading State -->
+    <div class="mb-10 p-6 rounded-lg border shadow-md transition-all" [style]="'background-color: var(--surface); border-color: var(--border);'">
+        <h2 class="text-lg font-bold mb-4" style="color: var(--foreground);">Filter & Search Options</h2>
+        
+        <form (ngSubmit)="loadMovies()" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-xs font-semibold mb-1" style="color: var(--foreground-muted);">Title</label>
+                <input type="text" [(ngModel)]="searchTitle" name="searchTitle" placeholder="Search title..." class="w-full p-2 rounded border text-sm bg-transparent outline-none transition focus:border-gray-400" [style]="'border-color: var(--border); color: var(--foreground);'">
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold mb-1" style="color: var(--foreground-muted);">Genre</label>
+                <select [(ngModel)]="genre" name="genre" class="w-full p-2 rounded border text-sm bg-transparent outline-none" [style]="'border-color: var(--border); color: var(--foreground);'">
+                    <option value="" style="background-color: var(--surface);">All Genres</option>
+                    <option value="ACTION" style="background-color: var(--surface);">Action</option>
+                    <option value="COMEDY" style="background-color: var(--surface);">Comedy</option>
+                    <option value="DRAMA" style="background-color: var(--surface);">Drama</option>
+                    <option value="HORROR" style="background-color: var(--surface);">Horror</option>
+                    <option value="ROMANCE" style="background-color: var(--surface);">Romance</option>
+                    <option value="SCI_FI" style="background-color: var(--surface);">Sci-Fi</option>
+                    <option value="THRILLER" style="background-color: var(--surface);">Thriller</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold mb-1" style="color: var(--foreground-muted);">Min Rating</label>
+                <input type="number" step="0.1" min="0" max="10" [(ngModel)]="minRating" name="minRating" placeholder="e.g. 7.5" class="w-full p-2 rounded border text-sm bg-transparent outline-none" [style]="'border-color: var(--border); color: var(--foreground);'">
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold mb-1" style="color: var(--foreground-muted);">Max Rating</label>
+                <input type="number" step="0.1" min="0" max="10" [(ngModel)]="maxRating" name="maxRating" placeholder="e.g. 9.8" class="w-full p-2 rounded border text-sm bg-transparent outline-none" [style]="'border-color: var(--border); color: var(--foreground);'">
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold mb-1" style="color: var(--foreground-muted);">Age Rating</label>
+                <select [(ngModel)]="ageRating" name="ageRating" class="w-full p-2 rounded border text-sm bg-transparent outline-none" [style]="'border-color: var(--border); color: var(--foreground);'">
+                    <option value="" style="background-color: var(--surface);">All Ratings</option>
+                    <option value="G" style="background-color: var(--surface);">G</option>
+                    <option value="PG" style="background-color: var(--surface);">PG</option>
+                    <option value="PG-13" style="background-color: var(--surface);">PG-13</option>
+                    <option value="R" style="background-color: var(--surface);">R</option>
+                    <option value="NC-17" style="background-color: var(--surface);">NC-17</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold mb-1" style="color: var(--foreground-muted);">Released From</label>
+                <input type="date" [(ngModel)]="releaseFrom" name="releaseFrom" class="w-full p-2 rounded border text-sm bg-transparent outline-none text-gray-400" [style]="'border-color: var(--border); color: var(--foreground);'">
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold mb-1" style="color: var(--foreground-muted);">Released To</label>
+                <input type="date" [(ngModel)]="releaseTo" name="releaseTo" class="w-full p-2 rounded border text-sm bg-transparent outline-none text-gray-400" [style]="'border-color: var(--border); color: var(--foreground);'">
+            </div>
+
+            <div class="flex items-end gap-2">
+                <button type="submit" class="flex-1 py-2 px-4 rounded-lg font-semibold text-black text-sm transition-all hover:opacity-90" [style]="'background-color: var(--primary);'">
+                    Apply
+                </button>
+                <button type="button" (click)="resetFilters()" class="flex-1 py-2 px-4 rounded-lg font-semibold text-sm transition-all border hover:bg-white/5" [style]="'border-color: var(--border); color: var(--foreground);'">
+                    Reset
+                </button>
+            </div>
+        </form>
+    </div>
+
     <div *ngIf="isLoading()" class="flex items-center justify-center min-h-96">
         <div class="text-center">
-            <div class="w-12 h-12 border-4 rounded-full mb-4 mx-auto" style="border-color: var(--primary); border-top-color: var(--border);"></div>
+            <div class="w-12 h-12 border-4 rounded-full mb-4 mx-auto animate-spin" style="border-color: var(--primary); border-top-color: var(--border);"></div>
             <p class="text-lg font-semibold" style="color: var(--foreground-muted);">Loading movies...</p>
         </div>
     </div>
 
-    <!-- Movies Grid -->
     <ng-container *ngIf="!isLoading()">
-    <div *ngIf="movies().length > 0; else noMovies" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <article 
-            class="relative group rounded-lg overflow-hidden shadow-lg transition-all duration-300 hover:shadow-2xl hover:scale-105" 
-            *ngFor="let movie of movies()"
-            [style]="'background-color: var(--surface); border: 1px solid var(--border);'"
-        >
-            <button *ngIf="isAdmin()" (click)="deleteMovie(movie.id)" class="absolute top-3 right-3 text-sm font-bold text-red-500 bg-red-100 rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                &times;
-            </button>
-            
-            <div class="p-6">
-                <h3 class="text-xl font-bold mb-3" style="color: var(--foreground);">{{ movie.title }}</h3>
-                
-                <div class="flex items-center gap-3 mb-4 text-sm" style="color: var(--foreground-muted);">
-                    <span class="px-3 py-1 rounded-full font-semibold" style="background-color: var(--primary); color: black;">{{ movie.rating }}</span>
-                    <span>{{ movie.duration }} min</span>
-                    <span class="px-2 py-1 rounded border" style="border-color: var(--border);">{{ movie.ageRating }}</span>
-                </div>
-
-                <p class="text-sm mb-4" style="color: var(--foreground-muted);">
-                    <span class="font-semibold">Released:</span> {{ movie.releaseDate | date:'mediumDate' }}
-                </p>
-
-                <p class="text-sm leading-relaxed mb-6" style="color: var(--foreground);">{{ movie.description }}</p>
-
-                <button 
-                    class="w-full py-2 px-4 rounded-lg font-semibold transition-all duration-200 text-black"
-                    [style]="'background-color: var(--primary);'"
-                >
-                    Book Tickets
+        <div *ngIf="movies().length > 0; else noMovies" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <article 
+                class="relative group rounded-lg overflow-hidden shadow-lg transition-all duration-300 hover:shadow-2xl hover:scale-105" 
+                *ngFor="let movie of movies()"
+                [style]="'background-color: var(--surface); border: 1px solid var(--border);'"
+            >
+                <button *ngIf="isAdmin()" (click)="deleteMovie(movie.id)" class="absolute top-3 right-3 text-sm font-bold text-red-500 bg-red-100 rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    &times;
                 </button>
-            </div>
-        </article>
-    </div>
-</ng-container>
-    <!-- No Movies State -->
+                
+                <div class="p-6 flex flex-col justify-between h-full">
+                    <div class="flex gap-4 items-start">
+                        <div class="flex-1 min-w-0">
+                            <h3 class="text-xl font-bold mb-3 truncate" style="color: var(--foreground);">{{ movie.title }}</h3>
+                            
+                            <div class="flex flex-wrap items-center gap-2 mb-4 text-xs" style="color: var(--foreground-muted);">
+                                <span class="px-2 py-0.5 rounded-full font-semibold" style="background-color: var(--primary); color: black;">{{ movie.rating }}</span>
+                                <span>{{ movie.duration }} min</span>
+                                <span class="px-1.5 py-0.5 rounded border" style="border-color: var(--border);">{{ movie.ageRating }}</span>
+                            </div>
+
+                            <p class="text-xs mb-3" style="color: var(--foreground-muted);">
+                                <span class="font-semibold">Released:</span> {{ movie.releaseDate | date:'mediumDate' }}
+                            </p>
+                            
+                            <p class="text-xs mb-3" style="color: var(--foreground-muted);">Genres: {{ formatGenres(movie.genres) }}</p>
+                        </div>
+
+                        <img 
+                            *ngIf="movie.imagePath" 
+                            [src]="movie.imagePath" 
+                            alt="{{ movie.title }} poster" 
+                            class="w-20 sm:w-24 aspect-[2/3] object-cover rounded shadow-md flex-shrink-0"
+                        >
+                    </div>
+
+                    <p class="text-sm leading-relaxed my-4 line-clamp-3" style="color: var(--foreground);">{{ movie.description }}</p>
+
+                    <button 
+                        class="w-full py-2 px-4 rounded-lg font-semibold transition-all duration-200 text-black mt-auto"
+                        [style]="'background-color: var(--primary);'"
+                    >
+                        Book Tickets
+                    </button>
+                </div>
+            </article>
+        </div>
+    </ng-container>
+
     <ng-template #noMovies>
         <div class="flex items-center justify-center min-h-96">
             <div class="text-center">
                 <p class="text-2xl font-semibold mb-2" style="color: var(--foreground);">No movies available</p>
-                <p class="text-sm" style="color: var(--foreground-muted);">Please check back later</p>
+                <p class="text-sm" style="color: var(--foreground-muted);">Please alter your filters or check back later</p>
             </div>
         </div>
     </ng-template>
-
-    <!-- Admin Button -->
-    <div class="mt-12 flex justify-center" *ngIf="isAdmin()">
-        <button 
-            (click)="goToAdminDashboard()"
-            class="px-8 py-3 rounded-lg font-semibold transition-all duration-200 border-2"
-            [style]="'background-color: transparent; border-color: var(--primary); color: var(--primary);'"
-        >
-            Admin Dashboard
-        </button>
-    </div>
 </div>

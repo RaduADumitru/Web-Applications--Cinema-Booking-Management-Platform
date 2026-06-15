@@ -1,0 +1,81 @@
+<section class="staff-panel">
+  <header class="panel-heading">
+    <div>
+      <p style="color: var(--primary);">Room Layout Manager</p>
+      <h2 style="color: var(--foreground);">Rooms and mappings</h2>
+      <span style="color: var(--foreground-muted);">Create rooms, then attach existing seats or showtimes when needed.</span>
+    </div>
+  </header>
+
+  <div *ngIf="error()" class="state-error">{{ error() }}</div>
+
+  <div class="panel-grid">
+    <form class="ops-card" style="background-color: var(--surface); border-color: var(--border);" (ngSubmit)="saveRoom()">
+      <h3 style="color: var(--foreground);">Create room</h3>
+
+      <label>
+        <span>Name</span>
+        <input [(ngModel)]="form.name" name="name" required placeholder="Room A1" />
+      </label>
+
+      <label>
+        <span>Type</span>
+        <select [(ngModel)]="form.type" name="type">
+          <option *ngFor="let type of roomTypes" [ngValue]="type">{{ type }}</option>
+        </select>
+      </label>
+
+      <label>
+        <span>Floor</span>
+        <input [(ngModel)]="form.floor" name="floor" type="number" min="0" required />
+      </label>
+
+      <button type="submit" [disabled]="saving()">{{ saving() ? 'Creating...' : 'Create room' }}</button>
+    </form>
+
+    <form class="ops-card" style="background-color: var(--surface); border-color: var(--border);">
+      <h3 style="color: var(--foreground);">Attach existing objects</h3>
+
+      <label>
+        <span>Room</span>
+        <select [(ngModel)]="selectedRoomId" name="selectedRoomId">
+          <option [ngValue]="null">Select room</option>
+          <option *ngFor="let room of rooms(); trackBy: trackByRoom" [ngValue]="room.id">{{ room.name }} (#{{ room.id }})</option>
+        </select>
+      </label>
+
+      <div class="inline-action">
+        <label>
+          <span>Seat ID</span>
+          <input [(ngModel)]="existingSeatId" name="existingSeatId" type="number" min="1" />
+        </label>
+        <button type="button" (click)="attachSeat()" [disabled]="selectedRoomId == null || existingSeatId == null">Attach seat</button>
+      </div>
+
+      <div class="inline-action">
+        <label>
+          <span>Screen session ID</span>
+          <input [(ngModel)]="existingSessionId" name="existingSessionId" type="number" min="1" />
+        </label>
+        <button type="button" (click)="attachSession()" [disabled]="selectedRoomId == null || existingSessionId == null">Attach session</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="table-card" style="background-color: var(--surface); border-color: var(--border);">
+    <div class="table-header">
+      <strong style="color: var(--foreground);">Rooms</strong>
+      <span style="color: var(--foreground-muted);">{{ rooms().length }} total</span>
+    </div>
+
+    <div *ngIf="loading()" class="muted">Loading rooms...</div>
+    <div *ngIf="!loading() && rooms().length === 0" class="muted">No rooms yet.</div>
+
+    <div class="compact-list" *ngIf="!loading() && rooms().length > 0">
+      <article *ngFor="let room of rooms(); trackBy: trackByRoom" style="border-color: var(--border);">
+        <strong style="color: var(--foreground);">{{ room.name }}</strong>
+        <span style="color: var(--foreground-muted);">#{{ room.id }} · {{ room.type }} · Floor {{ room.floor }}</span>
+      </article>
+    </div>
+  </div>
+</section>

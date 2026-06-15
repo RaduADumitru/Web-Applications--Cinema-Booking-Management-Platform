@@ -100,6 +100,7 @@ public class MovieServiceImpl implements MovieService {
                     .duration(tmdbMovie.getRuntime())
                     .ageRating(tmdbMovie.getAdult() ? "18+" : "12+")
                     .genres(genres)
+                    .imagePath("https://image.tmdb.org/t/p/w600_and_h900_face" + tmdbMovie.getPosterPath())
                     .build();
 
             movieRepository.save(m);

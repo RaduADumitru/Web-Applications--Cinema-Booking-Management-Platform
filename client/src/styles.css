@@ -65,3 +65,8 @@
 .animate-fadeIn {
   animation: fadeIn 0.20s ease-out forwards;
 }
+
+.swal-bg {
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+}

@@ -13,7 +13,8 @@ public record SaveMovieDTO(
         Double rating,
         Integer duration,
         String ageRating,
-        List<GenreType> genres
+        List<GenreType> genres,
+        String imagePath
 ) {
     public static SaveMovieDTO from(Movie movie) {
         List<GenreType> genres = movie.getGenres() == null ? List.of() :
@@ -25,7 +26,8 @@ public record SaveMovieDTO(
                 movie.getRating(),
                 movie.getDuration(),
                 movie.getAgeRating(),
-                genres
+                genres,
+                movie.getImagePath()
         );
     }
 }
