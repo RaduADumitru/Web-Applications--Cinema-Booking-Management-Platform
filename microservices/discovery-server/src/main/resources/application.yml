@@ -11,6 +11,12 @@ eureka:
     fetch-registry: false
   instance:
     hostname: ${EUREKA_INSTANCE_HOSTNAME:localhost}
+  server:
+    # PoC/dev registry: self-preservation produces a misleading "renewals are
+    # lesser than threshold" banner in a tiny cluster. Disable it so dead
+    # instances are actually evicted and the dashboard reflects reality.
+    enable-self-preservation: false
+    eviction-interval-timer-in-ms: 15000
 
 management:
   endpoints:
