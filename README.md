@@ -29,6 +29,34 @@ The system must allow creating a booking.
 The system must generate tickets for each booked seat.
 The system must prevent double-booking of the same seat.
 
+# Service Discovery (Eureka)
+
+The microservices register themselves with a **Netflix Eureka** service registry
+(`discovery-server`, host port **8761**) instead of using hardcoded inter-service
+URLs. The gateway routes to services by name (`lb://user-service`, etc.) and the
+Feign clients resolve their targets by service name through the registry.
+
+## Eureka dashboard
+
+With the stack running, open **http://localhost:8761**. The "Instances currently
+registered with Eureka" table lists every running app:
+`USER-SERVICE`, `CATALOG-SERVICE`, `BOOKING-SERVICE`, and `GATEWAY`. Stop a
+container (`docker stop ms-catalog-service`) and refresh — it disappears from the
+table; start it again and it re-registers automatically. This is the live proof
+that services discover each other with no static configuration.
+
+## What the logs show
+
+- On startup each app logs its registration, e.g.
+  `DiscoveryClient_CATALOG-SERVICE/... - registration status: 204`
+  (`com.netflix.discovery` at INFO).
+- On each inter-service call, the caller logs the name→instance selection, e.g.
+  the gateway and booking-service log LoadBalancer choosing an instance for
+  `catalog-service` (`org.springframework.cloud.loadbalancer` at DEBUG).
+
+Because resolution is by service name, no URL changes are needed to move or scale
+a service — the registry always reports its current location.
+
 # Running the Microservices Stack (Docker)
 
 The new microservices architecture lives in `microservices/` (a multi-module Maven

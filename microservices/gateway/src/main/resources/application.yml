@@ -30,3 +30,5 @@ management:
 logging:
   level:
     com.awbd.cinema: INFO
+    com.netflix.discovery: INFO
+    org.springframework.cloud.loadbalancer: DEBUG
