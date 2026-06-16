@@ -17,6 +17,11 @@
              style="color: var(--foreground-muted);">
             Home
           </a>
+          <a routerLink="/tickets" routerLinkActive="active-link"
+             class="px-4 py-2 text-xs font-bold uppercase tracking-widest opacity-70 hover:opacity-100 transition-opacity"
+             style="color: var(--foreground-muted);">
+            My Tickets
+          </a>
           <a *ngIf="userService.hasRole('STAFF') || userService.hasRole('OWNER')" routerLink="/users" routerLinkActive="active-link"
              class="px-4 py-2 text-xs font-bold uppercase tracking-widest opacity-70 hover:opacity-100 transition-opacity"
              style="color: var(--foreground-muted);">
@@ -103,6 +108,10 @@
         <a routerLink="/home" routerLinkActive="mobile-active-link" (click)="closeMobileMenu()"
            class="block px-3 py-3 rounded-xl text-xs font-bold uppercase tracking-widest" style="color: var(--foreground-muted);">
           Home
+        </a>
+        <a routerLink="/tickets" routerLinkActive="mobile-active-link" (click)="closeMobileMenu()"
+           class="block px-3 py-3 rounded-xl text-xs font-bold uppercase tracking-widest" style="color: var(--foreground-muted);">
+          My Tickets
         </a>
         <a *ngIf="userService.hasRole('STAFF') || userService.hasRole('OWNER')" routerLink="/users" routerLinkActive="mobile-active-link" (click)="closeMobileMenu()"
            class="block px-3 py-3 rounded-xl text-xs font-bold uppercase tracking-widest" style="color: var(--foreground-muted);">

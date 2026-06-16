@@ -53,6 +53,11 @@ export const routes: Routes = [
         loadComponent: () => import('@features/seat-selection/seat-selection').then(m => m.SeatSelectionComponent),
         canActivate: [authGuard]
       },
+      {
+        path: 'tickets',
+        loadComponent: () => import('@features/tickets/tickets').then(m => m.TicketsComponent),
+        canActivate: [authGuard]
+      },
       { 
         path: 'profile', 
         loadComponent: () => import('@features/user-profile/user-profile-component').then(m => m.UserProfileComponent), 

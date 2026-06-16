@@ -4,7 +4,8 @@ import { map } from 'rxjs/operators';
 import { ApiService } from './api.service';
 import { OrderResponse, OrderStatus } from '@app/shared/models/order.models';
 import { TicketResponse } from '@app/shared/models/ticket.models';
-import { ScreenSessionResponse } from '@app/shared/models/staff-operations.models';
+import { ScreenSessionResponse, RoomResponse } from '@app/shared/models/staff-operations.models';
+import { SeatResponse } from '@app/shared/models/seat.models';
 
 @Injectable({
   providedIn: 'root'
@@ -54,5 +55,13 @@ export class OrdersService {
 
   getScreenSession(id: number): Observable<ScreenSessionResponse> {
     return this.api.get<ScreenSessionResponse>(`/screen-sessions/${id}`);
+  }
+
+  getSeat(id: number): Observable<SeatResponse> {
+    return this.api.get<SeatResponse>(`/seats/${id}`);
+  }
+
+  getRoom(id: number): Observable<RoomResponse> {
+    return this.api.get<RoomResponse>(`/rooms/${id}`);
   }
 }
