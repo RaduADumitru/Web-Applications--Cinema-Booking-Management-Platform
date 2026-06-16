@@ -1,3 +1,5 @@
+import { TicketType } from './ticket.models';
+
 export type RoomType = 'NORMAL' | 'IMAX' | 'THREE_D' | 'VIP' | string;
 export type SeatZoneOption = 'VIP' | 'A' | 'B' | 'C' | 'D';
 
@@ -70,4 +72,15 @@ export interface SaveTicketRequest {
   seatId: number;
   roomId: number;
   screenSessionId: number;
+}
+
+export interface TicketInfoResponse {
+  id: number;
+  type: TicketType;
+  price: number;
+}
+
+export interface SaveTicketInfoRequest {
+  type: TicketType;
+  price: number;
 }

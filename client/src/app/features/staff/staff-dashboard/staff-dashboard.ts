@@ -15,5 +15,6 @@ export class StaffDashboardComponent {
     { label: 'Seats', path: 'seats', meta: 'Generate coordinate seating blueprints' },
     { label: 'Showtimes', path: 'screen-sessions', meta: 'Schedule movies into rooms' },
     { label: 'Tickets', path: 'tickets', meta: 'Generate purchasable seat inventory' },
+    { label: 'Prices', path: 'prices', meta: 'Set ticket category prices' },
   ];
 }

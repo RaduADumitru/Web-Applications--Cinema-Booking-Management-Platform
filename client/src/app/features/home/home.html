@@ -117,6 +117,7 @@
                     <p class="text-sm leading-relaxed my-4 line-clamp-3" style="color: var(--foreground);">{{ movie.description }}</p>
 
                     <button 
+                        (click)="bookTickets(movie.id)"
                         class="w-full py-2 px-4 rounded-lg font-semibold transition-all duration-200 text-black mt-auto"
                         [style]="'background-color: var(--primary);'"
                     >

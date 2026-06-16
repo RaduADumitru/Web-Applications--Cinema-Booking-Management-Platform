@@ -4,11 +4,12 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 import { UserService } from '@services/user.service';
 import { ThemeService } from '@services/theme.service'; 
 import { Notifications } from '../notifications/notifications';
+import { CartComponent } from '../cart/cart';
 
 @Component({
   selector: 'app-navigation',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive, Notifications],
+  imports: [CommonModule, RouterLink, RouterLinkActive, Notifications, CartComponent],
   templateUrl: './navigation.html',
   styleUrls: [] 
 })

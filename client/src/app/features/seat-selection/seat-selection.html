@@ -3,7 +3,9 @@
     <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5">
       <div>
         <p class="text-xs font-bold uppercase mb-1.5" style="color: var(--primary);">Seat Selection</p>
-        <h1 class="text-4xl md:text-5xl font-extrabold mb-2" style="color: var(--foreground);">Choose your seats</h1>
+        <h1 class="text-4xl md:text-5xl font-extrabold mb-2" style="color: var(--foreground);">
+          {{ movie() ? movie()?.title : 'Choose your seats' }}
+        </h1>
         <p class="text-sm md:text-base" style="color: var(--foreground-muted);">Room {{ roomId ?? '-' }} · Session {{ sessionId ?? '-' }}</p>
       </div>
 
@@ -23,6 +25,26 @@
       </div>
     </div>
   </header>
+
+  <!-- Showtime Selection -->
+  <div *ngIf="movieId && showtimes().length > 0" class="mb-8 p-6 rounded-lg border shadow-sm" style="background-color: var(--surface); border-color: var(--border);">
+    <h2 class="text-lg font-bold mb-4" style="color: var(--foreground);">Select Showtime</h2>
+    <div class="showtimes-grid">
+      <button
+        *ngFor="let showtime of showtimes()"
+        type="button"
+        (click)="selectShowtime(showtime.id)"
+        class="showtime-btn"
+        [class.active]="selectedShowtimeId() === showtime.id"
+      >
+        {{ showtime.date | date:'mediumDate' }} at {{ formatTime(showtime.startTime) }} ({{ showtime.format }})
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="movieId && showtimes().length === 0 && !isLoading()" class="mb-8 p-6 rounded-lg border text-center shadow-sm" style="background-color: var(--surface); border-color: var(--border);">
+    <p class="text-base font-semibold" style="color: var(--foreground-muted);">No showtimes scheduled for this movie.</p>
+  </div>
 
   <div *ngIf="isLoading()" class="flex flex-col items-center justify-center min-h-[420px]">
     <div class="w-12 h-12 border-4 rounded-full animate-spin mb-4" style="border-color: var(--border); border-top-color: var(--primary);"></div>

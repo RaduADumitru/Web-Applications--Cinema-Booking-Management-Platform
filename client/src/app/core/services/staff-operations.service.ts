@@ -13,6 +13,8 @@ import {
   SaveTicketRequest,
   ScreenSessionResponse,
   SessionInfoResponse,
+  TicketInfoResponse,
+  SaveTicketInfoRequest,
 } from '@app/shared/models/staff-operations.models';
 import { MovieResponse } from '@app/shared/models/movie.models';
 import { ApiService } from './api.service';
@@ -23,7 +25,7 @@ import { ApiService } from './api.service';
 export class StaffOperationsService {
   private readonly pageSize = 1000;
 
-  constructor(private api: ApiService) {}
+  constructor(private api: ApiService) { }
 
   getRooms(): Observable<PagedResponse<RoomResponse>> {
     return this.api.getPaged<RoomResponse>('/rooms', 0, this.pageSize);
@@ -100,5 +102,17 @@ export class StaffOperationsService {
 
   getMovies(): Observable<PagedResponse<MovieResponse>> {
     return this.api.getPaged<MovieResponse>('/movies', 1, this.pageSize);
+  }
+
+  getTicketInfos(): Observable<PagedResponse<TicketInfoResponse>> {
+    return this.api.getPaged<TicketInfoResponse>('/ticket-info', 0, this.pageSize);
+  }
+
+  createTicketInfo(payload: SaveTicketInfoRequest): Observable<TicketInfoResponse> {
+    return this.api.post<TicketInfoResponse>('/ticket-info', payload);
+  }
+
+  updateTicketInfo(id: number, payload: SaveTicketInfoRequest): Observable<TicketInfoResponse> {
+    return this.api.put<TicketInfoResponse>(`/ticket-info/${id}`, payload);
   }
 }

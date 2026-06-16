@@ -60,6 +60,7 @@
           </ng-container>
         </button>
 
+        <app-cart *ngIf="userService.isAuthenticated()"></app-cart>
         <app-notifications *ngIf="userService.isAuthenticated()"></app-notifications>
 
         <div *ngIf="userService.isAuthenticated()" routerLink="/profile" class="cursor-pointer flex items-center gap-3 pl-3 border-l" style="border-color: var(--border);">

@@ -6,8 +6,13 @@ import { forkJoin } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 import { SeatSelectionService } from '@app/core/services/seat-selection.service';
+import { MovieService } from '@app/core/services/movie.service';
+import { StaffOperationsService } from '@app/core/services/staff-operations.service';
+import { OrdersService } from '@app/core/services/orders.service';
 import { SeatResponse } from '@app/shared/models/seat.models';
 import { TicketResponse, TicketType } from '@app/shared/models/ticket.models';
+import { MovieResponse } from '@app/shared/models/movie.models';
+import { ScreenSessionResponse } from '@app/shared/models/staff-operations.models';
 
 interface SeatView {
   seat: SeatResponse;
@@ -41,6 +46,10 @@ export class SeatSelectionComponent implements OnInit, OnChanges {
   isLoading = signal(false);
   isBooking = signal(false);
   error = signal<string | null>(null);
+
+  movie = signal<MovieResponse | null>(null);
+  showtimes = signal<ScreenSessionResponse[]>([]);
+  selectedShowtimeId = signal<number | null>(null);
 
   private initialized = false;
 
@@ -119,11 +128,23 @@ export class SeatSelectionComponent implements OnInit, OnChanges {
   constructor(
     private route: ActivatedRoute,
     private seatSelectionService: SeatSelectionService,
+    private movieService: MovieService,
+    private staffOperationsService: StaffOperationsService,
+    private ordersService: OrdersService,
   ) {}
 
   ngOnInit(): void {
     this.applyRouteFallbacks();
     this.initialized = true;
+
+    if (this.movieId != null) {
+      this.loadMovieAndShowtimes();
+    }
+
+    if (this.sessionId != null) {
+      this.selectedShowtimeId.set(this.sessionId);
+    }
+
     this.loadLayout();
   }
 
@@ -132,23 +153,86 @@ export class SeatSelectionComponent implements OnInit, OnChanges {
       return;
     }
 
+    if (changes['movieId']) {
+      this.loadMovieAndShowtimes();
+    }
+
     if (changes['sessionId'] || changes['roomId'] || changes['movieId'] || changes['roomType']) {
+      if (changes['sessionId']) {
+        this.selectedShowtimeId.set(this.sessionId);
+      }
       this.loadLayout();
     }
+  }
+
+  loadMovieAndShowtimes(): void {
+    if (this.movieId == null) return;
+
+    this.movieService.getMovieById(this.movieId).subscribe({
+      next: (movie) => this.movie.set(movie),
+      error: (err) => console.error('Error loading movie:', err)
+    });
+
+    this.staffOperationsService.getScreenSessions(this.movieId).subscribe({
+      next: (sessions) => {
+        this.showtimes.set(sessions.content);
+        if (this.sessionId != null) {
+          this.selectedShowtimeId.set(this.sessionId);
+        }
+      },
+      error: (err) => console.error('Error loading showtimes:', err)
+    });
+  }
+
+  selectShowtime(showtimeId: number): void {
+    this.selectedShowtimeId.set(showtimeId);
+    this.sessionId = showtimeId;
+    this.roomId = null;
+    this.loadLayout();
+  }
+
+  formatTime(time: string | undefined): string {
+    if (!time) return '';
+    return time.substring(0, 5);
   }
 
   loadLayout(): void {
     this.error.set(null);
     this.selectedSeatIds.set(new Set<number>());
 
-    if (this.sessionId == null || this.roomId == null) {
+    if (this.sessionId == null) {
       this.seats.set([]);
       this.tickets.set([]);
-      this.error.set('Choose a screening session and room before selecting seats.');
+      if (this.movieId) {
+        this.error.set('Choose a screening session before selecting seats.');
+      } else {
+        this.error.set('Choose a screening session and room before selecting seats.');
+      }
       return;
     }
 
     this.isLoading.set(true);
+
+    if (this.roomId == null) {
+      this.seatSelectionService.getTickets({ sessionId: this.sessionId })
+        .subscribe({
+          next: (tickets) => {
+            if (tickets.content.length > 0) {
+              this.roomId = tickets.content[0].roomId;
+              this.loadLayout();
+            } else {
+              this.isLoading.set(false);
+              this.error.set('No tickets/seats allocated for this session.');
+            }
+          },
+          error: (error) => {
+            console.error('Unable to load tickets to find roomId:', error);
+            this.isLoading.set(false);
+            this.error.set('Unable to load layout for the selected session.');
+          }
+        });
+      return;
+    }
 
     forkJoin({
       seats: this.seatSelectionService.getSeats({
@@ -204,6 +288,7 @@ export class SeatSelectionComponent implements OnInit, OnChanges {
       .subscribe({
         next: (order) => {
           Swal.fire('Reserved!', `Order #${order.id} is pending payment.`, 'success');
+          this.ordersService.refreshOrders();
           this.loadLayout();
         },
         error: (error) => {

@@ -41,6 +41,10 @@ export const routes: Routes = [
           {
             path: 'tickets',
             loadComponent: () => import('@features/staff/ticket-allocation/ticket-allocation').then(m => m.TicketAllocationComponent)
+          },
+          {
+            path: 'prices',
+            loadComponent: () => import('@features/staff/ticket-pricing/ticket-pricing').then(m => m.TicketPricingComponent)
           }
         ]
       },

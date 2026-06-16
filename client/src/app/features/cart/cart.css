@@ -1,0 +1,32 @@
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+/* Custom scrollbar styling for the cart dropdown scroll container */
+.max-h-80::-webkit-scrollbar {
+  width: 4px;
+}
+
+.max-h-80::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.max-h-80::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+.max-h-80::-webkit-scrollbar-thumb:hover {
+  background: var(--foreground-muted);
+}

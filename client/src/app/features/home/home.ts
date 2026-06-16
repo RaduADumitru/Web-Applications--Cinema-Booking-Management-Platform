@@ -86,6 +86,10 @@ export class HomeComponent implements OnInit {
       .join(', ');
   }
 
+  bookTickets(movieId: number): void {
+    this.router.navigate(['/seat-selection'], { queryParams: { movieId } });
+  }
+
   deleteMovie(id: number): void {
     Swal.fire({
       title: 'Are you sure?',
