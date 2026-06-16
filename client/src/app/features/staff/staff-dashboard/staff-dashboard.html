@@ -1,0 +1,26 @@
+<div class="min-h-screen staff-shell" style="background-color: var(--background);">
+  <aside class="staff-sidebar" style="background-color: var(--surface); border-color: var(--border);">
+    <div class="sidebar-heading">
+      <p style="color: var(--primary);">Staff Portal</p>
+      <h1 style="color: var(--foreground);">Operations</h1>
+      <span style="color: var(--foreground-muted);">Build rooms, showtimes, and ticket inventory before customers book.</span>
+    </div>
+
+    <nav class="panel-nav">
+      <a
+        *ngFor="let panel of panels"
+        [routerLink]="panel.path"
+        routerLinkActive="active-panel"
+        class="panel-link"
+        style="border-color: var(--border); color: var(--foreground);"
+      >
+        <strong>{{ panel.label }}</strong>
+        <span style="color: var(--foreground-muted);">{{ panel.meta }}</span>
+      </a>
+    </nav>
+  </aside>
+
+  <main class="staff-content">
+    <router-outlet></router-outlet>
+  </main>
+</div>

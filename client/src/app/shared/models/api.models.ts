@@ -24,3 +24,14 @@ export interface ErrorResponse {
   statusCode: number;
   timestamp?: string;
 }
+
+
+export interface PaginatedResponse<T> {
+  content: T[];
+  page: {
+    size: number;
+    number: number;
+    totalElements: number;
+    totalPages: number;
+  };
+}

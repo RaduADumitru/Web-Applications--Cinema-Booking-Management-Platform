@@ -1,4 +1,5 @@
 export interface ProfileResponse {
+  id: number;
   username: string;
   firstName: string;
   lastName: string;

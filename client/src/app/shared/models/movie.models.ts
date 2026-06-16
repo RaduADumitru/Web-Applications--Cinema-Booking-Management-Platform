@@ -17,6 +17,8 @@ export interface MovieResponse {
     rating: number;
     duration: number;
     ageRating: string;
+    genres: string[];
+    imagePath: string | null;
 }
 
 export interface SaveMovieResponse {

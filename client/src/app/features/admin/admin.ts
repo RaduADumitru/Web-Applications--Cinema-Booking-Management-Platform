@@ -2,6 +2,7 @@ import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MovieService } from '@app/core/services/movie.service';
 import { AdminMovieResponse } from '@app/shared/models/movie.models';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-admin',
@@ -69,10 +70,26 @@ export class AdminComponent implements OnInit {
   saveMovie(tmdbId: number): void {
     this.movieService.saveAdminMovie(tmdbId).subscribe({
       next: (response) => {
-        console.log('Movie saved successfully:', response);
+        Swal.fire({
+          icon: 'success',
+          title: 'Movie Saved',
+          text: `The movie "${response.title}" has been saved successfully.`,
+          confirmButtonText: 'OK',
+      customClass: {
+        popup: 'swal-bg' 
+      }
+        });
       },
       error: (error) => {
-        console.error('Error saving movie:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: (error?.error?.message ? `${error.error.message}` : 'Failed to save the movie. Please try again.'),
+          confirmButtonText: 'OK',
+      customClass: {
+        popup: 'swal-bg' 
+      }
+        });
       }
     });
   }

@@ -50,7 +50,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(value = "user_notifications")
+    @Cacheable(value = "user_notifications", key = "#userId")
     public RestPage<NotificationDTO> getMyNotifications(Long userId, Pageable pageable) {
         return new RestPage<>(notificationRepository.findByUserIdOrderByCreatedDateDesc(userId, pageable)
                 .map(NotificationDTO::from));

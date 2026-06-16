@@ -25,3 +25,4 @@ app:
       user_discount_previews: 2m
       room_lists: 15m
       single_room: 30m
+      user_profile: 10m

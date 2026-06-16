@@ -1,0 +1,109 @@
+<section class="staff-panel">
+  <header class="panel-heading">
+    <div>
+      <p style="color: var(--primary);">Screen Session Manager</p>
+      <h2 style="color: var(--foreground);">Showtimes across rooms</h2>
+      <span style="color: var(--foreground-muted);">Create and update scheduled screenings. A room ID is required by the backend DTO.</span>
+    </div>
+  </header>
+
+  <div class="panel-grid">
+    <form class="ops-card" style="background-color: var(--surface); border-color: var(--border);" (ngSubmit)="saveSession()">
+      <h3 style="color: var(--foreground);">{{ editingId == null ? 'Create showtime' : 'Update showtime #' + editingId }}</h3>
+
+      <label>
+        <span>Movie</span>
+        <select [(ngModel)]="form.movieId" name="movieId" required>
+          <option [ngValue]="0">Select movie</option>
+          <option *ngFor="let movie of movies(); trackBy: trackByMovie" [ngValue]="movie.id">{{ movie.title }}</option>
+        </select>
+      </label>
+
+      <div class="two-column">
+        <label>
+          <span>Date</span>
+          <input [(ngModel)]="form.date" name="date" type="date" required />
+        </label>
+        <label>
+          <span>Room</span>
+          <select [(ngModel)]="form.roomId" name="roomId" required>
+            <option [ngValue]="0">Select room</option>
+            <option *ngFor="let room of rooms(); trackBy: trackByRoom" [ngValue]="room.id">
+              {{ room.name }} (#{{ room.id }})
+            </option>
+          </select>
+        </label>
+      </div>
+
+      <div class="two-column">
+        <label>
+          <span>Start time</span>
+          <input [(ngModel)]="form.startTime" name="startTime" type="time" required />
+        </label>
+        <label>
+          <span>End time</span>
+          <input [(ngModel)]="form.endTime" name="endTime" type="time" required />
+        </label>
+      </div>
+
+      <label>
+        <span>Session info</span>
+        <select [(ngModel)]="sessionInfoMode" name="sessionInfoMode">
+          <option value="existing">Use existing info ID</option>
+          <option value="new">Create new info for this showtime</option>
+        </select>
+      </label>
+
+      <label *ngIf="sessionInfoMode === 'existing'">
+        <span>Session info</span>
+        <select [(ngModel)]="form.sessionInfoId" name="sessionInfoId">
+          <option [ngValue]="null">Select session info (Optional)</option>
+          <option *ngFor="let info of sessionInfos(); trackBy: trackBySessionInfo" [ngValue]="info.id">
+            {{ info.format }} · {{ info.points }} pts (#{{ info.id }})
+          </option>
+        </select>
+      </label>
+
+      <div class="two-column" *ngIf="sessionInfoMode === 'new'">
+        <label>
+          <span>Format</span>
+          <select [(ngModel)]="sessionInfoForm.format" name="sessionInfoFormat" required>
+            <option *ngFor="let format of formatOptions" [value]="format">{{ format }}</option>
+          </select>
+        </label>
+        <label>
+          <span>Points</span>
+          <input [(ngModel)]="sessionInfoForm.points" name="sessionInfoPoints" type="number" min="0" required />
+        </label>
+      </div>
+
+      <div class="button-row">
+        <button type="submit" [disabled]="saving() || form.movieId < 1 || form.roomId < 1 || (sessionInfoMode === 'new' && (sessionInfoForm.points == null || sessionInfoForm.points < 0))">{{ saving() ? 'Saving...' : 'Save showtime' }}</button>
+        <button type="button" class="secondary" (click)="resetForm()" *ngIf="editingId != null">Cancel edit</button>
+      </div>
+    </form>
+
+    <div class="table-card" style="background-color: var(--surface); border-color: var(--border);">
+      <div class="table-header">
+        <strong style="color: var(--foreground);">Scheduled sessions</strong>
+        <span style="color: var(--foreground-muted);">{{ sessions().length }} total</span>
+      </div>
+
+      <div *ngIf="loading()" class="muted">Loading showtimes...</div>
+      <div *ngIf="!loading() && sessions().length === 0" class="muted">No showtimes scheduled.</div>
+
+      <div class="compact-list" *ngIf="!loading() && sessions().length > 0">
+        <article *ngFor="let session of sessions(); trackBy: trackBySession" style="border-color: var(--border);">
+          <div>
+            <strong style="color: var(--foreground);">{{ session.movieTitle }}</strong>
+            <span style="color: var(--foreground-muted);">#{{ session.id }} - {{ session.date }} - {{ session.startTime }}-{{ session.endTime }} - {{ session.format || 'No format' }} - {{ session.points ?? 0 }} pts</span>
+          </div>
+          <div class="row-actions">
+            <button type="button" class="secondary small" (click)="editSession(session)">Edit</button>
+            <button type="button" class="danger small" (click)="deleteSession(session.id)">Delete</button>
+          </div>
+        </article>
+      </div>
+    </div>
+  </div>
+</section>

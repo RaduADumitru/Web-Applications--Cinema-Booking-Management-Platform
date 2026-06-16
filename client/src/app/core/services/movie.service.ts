@@ -19,15 +19,17 @@ export class MovieService {
         maxRating?: number,
         ageRating?: string,
         releaseFrom?: string,
-        releaseTo?: string
+        releaseTo?: string,
+        genre?: string
     ): Observable<PagedResponse<MovieResponse>> {
         const params: any = {};
-        if (title != null) params.title = title;
+        if (title != null && title.trim() !== '') params.title = title;
         if (minRating != null) params.minRating = minRating;
         if (maxRating != null) params.maxRating = maxRating;
-        if (ageRating != null) params.ageRating = ageRating;
-        if (releaseFrom != null) params.releaseFrom = releaseFrom;
-        if (releaseTo != null) params.releaseTo = releaseTo;
+        if (ageRating != null && ageRating.trim() !== '') params.ageRating = ageRating;
+        if (releaseFrom != null && releaseFrom.trim() !== '') params.releaseFrom = releaseFrom;
+        if (releaseTo != null && releaseTo.trim() !== '') params.releaseTo = releaseTo;
+        if (genre != null && genre.trim() !== '') params.genre = genre; // Added genre mapping
 
         return this.api.getPaged<MovieResponse>('/movies', page, size, params);
     }

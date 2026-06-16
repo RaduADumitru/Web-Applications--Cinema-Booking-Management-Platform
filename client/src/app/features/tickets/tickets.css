@@ -1,0 +1,241 @@
+/* Tickets Wallet Layout and Styling */
+
+.tickets-container {
+  max-width: 6xl;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+/* Custom Tabs Styling matching the editorial theme */
+.tab-button {
+  position: relative;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--foreground-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.tab-button:hover {
+  color: var(--foreground);
+}
+
+.tab-button.active {
+  color: var(--primary);
+}
+
+.tab-button.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 1rem;
+  right: 1rem;
+  height: 2px;
+  background-color: var(--primary);
+  border-radius: 2px;
+}
+
+/* Premium Ticket Card with Tear-Off Stub Aesthetic */
+.ticket-card {
+  display: flex;
+  flex-direction: row;
+  min-height: 180px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+}
+
+.theme-dark .ticket-card {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+}
+
+.ticket-card:hover {
+  transform: translateY(-4px) scale(1.01);
+  border-color: var(--primary);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.theme-dark .ticket-card:hover {
+  box-shadow: 0 12px 20px -3px rgba(0, 0, 0, 0.5), 0 4px 8px -2px rgba(0, 0, 0, 0.4);
+}
+
+.ticket-main {
+  flex: 1;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+}
+
+/* Ticket Stub (Tear-off Part) */
+.ticket-stub {
+  width: 140px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: color-mix(in srgb, var(--surface) 95%, var(--foreground) 5%);
+  border-left: 2px dashed var(--border);
+  position: relative;
+  text-align: center;
+  cursor: pointer;
+}
+
+/* Classic Circular Ticket Punch Holes */
+.ticket-stub::before,
+.ticket-stub::after {
+  content: '';
+  position: absolute;
+  left: -9px;
+  /* Centered exactly on the dashed border line */
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: var(--background);
+  border: 1px solid var(--border);
+  z-index: 5;
+}
+
+.ticket-stub::before {
+  top: -9px;
+  box-shadow: inset 0 -3px 3px rgba(0, 0, 0, 0.02);
+}
+
+.ticket-stub::after {
+  bottom: -9px;
+  box-shadow: inset 0 3px 3px rgba(0, 0, 0, 0.02);
+}
+
+/* Micro-animation of Ticket Stub Hover effect */
+.ticket-card:hover .ticket-stub {
+  background-color: color-mix(in srgb, var(--surface) 90%, var(--foreground) 10%);
+}
+
+.ticket-scan-icon {
+  font-size: 2.25rem;
+  color: var(--primary);
+  margin-bottom: 0.5rem;
+  transition: transform 0.3s ease;
+}
+
+.ticket-card:hover .ticket-scan-icon {
+  transform: scale(1.15) rotate(5deg);
+}
+
+/* Responsive constraints */
+@media (max-width: 640px) {
+  .ticket-card {
+    flex-direction: column;
+    min-height: auto;
+  }
+
+  .ticket-stub {
+    width: 100%;
+    border-left: none;
+    border-top: 2px dashed var(--border);
+    padding: 1rem;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .ticket-stub::before,
+  .ticket-stub::after {
+    left: auto;
+    top: -9px;
+    width: 16px;
+    height: 16px;
+  }
+
+  .ticket-stub::before {
+    left: -9px;
+  }
+
+  .ticket-stub::after {
+    right: -9px;
+  }
+
+  .ticket-scan-icon {
+    margin-bottom: 0;
+    font-size: 1.75rem;
+  }
+}
+
+/* Loading Shimmer Effects */
+.shimmer {
+  background: linear-gradient(90deg,
+      var(--surface) 25%,
+      color-mix(in srgb, var(--surface) 90%, var(--foreground) 10%) 50%,
+      var(--surface) 75%);
+  background-size: 200% 100%;
+  animation: shimmer-loading 1.5s infinite linear;
+}
+
+@keyframes shimmer-loading {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.shimmer-card {
+  height: 180px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+/* Details Grid */
+.detail-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--foreground-muted);
+  font-weight: 700;
+}
+
+.detail-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+/* Beautiful custom QR code wrapper in modal */
+.qr-modal-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 0;
+}
+
+.qr-image-wrapper {
+  background: white;
+  padding: 12px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 1px solid #e2e8f0;
+}
+
+.qr-details-text {
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: var(--foreground-muted);
+  text-align: center;
+}

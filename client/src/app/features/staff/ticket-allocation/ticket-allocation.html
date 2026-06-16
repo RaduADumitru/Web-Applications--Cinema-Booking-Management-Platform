@@ -1,0 +1,72 @@
+<section class="staff-panel">
+  <header class="panel-heading">
+    <div>
+      <p style="color: var(--primary);">Ticket Allocation</p>
+      <h2 style="color: var(--foreground);">Generate purchasable inventory</h2>
+      <span style="color: var(--foreground-muted);">After a room has seats and a showtime, create the tickets customers can order.</span>
+    </div>
+  </header>
+
+  <div class="panel-grid">
+    <form class="ops-card" style="background-color: var(--surface); border-color: var(--border);" (ngSubmit)="loadInventory()">
+      <h3 style="color: var(--foreground);">Room/session lookup</h3>
+
+      <label>
+        <span>Room</span>
+        <select [(ngModel)]="roomId" name="roomId" required>
+          <option [ngValue]="null">Select room</option>
+          <option *ngFor="let room of rooms(); trackBy: trackByRoom" [ngValue]="room.id">
+            {{ room.name }} (#{{ room.id }})
+          </option>
+        </select>
+      </label>
+
+      <label>
+        <span>Screen session</span>
+        <select [(ngModel)]="screenSessionId" name="screenSessionId" required>
+          <option [ngValue]="null">Select showtime</option>
+          <option *ngFor="let session of screenSessions(); trackBy: trackBySession" [ngValue]="session.id">
+            {{ session.movieTitle }} (#{{ session.id }} - {{ session.date }} {{ session.startTime }})
+          </option>
+        </select>
+      </label>
+
+      <button type="submit" [disabled]="loading() || roomId == null || screenSessionId == null">{{ loading() ? 'Loading...' : 'Load inventory' }}</button>
+      <button type="button" class="secondary" (click)="generateMissingTickets()" [disabled]="generating() || seats().length === 0">
+        {{ generating() ? 'Generating...' : 'Generate missing tickets' }}
+      </button>
+    </form>
+
+    <div class="stats-grid">
+      <div class="stat-card" style="background-color: var(--surface); border-color: var(--border);">
+        <span style="color: var(--foreground-muted);">Seats</span>
+        <strong style="color: var(--foreground);">{{ seats().length }}</strong>
+      </div>
+      <div class="stat-card" style="background-color: var(--surface); border-color: var(--border);">
+        <span style="color: var(--foreground-muted);">Tickets</span>
+        <strong style="color: var(--foreground);">{{ tickets().length }}</strong>
+      </div>
+      <div class="stat-card" style="background-color: var(--surface); border-color: var(--border);">
+        <span style="color: var(--foreground-muted);">Missing</span>
+        <strong style="color: var(--foreground);">{{ missingSeats().length }}</strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-card" style="background-color: var(--surface); border-color: var(--border);">
+    <div class="table-header">
+      <strong style="color: var(--foreground);">Missing ticket seats</strong>
+      <span style="color: var(--foreground-muted);">Create these before opening bookings</span>
+    </div>
+
+    <div *ngIf="seats().length === 0" class="muted">Load inventory to see allocation status.</div>
+    <div *ngIf="seats().length > 0 && missingSeats().length === 0" class="muted">All seats have tickets for this session.</div>
+
+    <div class="compact-list" *ngIf="missingSeats().length > 0">
+      <article *ngFor="let seat of missingSeats()" style="border-color: var(--border);">
+        <strong style="color: var(--foreground);">Row {{ seat.row }}, Seat {{ seat.number }}</strong>
+        <span style="color: var(--foreground-muted);">Seat #{{ seat.id }} · {{ seat.zone }}</span>
+      </article>
+    </div>
+  </div>
+</section>

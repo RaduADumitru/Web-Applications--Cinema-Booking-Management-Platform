@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import com.awbd.cinema.utils.RestPage;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -51,5 +52,13 @@ public class UserController {
         if(userDetails.getId().equals(dto.id()))
             throw new BadRequestException("You cannot promote yourself.");
         return ResponseEntity.ok(userService.promoteUser(dto));
+    }
+
+    @GetMapping("/all")
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<RestPage<ProfileDTO>> getAllUsers(
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "10") Integer size) {
+        return ResponseEntity.ok(userService.getAllUsers(page, size));
     }
 }
