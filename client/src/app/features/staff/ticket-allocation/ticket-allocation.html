@@ -12,13 +12,23 @@
       <h3 style="color: var(--foreground);">Room/session lookup</h3>
 
       <label>
-        <span>Room ID</span>
-        <input [(ngModel)]="roomId" name="roomId" type="number" min="1" required />
+        <span>Room</span>
+        <select [(ngModel)]="roomId" name="roomId" required>
+          <option [ngValue]="null">Select room</option>
+          <option *ngFor="let room of rooms(); trackBy: trackByRoom" [ngValue]="room.id">
+            {{ room.name }} (#{{ room.id }})
+          </option>
+        </select>
       </label>
 
       <label>
-        <span>Screen session ID</span>
-        <input [(ngModel)]="screenSessionId" name="screenSessionId" type="number" min="1" required />
+        <span>Screen session</span>
+        <select [(ngModel)]="screenSessionId" name="screenSessionId" required>
+          <option [ngValue]="null">Select showtime</option>
+          <option *ngFor="let session of screenSessions(); trackBy: trackBySession" [ngValue]="session.id">
+            {{ session.movieTitle }} (#{{ session.id }} - {{ session.date }} {{ session.startTime }})
+          </option>
+        </select>
       </label>
 
       <button type="submit" [disabled]="loading() || roomId == null || screenSessionId == null">{{ loading() ? 'Loading...' : 'Load inventory' }}</button>

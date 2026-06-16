@@ -25,8 +25,13 @@
           <input [(ngModel)]="form.date" name="date" type="date" required />
         </label>
         <label>
-          <span>Room ID</span>
-          <input [(ngModel)]="form.roomId" name="roomId" type="number" min="1" required />
+          <span>Room</span>
+          <select [(ngModel)]="form.roomId" name="roomId" required>
+            <option [ngValue]="0">Select room</option>
+            <option *ngFor="let room of rooms(); trackBy: trackByRoom" [ngValue]="room.id">
+              {{ room.name }} (#{{ room.id }})
+            </option>
+          </select>
         </label>
       </div>
 
@@ -50,8 +55,13 @@
       </label>
 
       <label *ngIf="sessionInfoMode === 'existing'">
-        <span>Session info ID</span>
-        <input [(ngModel)]="form.sessionInfoId" name="sessionInfoId" type="number" min="1" placeholder="Optional" />
+        <span>Session info</span>
+        <select [(ngModel)]="form.sessionInfoId" name="sessionInfoId">
+          <option [ngValue]="null">Select session info (Optional)</option>
+          <option *ngFor="let info of sessionInfos(); trackBy: trackBySessionInfo" [ngValue]="info.id">
+            {{ info.format }} · {{ info.points }} pts (#{{ info.id }})
+          </option>
+        </select>
       </label>
 
       <div class="two-column" *ngIf="sessionInfoMode === 'new'">

@@ -10,6 +10,8 @@ import {
   SaveSessionInfoRequest,
   ScreenSessionResponse,
   SessionFormatOption,
+  RoomResponse,
+  SessionInfoResponse,
 } from '@app/shared/models/staff-operations.models';
 
 type SessionInfoMode = 'existing' | 'new';
@@ -24,6 +26,8 @@ type SessionInfoMode = 'existing' | 'new';
 export class ScreenSessionManagerComponent implements OnInit {
   sessions = signal<ScreenSessionResponse[]>([]);
   movies = signal<MovieResponse[]>([]);
+  rooms = signal<RoomResponse[]>([]);
+  sessionInfos = signal<SessionInfoResponse[]>([]);
   loading = signal(false);
   saving = signal(false);
   editingId: number | null = null;
@@ -44,6 +48,16 @@ export class ScreenSessionManagerComponent implements OnInit {
     this.staffOperations.getMovies().subscribe({
       next: (response) => this.movies.set(response.content),
       error: (error) => console.error('Unable to load movies:', error),
+    });
+
+    this.staffOperations.getRooms().subscribe({
+      next: (response) => this.rooms.set(response.content),
+      error: (error) => console.error('Unable to load rooms:', error),
+    });
+
+    this.staffOperations.getSessionInfos().subscribe({
+      next: (response) => this.sessionInfos.set(response.content),
+      error: (error) => console.error('Unable to load session infos:', error),
     });
 
     this.staffOperations.getScreenSessions().subscribe({
@@ -138,6 +152,14 @@ export class ScreenSessionManagerComponent implements OnInit {
 
   trackByMovie(_: number, movie: MovieResponse): number {
     return movie.id;
+  }
+
+  trackByRoom(_: number, room: RoomResponse): number {
+    return room.id;
+  }
+
+  trackBySessionInfo(_: number, info: SessionInfoResponse): number {
+    return info.id;
   }
 
   private emptyForm(): SaveScreenSessionRequest {

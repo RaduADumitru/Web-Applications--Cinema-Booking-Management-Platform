@@ -3,7 +3,7 @@ import { Component, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import Swal from 'sweetalert2';
 import { StaffOperationsService } from '@app/core/services/staff-operations.service';
-import { RoomResponse, RoomType, SaveRoomRequest } from '@app/shared/models/staff-operations.models';
+import { RoomResponse, RoomType, SaveRoomRequest, ScreenSessionResponse } from '@app/shared/models/staff-operations.models';
 
 @Component({
   selector: 'app-room-layout-manager',
@@ -16,6 +16,7 @@ export class RoomLayoutManagerComponent implements OnInit {
   readonly roomTypes: RoomType[] = ['NORMAL', 'IMAX', 'THREE_D', 'VIP'];
 
   rooms = signal<RoomResponse[]>([]);
+  sessions = signal<ScreenSessionResponse[]>([]);
   loading = signal(false);
   saving = signal(false);
   error = signal<string | null>(null);
@@ -34,6 +35,7 @@ export class RoomLayoutManagerComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadRooms();
+    this.loadSessions();
   }
 
   loadRooms(): void {
@@ -47,6 +49,17 @@ export class RoomLayoutManagerComponent implements OnInit {
         this.error.set('Unable to load rooms.');
       },
     }).add(() => this.loading.set(false));
+  }
+
+  loadSessions(): void {
+    this.staffOperations.getScreenSessions().subscribe({
+      next: (response) => this.sessions.set(response.content),
+      error: (error) => console.error('Unable to load screen sessions:', error),
+    });
+  }
+
+  trackBySession(_: number, session: ScreenSessionResponse): number {
+    return session.id;
   }
 
   saveRoom(): void {

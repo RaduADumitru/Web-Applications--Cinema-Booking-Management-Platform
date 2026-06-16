@@ -54,8 +54,13 @@
 
       <div class="inline-action">
         <label>
-          <span>Screen session ID</span>
-          <input [(ngModel)]="existingSessionId" name="existingSessionId" type="number" min="1" />
+          <span>Screen session</span>
+          <select [(ngModel)]="existingSessionId" name="existingSessionId">
+            <option [ngValue]="null">Select session</option>
+            <option *ngFor="let session of sessions(); trackBy: trackBySession" [ngValue]="session.id">
+              {{ session.movieTitle }} (#{{ session.id }} - {{ session.date }} {{ session.startTime }})
+            </option>
+          </select>
         </label>
         <button type="button" (click)="attachSession()" [disabled]="selectedRoomId == null || existingSessionId == null">Attach session</button>
       </div>

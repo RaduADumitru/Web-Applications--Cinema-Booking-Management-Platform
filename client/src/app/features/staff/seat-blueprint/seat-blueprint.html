@@ -12,8 +12,13 @@
       <h3 style="color: var(--foreground);">Generate seats</h3>
 
       <label>
-        <span>Room ID</span>
-        <input [(ngModel)]="roomId" name="roomId" type="number" min="1" required />
+        <span>Room</span>
+        <select [(ngModel)]="roomId" name="roomId" required>
+          <option [ngValue]="null">Select room</option>
+          <option *ngFor="let room of rooms(); trackBy: trackByRoom" [ngValue]="room.id">
+            {{ room.name }} (#{{ room.id }})
+          </option>
+        </select>
       </label>
 
       <div class="two-column">
@@ -46,8 +51,13 @@
           </select>
         </label>
         <label>
-          <span>Category ID</span>
-          <input [(ngModel)]="categoryId" name="categoryId" type="number" min="1" placeholder="Optional" />
+          <span>Ticket Category</span>
+          <select [(ngModel)]="categoryId" name="categoryId">
+            <option [ngValue]="null">No category (Standard)</option>
+            <option *ngFor="let cat of categories(); trackBy: trackByCategory" [ngValue]="cat.id">
+              {{ cat.type }} (${{ cat.price.toFixed(2) }})
+            </option>
+          </select>
         </label>
       </div>
 

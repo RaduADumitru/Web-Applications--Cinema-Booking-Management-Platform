@@ -1,9 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, signal } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import Swal from 'sweetalert2';
 import { StaffOperationsService } from '@app/core/services/staff-operations.service';
-import { SeatZoneOption } from '@app/shared/models/staff-operations.models';
+import { SeatZoneOption, RoomResponse, TicketInfoResponse } from '@app/shared/models/staff-operations.models';
 
 @Component({
   selector: 'app-seat-blueprint',
@@ -12,8 +12,11 @@ import { SeatZoneOption } from '@app/shared/models/staff-operations.models';
   templateUrl: './seat-blueprint.html',
   styleUrl: '../staff-panel.css',
 })
-export class SeatBlueprintComponent {
+export class SeatBlueprintComponent implements OnInit {
   readonly zones: SeatZoneOption[] = ['VIP', 'A', 'B', 'C', 'D'];
+
+  rooms = signal<RoomResponse[]>([]);
+  categories = signal<TicketInfoResponse[]>([]);
 
   roomId: number | null = null;
   rows = 6;
@@ -25,6 +28,30 @@ export class SeatBlueprintComponent {
   creating = signal(false);
 
   constructor(private staffOperations: StaffOperationsService) {}
+
+  ngOnInit(): void {
+    this.loadData();
+  }
+
+  loadData(): void {
+    this.staffOperations.getRooms().subscribe({
+      next: (response) => this.rooms.set(response.content),
+      error: (error) => console.error('Unable to load rooms:', error),
+    });
+
+    this.staffOperations.getTicketInfos().subscribe({
+      next: (response) => this.categories.set(response.content),
+      error: (error) => console.error('Unable to load ticket categories:', error),
+    });
+  }
+
+  trackByRoom(_: number, room: RoomResponse): number {
+    return room.id;
+  }
+
+  trackByCategory(_: number, category: TicketInfoResponse): number {
+    return category.id;
+  }
 
   rowPreview(): number[] {
     return Array.from({ length: Math.max(this.rows, 0) }, (_, index) => this.startRow + index);
