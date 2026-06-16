@@ -6,7 +6,7 @@ import {
 } from '@models/user.models';
 import { Injectable, signal, inject } from '@angular/core';
 import { catchError, map, Observable, of, tap } from 'rxjs';
-import { ApiResponse } from '@models/api.models';
+import { ApiResponse, PagedResponse } from '@models/api.models';
 import { ApiService } from './api.service';
 
 @Injectable({
@@ -37,6 +37,27 @@ export class UserService {
 
   promoteUser(promoteData: PromoteRequest): Observable<ProfileResponse> {
     return this.apiService.patch<ProfileResponse>(`${this.basePath}/promote`, promoteData);
+  }
+
+  getUsersPage(page: number = 1, size: number = 10): Observable<PagedResponse<ProfileResponse>> {
+    return this.apiService.getPaged<ProfileResponse>(`${this.basePath}/all`, page, size).pipe(
+      map((response: any) => {
+        return {
+          content: response.content || [],
+          page: response.page ? {
+            number: response.page.number,
+            size: response.page.size,
+            totalElements: response.page.totalElements,
+            totalPages: response.page.totalPages
+          } : {
+            number: response.number || 0,
+            size: response.size || 10,
+            totalElements: response.totalElements || 0,
+            totalPages: response.totalPages || 0
+          }
+        } as PagedResponse<ProfileResponse>;
+      })
+    );
   }
 
 loadUserProfile(): Observable<ProfileResponse | null> {

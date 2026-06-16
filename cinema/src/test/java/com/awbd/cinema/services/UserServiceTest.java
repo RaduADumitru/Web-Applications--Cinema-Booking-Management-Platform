@@ -11,6 +11,7 @@ import com.awbd.cinema.exceptions.NotFoundException;
 import com.awbd.cinema.repositories.UserRepository;
 import com.awbd.cinema.security.CustomUserDetails;
 import com.awbd.cinema.services.UserService.UserServiceImpl;
+import com.awbd.cinema.utils.RestPage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -284,6 +285,26 @@ class UserServiceTest {
             assertEquals("Jane", result.firstName());
             assertEquals("john@example.com", result.email()); // Remains unchanged
             verify(userRepository, times(1)).save(sampleUser);
+        }
+    }
+
+    @Nested
+    class GetAllUsersTests {
+
+        @Test
+        void getAllUsers_Success() {
+            // Arrange
+            org.springframework.data.domain.Page<User> userPage = new org.springframework.data.domain.PageImpl<>(List.of(sampleUser));
+            when(userRepository.findAll(any(org.springframework.data.domain.Pageable.class))).thenReturn(userPage);
+
+            // Act
+            RestPage<ProfileDTO> result = userService.getAllUsers(1, 10);
+
+            // Assert
+            assertNotNull(result);
+            assertEquals(1, result.getContent().size());
+            assertEquals("john_doe", result.getContent().get(0).username());
+            verify(userRepository, times(1)).findAll(any(org.springframework.data.domain.Pageable.class));
         }
     }
 }

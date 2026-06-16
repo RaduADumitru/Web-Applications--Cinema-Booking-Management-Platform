@@ -14,6 +14,10 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import com.awbd.cinema.utils.RestPage;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -90,6 +94,15 @@ public class UserServiceImpl implements UserService{
         user.setRole(dto.role());
         userRepository.save(user);
         return ProfileDTO.from(user);
+    }
+
+    @Override
+    @Transactional
+    public RestPage<ProfileDTO> getAllUsers(Integer page, Integer size) {
+        int p = (page == null || page < 1) ? 0 : page - 1;
+        int s = (size == null || size < 1) ? 10 : size;
+        Pageable pageable = PageRequest.of(p, s, Sort.by(Sort.Direction.ASC, "username"));
+        return new RestPage<>(userRepository.findAll(pageable).map(ProfileDTO::from));
     }
 
     private String deleteUser(Long id){

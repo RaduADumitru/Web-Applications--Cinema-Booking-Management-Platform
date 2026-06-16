@@ -21,6 +21,11 @@ export const routes: Routes = [
       { path: 'home', component: HomeComponent, canActivate: [authGuard] },
       { path: 'admin', component: AdminComponent, canActivate: [authGuard, rbacGuard('OWNER')] },
       {
+        path: 'users',
+        loadComponent: () => import('@features/users/users').then(m => m.UsersComponent),
+        canActivate: [authGuard, rbacGuard('OWNER')]
+      },
+      {
         path: 'staff',
         loadComponent: () => import('@features/staff/staff-dashboard/staff-dashboard').then(m => m.StaffDashboardComponent),
         canActivate: [authGuard, rbacGuard('STAFF')],
