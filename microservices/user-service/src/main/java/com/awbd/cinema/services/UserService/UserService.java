@@ -7,6 +7,8 @@ import com.awbd.cinema.DTOs.UserDTOs.PromoteDTO;
 import com.awbd.cinema.DTOs.UserDTOs.UpdateProfileDTO;
 import com.awbd.cinema.security.CustomUserDetails;
 
+import com.awbd.cinema.utils.RestPage;
+
 import java.util.Map;
 
 public interface UserService {
@@ -17,4 +19,5 @@ public interface UserService {
     ProfileDTO promoteUser(PromoteDTO dto);
     LoyaltyPointsDTO getLoyaltyPoints(Long userId);
     LoyaltyPointsDTO updateLoyaltyPoints(Long userId, AdjustLoyaltyPointsDTO dto);
+    RestPage<ProfileDTO> getAllUsers(Integer page, Integer size);
 }

@@ -4,6 +4,7 @@ import com.awbd.cinema.entities.User;
 import com.awbd.cinema.enums.Role;
 
 public record ProfileDTO(
+        Long id,
         String username,
         String firstName,
         String lastName,
@@ -14,6 +15,7 @@ public record ProfileDTO(
 ) {
     public static ProfileDTO from(User user){
         return new ProfileDTO(
+                user.getId(),
                 user.getUsername(),
                 user.getFirstName(),
                 user.getLastName(),
