@@ -426,7 +426,7 @@ class MovieServiceTest {
         void shouldUpdateMovieSuccessfully() {
             // Arrange
             SaveMovieDTO updateDto = new SaveMovieDTO(
-                    "Inception Remastered", LocalDateTime.now(), "New description", 9.0, 150, "16+", List.of(GenreType.ACTION)
+                    "Inception Remastered", LocalDateTime.now(), "New description", 9.0, 150, "16+", List.of(GenreType.ACTION), "https://example.com/image.jpg"
             );
             when(movieRepository.findById(100L)).thenReturn(Optional.of(sampleMovie));
             when(genreRepository.findByTypeIn(any())).thenReturn(List.of(sampleGenre));
@@ -446,7 +446,7 @@ class MovieServiceTest {
         @DisplayName("Should throw NotFoundException if trying to update a soft-deleted movie")
         void shouldNotUpdateSoftDeletedMovie() {
             sampleMovie.setDeletedAt(LocalDateTime.now());
-            SaveMovieDTO updateDto = new SaveMovieDTO("Title", LocalDateTime.now(), "Desc", 5.0, 120, "12+", List.of());
+            SaveMovieDTO updateDto = new SaveMovieDTO("Title", LocalDateTime.now(), "Desc", 5.0, 120, "12+", List.of(), "https://example.com/poster.jpg");
             when(movieRepository.findById(100L)).thenReturn(Optional.of(sampleMovie));
 
             assertThatThrownBy(() -> movieService.updateMovie(100L, updateDto))
@@ -458,7 +458,7 @@ class MovieServiceTest {
         void shouldCreateGenresIfTheyDoNotYetExistInDatabase() {
             SaveMovieDTO updateDto = new SaveMovieDTO(
                     "Inception Remastered", LocalDateTime.now(), "New description", 9.0, 150, "16+",
-                    List.of(GenreType.ACTION, GenreType.COMEDY)
+                    List.of(GenreType.ACTION, GenreType.COMEDY), "https://example.com/image.jpg"
             );
 
             when(movieRepository.findById(100L)).thenReturn(Optional.of(sampleMovie));
@@ -477,7 +477,7 @@ class MovieServiceTest {
         @DisplayName("Should safely assign empty collection structures when update list references are absent")
         void shouldReturnEmptyListWhenProvidedGenreTypesListIsEmptyOrNull() {
             SaveMovieDTO updateDtoNullGenres = new SaveMovieDTO(
-                    "No Genres", LocalDateTime.now(), "Desc", 5.0, 120, "12+", null
+                    "No Genres", LocalDateTime.now(), "Desc", 5.0, 120, "12+", null, null
             );
             when(movieRepository.findById(100L)).thenReturn(Optional.of(sampleMovie));
             when(movieRepository.save(any(Movie.class))).thenAnswer(invocation -> invocation.getArgument(0));

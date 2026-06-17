@@ -37,7 +37,7 @@ export class AdminComponent implements OnInit {
       next: (response) => {
         this.tmdbMovies = response.content;
         this.currentPage = response.page.number;
-        this.totalPages = response.page.totalPages;
+        this.totalPages = Math.min(response.page.totalPages, 500);
         this.totalElements = response.page.totalElements;
         this.pageNumbers = this.getVisiblePages();
         console.log(response);

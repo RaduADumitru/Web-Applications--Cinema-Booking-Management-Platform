@@ -3,6 +3,7 @@ package com.awbd.cinema.controllers;
 import com.awbd.cinema.DTOs.TicketInfoDTOs.SaveTicketInfoDTO;
 import com.awbd.cinema.DTOs.TicketInfoDTOs.TicketInfoDTO;
 import com.awbd.cinema.services.TicketInfoService.TicketInfoService;
+import com.awbd.cinema.utils.RestPage;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -26,7 +27,7 @@ public class TicketInfoController {
     }
 
     @GetMapping
-    public ResponseEntity<List<TicketInfoDTO>> getTicketInfos() {
+    public ResponseEntity<RestPage<TicketInfoDTO>> getTicketInfos() {
         return ResponseEntity.ok(ticketInfoService.getTicketInfos());
     }
 

@@ -7,6 +7,7 @@ import com.awbd.cinema.DTOs.UserDTOs.UpdateProfileDTO;
 import com.awbd.cinema.exceptions.BadRequestException;
 import com.awbd.cinema.security.CustomUserDetails;
 import com.awbd.cinema.services.UserService.UserService;
+import com.awbd.cinema.utils.RestPage;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -51,5 +52,13 @@ public class UserController {
         if(userDetails.getId().equals(dto.id()))
             throw new BadRequestException("You cannot promote yourself.");
         return ResponseEntity.ok(userService.promoteUser(dto));
+    }
+
+    @GetMapping("/all")
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<RestPage<ProfileDTO>> getAllUsers(
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "10") Integer size) {
+        return ResponseEntity.ok(userService.getAllUsers(page, size));
     }
 }

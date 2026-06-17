@@ -117,7 +117,8 @@ public class MovieIntegrationTest {
                 8.0,
                 130,
                 "PG-13",
-                List.of(GenreType.ACTION)
+                List.of(GenreType.ACTION),
+                "https://example.com/poster.jpg"
         );
 
         mockMvc.perform(put("/movies/{id}", createdMovieId)

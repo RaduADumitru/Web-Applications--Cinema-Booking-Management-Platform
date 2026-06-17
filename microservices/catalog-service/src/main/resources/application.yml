@@ -12,3 +12,5 @@ app:
       single_screen_sessions: 10m
       room_lists: 15m
       single_room: 30m
+      session_info_lists: 10m
+      single_session_infos: 30m

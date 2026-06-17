@@ -98,7 +98,7 @@ class TicketInfoServiceTest {
             TicketInfo studentInfo = TicketInfo.builder().id(3L).type(TicketType.STUDENT).price(BigDecimal.valueOf(20.00)).build();
             when(ticketInfoRepository.findAll()).thenReturn(List.of(sampleTicketInfo, childInfo, studentInfo));
 
-            List<TicketInfoDTO> result = ticketInfoService.getTicketInfos();
+            List<TicketInfoDTO> result = ticketInfoService.getTicketInfos().getContent();
 
             assertThat(result).hasSize(3);
             assertThat(result.get(0).type()).isEqualTo(TicketType.ADULT);
