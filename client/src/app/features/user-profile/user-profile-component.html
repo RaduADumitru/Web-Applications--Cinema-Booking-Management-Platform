@@ -1,0 +1,156 @@
+<div class="min-h-screen p-6 md:p-12 lg:p-16 relative overflow-hidden selection:bg-opacity-10" style="background-color: var(--background);">
+    
+    <div class="absolute top-0 left-1/4 w-[600px] h-[600px] rounded-full blur-[140px] pointer-events-none opacity-[0.04]" style="background-color: var(--primary);"></div>
+
+    <div class="max-w-5xl mx-auto relative z-10">
+        
+        <header class="mb-16 flex flex-col md:flex-row md:items-end md:justify-between gap-8 pb-8 border-b" style="border-color: var(--border);">
+            <div>
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest mb-4" style="background-color: var(--surface); color: var(--primary); border: 1px solid var(--border);">
+                    <span class="w-1.5 h-1.5 rounded-full" style="background-color: var(--primary);"></span>
+                    Cinema Club Member
+                </div>
+                <h1 class="text-4xl md:text-5xl font-serif font-normal tracking-tight mb-3" style="color: var(--foreground);">
+                    Your Profile
+                </h1>
+                <p class="text-sm font-normal max-w-xl leading-relaxed opacity-80" style="color: var(--foreground-muted);">
+                    Manage your personal details, review your account security, and keep track of your earned theater rewards.
+                </p>
+
+                <button (click)="themeService.toggleTheme()" type="button" 
+        class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-all duration-200"
+        style="background-color: var(--surface); border-color: var(--border); color: var(--foreground-muted);">
+    <ng-container *ngIf="!themeService.isDarkMode()">
+        <span>🌙 Go Noir</span>
+    </ng-container>
+    <ng-container *ngIf="themeService.isDarkMode()">
+        <span>☀️ Go Editorial</span>
+    </ng-container>
+</button>
+            </div>
+
+            <div *ngIf="!isLoading() && userService.isAuthenticated()" 
+                 class="group relative rounded-xl p-4 flex items-center gap-4 transition-all duration-300 hover:shadow-md" 
+                 style="background-color: var(--surface); border: 1px solid var(--border);">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background-color: var(--background); border: 1px solid var(--border);">
+                    <svg class="w-4 h-4 opacity-80" style="color: var(--primary);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold tracking-wider uppercase opacity-50" style="color: var(--foreground-muted);">Loyalty Balance</p>
+                    <p class="text-xl font-serif font-normal tracking-tight" style="color: var(--foreground);">
+                        {{ userService.currentUser()?.loyaltyPoints }} <span class="text-xs font-sans font-medium tracking-normal opacity-80" style="color: var(--primary);">Points</span>
+                    </p>
+                </div>
+            </div>
+        </header>
+
+        <div *ngIf="isLoading()" class="flex flex-col items-center justify-center min-h-[300px]">
+            <div class="w-6 h-6 border-2 rounded-full animate-spin mb-4 border-t-transparent" style="border-color: var(--primary);"></div>
+            <p class="text-xs tracking-wider opacity-60" style="color: var(--foreground-muted);">Bringing up your details...</p>
+        </div>
+
+        <div *ngIf="error() && !isLoading()" class="p-4 rounded-xl border flex items-center gap-3 mb-8 text-sm transition-all" style="background-color: var(--surface); border-color: var(--error); color: var(--error);">
+            <span class="w-2 h-2 rounded-full" style="background-color: var(--error);"></span>
+            {{ error() }}
+        </div>
+
+        <div *ngIf="successMessage() && !isLoading()" class="p-4 rounded-xl border flex items-center gap-3 mb-8 text-sm transition-all" style="background-color: var(--surface); border-color: #10b981; color: #10b981;">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            {{ successMessage() }}
+        </div>
+
+        <ng-container *ngIf="!isLoading() && userService.isAuthenticated()">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+                
+                <div class="lg:col-span-4 flex flex-col items-center lg:items-start text-center lg:text-left p-6 rounded-2xl border" style="background-color: var(--surface); border-color: var(--border);">
+                    <div class="relative mb-4">
+                        <div class="w-24 h-24 rounded-2xl flex items-center justify-center text-2xl font-serif font-normal tracking-tight select-none border shadow-sm bg-stone-100" 
+                             style="color: var(--foreground); border-color: var(--border);">
+                            {{ userService.currentUser()?.firstName?.charAt(0) }}{{ userService.currentUser()?.lastName?.charAt(0) }}
+                        </div>
+                    </div>
+                    
+                    <h2 class="text-xl font-serif font-normal tracking-tight mb-1" style="color: var(--foreground);">
+                        {{ userService.currentUser()?.firstName }} {{ userService.currentUser()?.lastName }}
+                    </h2>
+                    <p class="text-xs mb-6 opacity-60" style="color: var(--foreground-muted);">@{{ userService.currentUser()?.username }}</p>
+
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-md text-[11px] border font-medium" style="background-color: var(--background); border-color: var(--border); color: var(--foreground-muted);">
+                        <span class="opacity-60">Account Type:</span>
+                        <span class="font-semibold capitalize" style="color: var(--foreground);">{{ userService.currentUser()?.role }}</span>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-8 space-y-8">
+                    <div>
+                        <div class="flex items-center justify-between mb-8 pb-4 border-b" style="border-color: var(--border);">
+                            <h3 class="text-sm font-serif font-normal tracking-wide" style="color: var(--foreground);">Profile Details</h3>
+                            <button *ngIf="!isEditing()" (click)="startEditing()" type="button" 
+                                    class="text-xs px-4 py-2 font-medium rounded-lg transition-all duration-200 border hover:bg-black/[0.02] dark:hover:bg-white/[0.02]" 
+                                    style="border-color: var(--border); color: var(--foreground);">
+                                Edit Details
+                            </button>
+                        </div>
+
+                        <form #profileForm="ngForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            
+                            <div class="space-y-1.5">
+                                <label class="block text-xs font-medium opacity-70" style="color: var(--foreground-muted);">First Name</label>
+                                <input type="text" name="firstName" [(ngModel)]="editForm.firstName" [disabled]="!isEditing()"
+                                       class="w-full px-4 py-2.5 text-sm rounded-xl border transition-all duration-200 focus:outline-none focus:ring-1"
+                                       [style]="isEditing() ? 'background-color: var(--background); border-color: var(--primary); focus:ring-color: var(--primary); color: var(--foreground);' : 'background-color: var(--surface); border-color: var(--border); color: var(--foreground-muted);'" required />
+                            </div>
+
+                            <div class="space-y-1.5">
+                                <label class="block text-xs font-medium opacity-70" style="color: var(--foreground-muted);">Last Name</label>
+                                <input type="text" name="lastName" [(ngModel)]="editForm.lastName" [disabled]="!isEditing()"
+                                       class="w-full px-4 py-2.5 text-sm rounded-xl border transition-all duration-200 focus:outline-none focus:ring-1"
+                                       [style]="isEditing() ? 'background-color: var(--background); border-color: var(--primary); focus:ring-color: var(--primary); color: var(--foreground);' : 'background-color: var(--surface); border-color: var(--border); color: var(--foreground-muted);'" required />
+                            </div>
+
+                            <div class="space-y-1.5">
+                                <label class="block text-xs font-medium opacity-70" style="color: var(--foreground-muted);">Email Address</label>
+                                <input type="email" name="email" [(ngModel)]="editForm.email" [disabled]="!isEditing()"
+                                       class="w-full px-4 py-2.5 text-sm rounded-xl border transition-all duration-200 focus:outline-none focus:ring-1"
+                                       [style]="isEditing() ? 'background-color: var(--background); border-color: var(--primary); focus:ring-color: var(--primary); color: var(--foreground);' : 'background-color: var(--surface); border-color: var(--border); color: var(--foreground-muted);'" required />
+                            </div>
+
+                            <div class="space-y-1.5">
+                                <label class="block text-xs font-medium opacity-70" style="color: var(--foreground-muted);">Phone Number</label>
+                                <input type="text" name="phoneNumber" [(ngModel)]="editForm.phoneNumber" [disabled]="!isEditing()"
+                                       class="w-full px-4 py-2.5 text-sm rounded-xl border transition-all duration-200 focus:outline-none focus:ring-1"
+                                       [style]="isEditing() ? 'background-color: var(--background); border-color: var(--primary); focus:ring-color: var(--primary); color: var(--foreground);' : 'background-color: var(--surface); border-color: var(--border); color: var(--foreground-muted);'" />
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="pt-6 flex flex-wrap items-center justify-between gap-6">
+                        <div class="flex items-center gap-3">
+                            <button *ngIf="isEditing()" (click)="saveProfile()" type="button" [disabled]="!profileForm.form.valid"
+                                    class="px-5 py-2 rounded-lg text-xs font-medium transition-all duration-200 disabled:opacity-40 text-white"
+                                    style="background-color: var(--primary);">
+                                Save Changes
+                            </button>
+                            <button *ngIf="isEditing()" (click)="cancelEditing()" type="button"
+                                    class="px-5 py-2 rounded-lg text-xs font-medium transition-all duration-200 border bg-transparent hover:bg-black/[0.02]"
+                                    style="border-color: var(--border); color: var(--foreground-muted);">
+                                Cancel
+                            </button>
+                        </div>
+
+                        <button (click)="deleteAccount()" type="button" class="text-xs font-medium tracking-wide text-red-600 hover:text-red-500 transition-all duration-200 py-2">
+                            Delete Account
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </ng-container>
+
+        <div *ngIf="!isLoading() && !userService.isAuthenticated()" class="flex items-center justify-center min-h-[300px]">
+            <div class="text-center max-w-sm p-8 rounded-2xl border" style="background-color: var(--surface); border-color: var(--border);">
+                <p class="text-lg font-serif font-normal tracking-tight mb-2" style="color: var(--foreground);">Sign In Required</p>
+                <p class="text-xs font-normal leading-relaxed opacity-70" style="color: var(--foreground-muted);">Please log in to your account to view and manage your profile settings.</p>
+            </div>
+        </div>
+    </div>
+</div>

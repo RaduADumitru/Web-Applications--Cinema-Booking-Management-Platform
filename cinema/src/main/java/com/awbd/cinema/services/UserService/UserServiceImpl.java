@@ -12,6 +12,12 @@ import com.awbd.cinema.repositories.UserRepository;
 import com.awbd.cinema.security.CustomUserDetails;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import com.awbd.cinema.utils.RestPage;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -24,6 +30,8 @@ import java.util.UUID;
 public class UserServiceImpl implements UserService{
     private final UserRepository userRepository;
 
+    @Override
+    @Cacheable("user_profile")
     public ProfileDTO getProfile(Long id){
         User u = userRepository.findById(id).orElseThrow(()->new NotFoundException("User doesn't exist."));
         return ProfileDTO.from(u);
@@ -31,6 +39,7 @@ public class UserServiceImpl implements UserService{
 
     @Override
     @Transactional
+    @CacheEvict("user_profile")
     public Map<String, String> deleteAccount(CustomUserDetails userDetails) {
         if(userDetails.getAuthorities().stream().anyMatch(r-> Objects.equals(r.getAuthority(), "ROLE_OWNER")))
             throw new BadRequestException("You cannot delete your account.");
@@ -41,12 +50,15 @@ public class UserServiceImpl implements UserService{
 
     @Override
     @Transactional
+    @CacheEvict("user_profile")
     public Map<String, String> deleteAccount(Long id) {
         String deletedUsername = deleteUser(id);
         return Map.of("message", deletedUsername + "'s account has been deleted successfully.");
     }
 
     @Transactional
+    @Override
+    @CacheEvict("user_profile")
     public ProfileDTO updateProfile(Long id, UpdateProfileDTO dto) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new BadRequestException("User doesn't exist"));
@@ -75,12 +87,22 @@ public class UserServiceImpl implements UserService{
 
     @Override
     @Transactional
+    @CacheEvict("user_profile")
     public ProfileDTO promoteUser(PromoteDTO dto) {
         User user = userRepository.findById(dto.id())
                 .orElseThrow(() -> new BadRequestException("User doesn't exist"));
         user.setRole(dto.role());
         userRepository.save(user);
         return ProfileDTO.from(user);
+    }
+
+    @Override
+    @Transactional
+    public RestPage<ProfileDTO> getAllUsers(Integer page, Integer size) {
+        int p = (page == null || page < 1) ? 0 : page - 1;
+        int s = (size == null || size < 1) ? 10 : size;
+        Pageable pageable = PageRequest.of(p, s, Sort.by(Sort.Direction.ASC, "username"));
+        return new RestPage<>(userRepository.findAll(pageable).map(ProfileDTO::from));
     }
 
     private String deleteUser(Long id){

@@ -1,5 +1,6 @@
 package com.awbd.cinema.services.SeatService;
 
+import com.awbd.cinema.DTOs.SeatDTOs.GenerateSeatsDTO;
 import com.awbd.cinema.DTOs.SeatDTOs.SaveSeatDTO;
 import com.awbd.cinema.DTOs.SeatDTOs.SeatDTO;
 import com.awbd.cinema.entities.Room;
@@ -51,6 +52,40 @@ public class SeatServiceImpl implements SeatService {
         room.getSeats().add(savedSeat);
         roomRepository.save(room);
         return SeatDTO.from(savedSeat);
+    }
+
+    @Override
+    @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "seat_lists", allEntries = true),
+            @CacheEvict(value = "single_rooms", key = "#dto.roomId()"),
+            @CacheEvict(value = "room_lists", allEntries = true)
+    })
+    public List<SeatDTO> generateSeats(GenerateSeatsDTO dto) {
+        Room room = roomRepository.findById(dto.roomId())
+                .orElseThrow(() -> new NotFoundException("Room not found."));
+        SeatCategory category = resolveCategory(dto.categoryId());
+
+        List<Seat> seats = new ArrayList<>();
+        for (int rowOffset = 0; rowOffset < dto.rows(); rowOffset++) {
+            int row = dto.startRow() + rowOffset;
+            for (int seatOffset = 0; seatOffset < dto.seatsPerRow(); seatOffset++) {
+                seats.add(Seat.builder()
+                        .row(row)
+                        .number(dto.startSeatNumber() + seatOffset)
+                        .zone(dto.zone())
+                        .category(category)
+                        .build());
+            }
+        }
+
+        List<Seat> savedSeats = seatRepository.saveAll(seats);
+        room.getSeats().addAll(savedSeats);
+        roomRepository.save(room);
+
+        return savedSeats.stream()
+                .map(SeatDTO::from)
+                .toList();
     }
 
     @Override

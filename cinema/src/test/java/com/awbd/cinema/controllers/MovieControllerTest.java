@@ -88,7 +88,7 @@ class MovieControllerTest extends BaseControllerTest{
         @WithMockUser(roles = "STAFF")
         @DisplayName("Should return 200 and saved object when authorized")
         void shouldSaveMovieWhenAuthorized() throws Exception {
-            SaveMovieDTO responseDto = new SaveMovieDTO("Avatar", LocalDateTime.now(), "Epic film", 7.9, 162, "12+", List.of());
+            SaveMovieDTO responseDto = new SaveMovieDTO("Avatar", LocalDateTime.now(), "Epic film", 7.9, 162, "12+", List.of(), "https://example.com/poster.jpg");
             when(movieService.saveMovie(123)).thenReturn(responseDto);
 
             mockMvc.perform(post("/movies/admin/save/123")
@@ -118,7 +118,7 @@ class MovieControllerTest extends BaseControllerTest{
         @Test
         @DisplayName("Should return 200 with public movie data and apply default parameter values")
         void shouldReturnPublicMovieList() throws Exception {
-            MovieDTO dto = new MovieDTO(100L, "Interstellar", LocalDateTime.now(), "Space travel", 8.6, 169, "12+", List.of());
+            MovieDTO dto = new MovieDTO(100L, "Interstellar", LocalDateTime.now(), "Space travel", 8.6, 169, "12+", List.of(), "https://example.com/poster.jpg");
             RestPage<MovieDTO> pageResult = new RestPage<>(new PageImpl<>(List.of(dto)));
 
             when(movieService.getUserMovieList(1, 10, null, null, null, null, null, null, null))
@@ -164,7 +164,7 @@ class MovieControllerTest extends BaseControllerTest{
         @Test
         @DisplayName("Should allow access to unauthenticated user and return movie payload")
         void shouldReturnMovieById() throws Exception {
-            MovieDTO dto = new MovieDTO(45L, "Gladiator", LocalDateTime.now(), "Roman general", 8.5, 155, "16+", List.of());
+            MovieDTO dto = new MovieDTO(45L, "Gladiator", LocalDateTime.now(), "Roman general", 8.5, 155, "16+", List.of(),"https://example.com/poster.jpg");
             when(movieService.getMovie(45L)).thenReturn(dto);
 
             mockMvc.perform(get("/movies/45")
@@ -184,8 +184,8 @@ class MovieControllerTest extends BaseControllerTest{
         @WithMockUser(roles = "STAFF")
         @DisplayName("Should return 200 and updated data object when caller has STAFF role")
         void shouldUpdateMovieWhenAuthorized() throws Exception {
-            SaveMovieDTO requestBody = new SaveMovieDTO("Memento", LocalDateTime.now(), "Updated Desc", 8.4, 113, "16+", List.of());
-            MovieDTO responseDto = new MovieDTO(1L, "Memento", LocalDateTime.now(), "Updated Desc", 8.4, 113, "16+", List.of());
+            SaveMovieDTO requestBody = new SaveMovieDTO("Memento", LocalDateTime.now(), "Updated Desc", 8.4, 113, "16+", List.of(),"https://example.com/poster.jpg");
+            MovieDTO responseDto = new MovieDTO(1L, "Memento", LocalDateTime.now(), "Updated Desc", 8.4, 113, "16+", List.of(),"https://example.com/poster.jpg");
 
             when(movieService.updateMovie(eq(1L), any(SaveMovieDTO.class))).thenReturn(responseDto);
 
@@ -202,7 +202,7 @@ class MovieControllerTest extends BaseControllerTest{
         @WithMockUser(roles = "USER")
         @DisplayName("Should deny mutation and return 403 when user lacks STAFF permission tier")
         void shouldDenyUpdateForStandardUser() throws Exception {
-            SaveMovieDTO requestBody = new SaveMovieDTO("Memento", LocalDateTime.now(), "Desc", 8.4, 113, "16+", List.of());
+            SaveMovieDTO requestBody = new SaveMovieDTO("Memento", LocalDateTime.now(), "Desc", 8.4, 113, "16+", List.of(),"https://example.com/poster.jpg");
 
             mockMvc.perform(put("/movies/1")
                             .with(csrf())

@@ -68,6 +68,23 @@ services:
     networks:
       - microservices-network
 
+  discovery-server:
+    <<: *ms-common
+    container_name: ms-discovery-server
+    command: sh -c "mvn -o -pl discovery-server spring-boot:run"
+    environment:
+      SERVER_PORT: 8761
+    ports:
+      - "8761:8761"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8761/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 40
+      start_period: 120s
+    networks:
+      - microservices-network
+
   user-service:
     <<: *ms-common
     container_name: ms-user-service
@@ -75,12 +92,14 @@ services:
     environment:
       SERVER_PORT: 8080
       DATABASE_URL: jdbc:postgresql://user-db:5432/${USER_DB_NAME}
-      BOOKING_SERVICE_URL: http://booking-service:8080/api/v1
+      EUREKA_SERVER_URL: http://discovery-server:8761/eureka/
       SECURITY_CORS_ALLOWED_ORIGINS: http://localhost:4200
     ports:
       - "8081:8080"
     depends_on:
       user-db:
+        condition: service_healthy
+      discovery-server:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8080/api/v1/actuator/health || exit 1"]
@@ -99,6 +118,7 @@ services:
       SERVER_PORT: 8080
       DATABASE_URL: jdbc:postgresql://catalog-db:5432/${CATALOG_DB_NAME}
       REDIS_HOST: redis
+      EUREKA_SERVER_URL: http://discovery-server:8761/eureka/
       SECURITY_CORS_ALLOWED_ORIGINS: http://localhost:4200
     ports:
       - "8082:8080"
@@ -107,6 +127,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+      discovery-server:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8080/api/v1/actuator/health || exit 1"]
       interval: 15s
@@ -124,8 +146,7 @@ services:
       SERVER_PORT: 8080
       DATABASE_URL: jdbc:postgresql://booking-db:5432/${BOOKING_DB_NAME}
       REDIS_HOST: redis
-      CATALOG_SERVICE_URL: http://catalog-service:8080/api/v1
-      USER_SERVICE_URL: http://user-service:8080/api/v1
+      EUREKA_SERVER_URL: http://discovery-server:8761/eureka/
       SECURITY_CORS_ALLOWED_ORIGINS: http://localhost:4200
     ports:
       - "8083:8080"
@@ -134,6 +155,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+      discovery-server:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8080/api/v1/actuator/health || exit 1"]
       interval: 15s
@@ -148,9 +171,7 @@ services:
     container_name: ms-gateway
     command: sh -c "mvn -o -pl gateway spring-boot:run"
     environment:
-      USER_SERVICE_URI: http://user-service:8080
-      CATALOG_SERVICE_URI: http://catalog-service:8080
-      BOOKING_SERVICE_URI: http://booking-service:8080
+      EUREKA_SERVER_URL: http://discovery-server:8761/eureka/
       REDIS_HOST: redis
     ports:
       - "8080:8080"
@@ -163,6 +184,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+      discovery-server:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
       interval: 15s

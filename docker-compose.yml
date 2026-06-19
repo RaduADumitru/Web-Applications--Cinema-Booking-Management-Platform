@@ -62,23 +62,22 @@ services:
       - cinema-network
   
   client:
-    build:
-      context: ./client
-      dockerfile: Dockerfile
-    container_name: cinema-client
-    environment:
-      API_URL: http://localhost:8081/api/v1
-    ports:
-      - "4200:4200"
-    volumes:
-      - ./client:/app
-      - /app/node_modules
-      - /app/.angular
-    depends_on:
-      app:
-        condition: service_healthy
-    networks:
-      - cinema-network
+      build:
+        context: ./client
+        dockerfile: Dockerfile
+      container_name: cinema-client
+      environment:
+        API_URL: http://localhost:8081/api/v1
+      ports:
+        - "4200:4200"
+      volumes:
+        - ./client:/app
+        - /app/node_modules
+      depends_on:
+        app:
+          condition: service_healthy
+      networks:
+        - cinema-network
     
 networks:
   cinema-network:

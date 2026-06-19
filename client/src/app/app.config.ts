@@ -16,6 +16,7 @@ import { authInterceptor } from './core/auth/auth-interceptor';
 import { errorInterceptor } from './core/auth/error-interceptor';
 import { UserService } from './core/services/user.service';
 import { ConfigService } from './core/services/config.service';
+import { ThemeService } from './core/services/theme.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -26,6 +27,8 @@ export const appConfig: ApplicationConfig = {
     importProvidersFrom(MatSnackBarModule),
         provideAppInitializer(() => {
       const userService = inject(UserService);
+      const themeService = inject(ThemeService);
+      themeService.initTheme();
       return userService.loadUserProfile();
     }),
     {

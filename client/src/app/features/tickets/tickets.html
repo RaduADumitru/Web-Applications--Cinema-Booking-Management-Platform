@@ -1,0 +1,122 @@
+<div class="min-h-screen p-6 md:p-8"
+  style="background-color: var(--background); transition: background-color 0.3s ease;">
+  <div class="tickets-container min-h-[calc(100vh-8rem)] flex flex-col justify-start">
+
+    <!-- Header -->
+    <div class="mb-8 border-b pb-6" style="border-color: var(--border);">
+      <h1 class="text-3xl md:text-4xl font-serif font-normal tracking-tight" style="color: var(--foreground);">
+        My <span style="color: var(--primary);">Tickets</span>
+      </h1>
+      <p class="text-sm mt-2 font-normal" style="color: var(--foreground-muted);">
+        Access your entry passes, reservations, and history. Click any pass to generate your entry QR code.
+      </p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex border-b mb-8 space-x-2 scrollbar-none overflow-x-auto" style="border-color: var(--border);">
+      <button (click)="setActiveTab('active')" [class.active]="activeTab() === 'active'" class="tab-button">
+        Active Passes ({{ activeTickets().length }})
+      </button>
+      <button (click)="setActiveTab('pending')" [class.active]="activeTab() === 'pending'" class="tab-button">
+        Reserved ({{ pendingTickets().length }})
+      </button>
+      <button (click)="setActiveTab('past')" [class.active]="activeTab() === 'past'" class="tab-button">
+        Past History ({{ pastTickets().length }})
+      </button>
+    </div>
+
+    <!-- Loading Skeletons -->
+    <div *ngIf="isLoading()" class="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-pulse">
+      <div *ngFor="let i of [1, 2, 3, 4]" class="shimmer-card shimmer"></div>
+    </div>
+
+    <!-- Tickets List -->
+    <div *ngIf="!isLoading()" class="flex-grow">
+
+      <!-- No Tickets State -->
+      <div *ngIf="getCurrentTabTickets().length === 0"
+        class="flex flex-col items-center justify-center py-16 px-4 rounded-2xl border border-dashed text-center"
+        style="border-color: var(--border); background-color: var(--surface);">
+        <div class="text-4xl mb-4">🎟️</div>
+        <h3 class="text-lg font-serif font-normal mb-1" style="color: var(--foreground);">No tickets here</h3>
+        <p class="text-xs max-w-sm mb-6" style="color: var(--foreground-muted);">
+          <span *ngIf="activeTab() === 'active'">You don't have any paid upcoming tickets. Find a movie and book
+            now!</span>
+          <span *ngIf="activeTab() === 'pending'">You have no pending reservations. Explore the sessions list!</span>
+          <span *ngIf="activeTab() === 'past'">No past screening records found on your profile.</span>
+        </p>
+        <a routerLink="/home"
+          class="inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest border transition-all duration-200 hover:shadow-sm"
+          style="background-color: var(--background); border-color: var(--border); color: var(--foreground);">
+          🎬 Book Screenings
+        </a>
+      </div>
+
+      <!-- Active Tickets Grid -->
+      <div *ngIf="getCurrentTabTickets().length > 0" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div *ngFor="let t of getCurrentTabTickets(); trackBy: trackByTicketId" class="ticket-card animate-fadeIn">
+
+          <!-- Ticket Body -->
+          <div class="ticket-main">
+            <!-- Top Row: Category and format -->
+            <div class="flex justify-between items-start">
+              <span class="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded"
+                [style.background-color]="t.status === 'PAID' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)'"
+                [style.color]="t.status === 'PAID' ? '#10b981' : '#f59e0b'">
+                {{ t.status === 'PAID' ? 'CONFIRMED PASS' : 'RESERVATION' }}
+              </span>
+              <span class="text-[10px] font-bold uppercase tracking-widest opacity-60"
+                style="color: var(--foreground-muted);">
+                {{ t.format || '2D' }}
+              </span>
+            </div>
+
+            <!-- Movie Details -->
+            <div class="my-3">
+              <h2 class="text-xl font-serif font-normal leading-snug cursor-pointer hover:underline"
+                (click)="showQRCode(t)" style="color: var(--foreground);">
+                {{ t.movieTitle }}
+              </h2>
+              <p class="text-[11px] font-bold uppercase tracking-wider mt-1" style="color: var(--primary);">
+                {{ t.roomName }}
+              </p>
+            </div>
+
+            <!-- Metadata grid (Date, Time, Seat, Price) -->
+            <div class="grid grid-cols-4 gap-2 pt-2 border-t" style="border-color: var(--border);">
+              <div>
+                <div class="detail-label">Date</div>
+                <div class="detail-value text-xs">{{ formatDate(t.date) }}</div>
+              </div>
+              <div>
+                <div class="detail-label">Time</div>
+                <div class="detail-value text-xs">{{ formatTime(t.startTime) }}</div>
+              </div>
+              <div>
+                <div class="detail-label">Seat</div>
+                <div class="detail-value text-xs">R{{ t.seatRow }} • S{{ t.seatNumber }}</div>
+              </div>
+              <div>
+                <div class="detail-label">Price</div>
+                <div class="detail-value text-xs font-bold">{{ t.price | currency:'EUR':'symbol':'1.2-2' }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Ticket Stub Tear-Off Column (Triggers QR Code display) -->
+          <div class="ticket-stub" (click)="showQRCode(t)" title="Click to view QR Code">
+            <div class="text-[9px] font-bold uppercase tracking-widest" style="color: var(--foreground-muted);">
+              Scan Entry
+            </div>
+            <div class="text-[8px] font-mono opacity-50 mt-1" style="color: var(--foreground-muted);">
+              #{{ t.id }}
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>

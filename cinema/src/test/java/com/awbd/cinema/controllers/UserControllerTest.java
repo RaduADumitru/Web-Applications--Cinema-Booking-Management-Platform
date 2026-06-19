@@ -64,7 +64,7 @@ class UserControllerTest {
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         sampleProfileDTO = new ProfileDTO(
-                "john_doe", "John", "Doe",
+                1L, "john_doe", "John", "Doe",
                 "john.doe@example.com", "+1234567890", 150, Role.USER
         );
     }
@@ -134,7 +134,7 @@ class UserControllerTest {
         void updateProfile_WithValidPayload_ReturnsUpdatedProfile() throws Exception {
             // Arrange
             UpdateProfileDTO validUpdateDTO = new UpdateProfileDTO("Jane", "Smith", "jane.smith@example.com", "+9876543210");
-            ProfileDTO updatedProfileDTO = new ProfileDTO("john_doe", "Jane", "Smith", "jane.smith@example.com", "+9876543210", 150, Role.USER);
+            ProfileDTO updatedProfileDTO = new ProfileDTO(1L, "john_doe", "Jane", "Smith", "jane.smith@example.com", "+9876543210", 150, Role.USER);
 
             when(userService.updateProfile(eq(1L), any(UpdateProfileDTO.class))).thenReturn(updatedProfileDTO);
 
@@ -172,7 +172,7 @@ class UserControllerTest {
         void promoteUser_WithValidTarget_ReturnsPromotedProfile() throws Exception {
             // Arrange
             PromoteDTO promoteDTO = new PromoteDTO(2L, Role.OWNER);
-            ProfileDTO promotedProfileDTO = new ProfileDTO("target_user", "Alex", "Jones", "alex@example.com", "+1112223333", 0, Role.OWNER);
+            ProfileDTO promotedProfileDTO = new ProfileDTO(2L, "target_user", "Alex", "Jones", "alex@example.com", "+1112223333", 0, Role.OWNER);
 
             when(userService.promoteUser(any(PromoteDTO.class))).thenReturn(promotedProfileDTO);
 
@@ -212,6 +212,29 @@ class UserControllerTest {
                     .andExpect(status().isUnprocessableContent());
 
             verify(userService, never()).promoteUser(any());
+        }
+    }
+
+    @Nested
+    class GetAllUsersEndpointTests {
+
+        @Test
+        void getAllUsers_ReturnsPagedUsers() throws Exception {
+            // Arrange
+            java.util.List<ProfileDTO> content = java.util.List.of(sampleProfileDTO);
+            com.awbd.cinema.utils.RestPage<ProfileDTO> pagedResponse = new com.awbd.cinema.utils.RestPage<>(content, 0, 10, 1L);
+
+            when(userService.getAllUsers(1, 10)).thenReturn(pagedResponse);
+
+            // Act & Assert
+            mockMvc.perform(get("/user/all")
+                            .param("page", "1")
+                            .param("size", "10"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content[0].username").value("john_doe"))
+                    .andExpect(jsonPath("$.content[0].email").value("john.doe@example.com"));
+
+            verify(userService, times(1)).getAllUsers(1, 10);
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.awbd.cinema.controllers;
 
+import com.awbd.cinema.DTOs.SeatDTOs.GenerateSeatsDTO;
 import com.awbd.cinema.DTOs.SeatDTOs.SaveSeatDTO;
 import com.awbd.cinema.DTOs.SeatDTOs.SeatDTO;
 import com.awbd.cinema.services.SeatService.SeatService;
@@ -13,6 +14,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/seats")
 @RequiredArgsConstructor
@@ -24,6 +27,12 @@ public class SeatController {
     @PreAuthorize("hasRole('STAFF')")
     public ResponseEntity<SeatDTO> createSeat(@Valid @RequestBody SaveSeatDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(seatService.createSeat(dto));
+    }
+
+    @PostMapping("/generate")
+    @PreAuthorize("hasRole('STAFF')")
+    public ResponseEntity<List<SeatDTO>> generateSeats(@Valid @RequestBody GenerateSeatsDTO dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(seatService.generateSeats(dto));
     }
 
     @GetMapping

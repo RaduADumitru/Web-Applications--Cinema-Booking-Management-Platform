@@ -1,0 +1,155 @@
+<div class="min-h-screen p-6 md:p-8 seat-selection-page" style="background-color: var(--background);">
+  <header class="mb-8 pb-6 border-b" style="border-color: var(--border);">
+    <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5">
+      <div>
+        <p class="text-xs font-bold uppercase mb-1.5" style="color: var(--primary);">Seat Selection</p>
+        <h1 class="text-4xl md:text-5xl font-extrabold mb-2" style="color: var(--foreground);">
+          {{ movie() ? movie()?.title : 'Choose your seats' }}
+        </h1>
+        <p class="text-sm md:text-base" style="color: var(--foreground-muted);">Room {{ roomId ?? '-' }} · Session {{ sessionId ?? '-' }}</p>
+      </div>
+
+      <div class="grid grid-cols-3 gap-2 min-w-full sm:min-w-[24rem]">
+        <div class="summary-tile" style="background-color: var(--surface); border-color: var(--border);">
+          <span style="color: var(--foreground-muted);">Free</span>
+          <strong style="color: var(--foreground);">{{ availableCount() }}</strong>
+        </div>
+        <div class="summary-tile" style="background-color: var(--surface); border-color: var(--border);">
+          <span style="color: var(--foreground-muted);">Taken</span>
+          <strong style="color: var(--foreground);">{{ bookedCount() }}</strong>
+        </div>
+        <div class="summary-tile" style="background-color: var(--surface); border-color: var(--border);">
+          <span style="color: var(--foreground-muted);">Selected</span>
+          <strong style="color: var(--foreground);">{{ selectedViews().length }}</strong>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Showtime Selection -->
+  <div *ngIf="movieId && showtimes().length > 0" class="mb-8 p-6 rounded-lg border shadow-sm" style="background-color: var(--surface); border-color: var(--border);">
+    <h2 class="text-lg font-bold mb-4" style="color: var(--foreground);">Select Showtime</h2>
+    <div class="showtimes-grid">
+      <button
+        *ngFor="let showtime of showtimes()"
+        type="button"
+        (click)="selectShowtime(showtime.id)"
+        class="showtime-btn"
+        [class.active]="selectedShowtimeId() === showtime.id"
+      >
+        {{ showtime.date | date:'mediumDate' }} at {{ formatTime(showtime.startTime) }} ({{ showtime.format }})
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="movieId && showtimes().length === 0 && !isLoading()" class="mb-8 p-6 rounded-lg border text-center shadow-sm" style="background-color: var(--surface); border-color: var(--border);">
+    <p class="text-base font-semibold" style="color: var(--foreground-muted);">No showtimes scheduled for this movie.</p>
+  </div>
+
+  <div *ngIf="isLoading()" class="flex flex-col items-center justify-center min-h-[420px]">
+    <div class="w-12 h-12 border-4 rounded-full animate-spin mb-4" style="border-color: var(--border); border-top-color: var(--primary);"></div>
+    <p class="text-sm font-semibold" style="color: var(--foreground-muted);">Loading room layout...</p>
+  </div>
+
+  <div *ngIf="error() && !isLoading()" class="p-4 rounded-lg border mb-8" style="background-color: rgba(220, 38, 38, 0.07); border-color: var(--error); color: var(--error);">
+    <p class="font-semibold text-sm">{{ error() }}</p>
+  </div>
+
+  <ng-container *ngIf="!isLoading() && !error()">
+    <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_22rem] gap-6 items-start">
+      <section class="rounded-lg border p-4 md:p-6 overflow-x-auto" style="background-color: var(--surface); border-color: var(--border);">
+        <div class="screen mb-8">
+          <span>Screen</span>
+        </div>
+
+        <div class="seat-map-shell">
+          <div class="seat-map" [style.grid-template-columns]="gridTemplateColumns()">
+            <div
+              *ngFor="let row of rowNumbers(); trackBy: trackByRow"
+              class="row-label"
+              [style.grid-row]="rowNumbers().indexOf(row) + 1"
+              [style.grid-column]="1"
+              style="color: var(--foreground-muted);"
+            >
+              {{ row }}
+            </div>
+
+            <button
+              *ngFor="let view of seatViews(); trackBy: trackBySeat"
+              type="button"
+              class="seat"
+              [class.seat-available]="view.status === 'available'"
+              [class.seat-booked]="view.status === 'booked'"
+              [class.seat-selected]="view.isSelected"
+              [class.seat-unavailable]="view.status === 'unavailable'"
+              [disabled]="view.status !== 'available' || isBooking()"
+              [style.grid-row]="view.gridRow"
+              [style.grid-column]="view.gridColumn"
+              (click)="toggleSeat(view)"
+              [attr.aria-label]="'Row ' + view.seat.row + ', seat ' + view.seat.number + ', ' + view.status"
+            >
+              <span>{{ view.seat.number }}</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="legend mt-8">
+          <span><i class="legend-dot available"></i>Free</span>
+          <span><i class="legend-dot selected"></i>Selected</span>
+          <span><i class="legend-dot booked"></i>Taken</span>
+          <span><i class="legend-dot unavailable"></i>No ticket</span>
+        </div>
+      </section>
+
+      <aside class="rounded-lg border p-5 sticky-panel" style="background-color: var(--surface); border-color: var(--border);">
+        <h2 class="text-lg font-bold mb-1" style="color: var(--foreground);">Reservation</h2>
+        <p class="text-sm mb-5" style="color: var(--foreground-muted);">Select one or more free seats, then choose the ticket type.</p>
+
+        <label class="block text-xs font-semibold mb-1" style="color: var(--foreground-muted);">Ticket type</label>
+        <select
+          [(ngModel)]="selectedTicketType"
+          class="w-full p-2.5 rounded border text-sm bg-transparent outline-none mb-5"
+          [style]="'border-color: var(--border); color: var(--foreground);'"
+        >
+          <option *ngFor="let type of ticketTypes" [ngValue]="type" style="background-color: var(--surface);">{{ type }}</option>
+        </select>
+
+        <label class="discount-toggle mb-5" style="border-color: var(--border); color: var(--foreground);">
+          <input type="checkbox" [(ngModel)]="useDiscount" />
+          <span>Use loyalty discount</span>
+        </label>
+
+        <div class="selected-list mb-5" *ngIf="selectedViews().length > 0; else emptySelection">
+          <div class="selected-seat" *ngFor="let view of selectedViews(); trackBy: trackBySeat" style="border-color: var(--border);">
+            <div>
+              <strong style="color: var(--foreground);">Row {{ view.seat.row }}, Seat {{ view.seat.number }}</strong>
+              <span style="color: var(--foreground-muted);">{{ formatZone(view.seat.zone) }}</span>
+            </div>
+            <span style="color: var(--foreground);">{{ view.ticket?.price != null ? (view.ticket?.price | currency) : '-' }}</span>
+          </div>
+        </div>
+
+        <ng-template #emptySelection>
+          <div class="empty-selection mb-5" style="border-color: var(--border); color: var(--foreground-muted);">
+            No seats selected
+          </div>
+        </ng-template>
+
+        <div class="flex items-center justify-between py-3 border-t mb-4" style="border-color: var(--border);">
+          <span class="text-sm font-semibold" style="color: var(--foreground-muted);">Estimated total</span>
+          <strong class="text-lg" style="color: var(--foreground);">{{ selectedTotal() | currency }}</strong>
+        </div>
+
+        <button
+          type="button"
+          class="w-full py-3 px-4 rounded-lg font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          style="background-color: var(--primary); color: black;"
+          [disabled]="selectedViews().length === 0 || isBooking()"
+          (click)="reserveSelection()"
+        >
+          {{ isBooking() ? 'Creating order...' : 'Create order' }}
+        </button>
+      </aside>
+    </div>
+  </ng-container>
+</div>

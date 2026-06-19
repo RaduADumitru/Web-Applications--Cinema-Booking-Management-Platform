@@ -1,0 +1,177 @@
+<div class="min-h-screen p-6 lg:p-12" style="background-color: var(--background);">
+  <header class="mb-10 pb-6 border-b" style="border-color: var(--border);">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+      <div>
+        <p class="text-xs font-bold tracking-widest uppercase mb-1.5" style="color: var(--primary);">System Admin</p>
+        <h1 class="text-4xl font-extrabold tracking-tight mb-2" style="color: var(--foreground);">Manage Users</h1>
+        <p class="text-sm font-medium" style="color: var(--foreground-muted);">View, promote, and manage all cinema
+          platform user accounts.</p>
+      </div>
+
+      <div *ngIf="!loading() && !error()"
+        class="rounded-xl px-5 py-3 flex items-center gap-4 self-start sm:self-center backdrop-blur-sm bg-opacity-50"
+        style="background-color: var(--surface); border: 1px solid var(--border);">
+        <div class="w-2 h-2 rounded-full animate-pulse" style="background-color: var(--primary);"></div>
+        <div class="text-xs font-medium" style="color: var(--foreground-muted);">
+          Showing <span class="font-bold text-sm mx-0.5" style="color: var(--foreground);">{{ users().length }}</span>
+          of <span class="font-bold text-sm" style="color: var(--foreground);">{{ totalElements() }}</span> total users
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div *ngIf="loading()" class="flex flex-col items-center justify-center min-h-[400px]">
+    <div class="w-12 h-12 border-4 rounded-full animate-spin mb-4"
+      style="border-color: var(--border); border-top-color: var(--primary);"></div>
+    <p class="text-sm font-medium" style="color: var(--foreground-muted);">Retrieving user records...</p>
+  </div>
+
+  <div *ngIf="error() && !loading()" class="p-4 rounded-xl border flex items-center gap-3 mb-8"
+    style="background-color: rgba(220, 38, 38, 0.06); border-color: var(--error); color: var(--error);">
+    <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+    </svg>
+    <p class="font-semibold text-sm">{{ error() }}</p>
+  </div>
+
+  <ng-container *ngIf="!loading() && !error()">
+    <!-- Pagination Top (Only if multiple pages exist) -->
+    <div *ngIf="totalPages() > 1"
+      class="flex flex-wrap gap-1.5 mb-6 items-center justify-center md:justify-start text-xs font-semibold">
+      <button type="button" (click)="goToPage(0)" [disabled]="currentPage() === 0"
+        class="px-3 py-2 rounded-lg transition-all duration-150 border border-transparent disabled:opacity-40 disabled:cursor-not-allowed hover:bg-opacity-90"
+        [style]="currentPage() === 0 ? 'background-color: var(--border); color: var(--foreground-muted);' : 'background-color: var(--primary); color: black;'">
+        First
+      </button>
+
+      <button type="button" (click)="goToPage(currentPage() - 1)" [disabled]="currentPage() === 0"
+        class="px-3 py-2 rounded-lg transition-all duration-150 border border-transparent disabled:opacity-40 disabled:cursor-not-allowed hover:bg-opacity-90 mr-2"
+        [style]="currentPage() === 0 ? 'background-color: var(--border); color: var(--foreground-muted);' : 'background-color: var(--primary); color: black;'">
+        Prev
+      </button>
+
+      <span *ngIf="pageNumbers()[0] > 0" class="px-2 font-normal" style="color: var(--foreground-muted);">...</span>
+
+      <button type="button" *ngFor="let page of pageNumbers(); trackBy: trackByPage" (click)="goToPage(page)"
+        class="px-3 py-2 rounded-lg transition-all duration-150 border"
+        [style]="page === currentPage() ? 'background-color: var(--primary); color: black; border-color: var(--primary);' : 'background-color: var(--surface); color: var(--foreground); border-color: var(--border);'">
+        {{ page + 1 }}
+      </button>
+
+      <span *ngIf="pageNumbers()[pageNumbers().length - 1] < totalPages() - 1" class="px-2 font-normal"
+        style="color: var(--foreground-muted);">...</span>
+
+      <button type="button" (click)="goToPage(currentPage() + 1)" [disabled]="currentPage() >= totalPages() - 1"
+        class="px-3 py-2 rounded-lg transition-all duration-150 border border-transparent disabled:opacity-40 disabled:cursor-not-allowed hover:bg-opacity-90 ml-2"
+        [style]="currentPage() >= totalPages() - 1 ? 'background-color: var(--border); color: var(--foreground-muted);' : 'background-color: var(--primary); color: black;'">
+        Next
+      </button>
+
+      <button type="button" (click)="goToPage(totalPages() - 1)" [disabled]="currentPage() >= totalPages() - 1"
+        class="px-3 py-2 rounded-lg transition-all duration-150 border border-transparent disabled:opacity-40 disabled:cursor-not-allowed hover:bg-opacity-90"
+        [style]="currentPage() >= totalPages() - 1 ? 'background-color: var(--border); color: var(--foreground-muted);' : 'background-color: var(--primary); color: black;'">
+        Last
+      </button>
+    </div>
+
+    <!-- Users Table Grid Card -->
+    <div *ngIf="users().length > 0; else noUsers" class="overflow-hidden rounded-xl border shadow-lg"
+      [style]="'background-color: var(--surface); border-color: var(--border);'">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="border-b text-xs font-bold uppercase tracking-wider"
+              style="border-color: var(--border); color: var(--foreground-muted); background-color: rgba(0,0,0,0.02);">
+              <th class="py-4 px-6 font-mono text-[10px]">ID</th>
+              <th class="py-4 px-6">User</th>
+              <th class="py-4 px-6">Email / Phone</th>
+              <th class="py-4 px-6 text-center">Loyalty Points</th>
+              <th class="py-4 px-6">Role</th>
+              <th class="py-4 px-6 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y text-sm" style="border-color: var(--border); color: var(--foreground);">
+            <tr *ngFor="let user of users(); trackBy: trackByUser"
+              class="hover:bg-black/5 dark:hover:bg-white/5 transition-colors duration-150 group">
+              <!-- ID -->
+              <td class="py-4 px-6 font-mono text-[11px] opacity-65">#{{ user.id }}</td>
+
+              <!-- User -->
+              <td class="py-4 px-6">
+                <div class="flex items-center gap-3">
+                  <div
+                    class="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold select-none border shadow-sm flex-shrink-0"
+                    style="background-color: var(--background); color: var(--foreground); border-color: var(--border);">
+                    {{ user.firstName.charAt(0) }}{{ user.lastName.charAt(0) }}
+                  </div>
+                  <div>
+                    <div class="font-bold flex items-center gap-1.5">
+                      {{ user.firstName }} {{ user.lastName }}
+                      <span *ngIf="isCurrentUser(user)"
+                        class="text-[9px] font-bold tracking-wider uppercase px-1.5 py-0.5 rounded-md"
+                        style="background-color: var(--primary); color: black;">
+                        You
+                      </span>
+                    </div>
+                    <div class="text-xs opacity-65">{{ user.username }}</div>
+                  </div>
+                </div>
+              </td>
+
+              <!-- Contact -->
+              <td class="py-4 px-6">
+                <div class="font-medium text-xs">{{ user.email }}</div>
+                <div class="text-xs opacity-65 mt-0.5">{{ user.phoneNumber }}</div>
+              </td>
+
+              <!-- Points -->
+              <td class="py-4 px-6 text-center font-bold text-xs" style="color: var(--primary);">
+                {{ user.loyaltyPoints }} Pts
+              </td>
+
+              <!-- Role Selector -->
+              <td class="py-4 px-6">
+                <div class="relative inline-block w-32">
+                  <select [value]="user.role" (change)="changeRole(user, $event)" [disabled]="isCurrentUser(user)"
+                    class="role-select block w-full px-3 py-1.5 rounded-lg text-xs font-bold uppercase border cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 transition-all duration-150 focus:outline-none focus:ring-1 focus:ring-opacity-50"
+                    [style]="isCurrentUser(user) ? 'background-color: var(--background); border-color: var(--border); color: var(--foreground);' : 'background-color: var(--background); border-color: var(--border); color: var(--foreground);'">
+                    <option value="USER">User</option>
+                    <option value="STAFF">Staff</option>
+                    <option value="OWNER">Owner</option>
+                  </select>
+                </div>
+              </td>
+
+              <!-- Actions -->
+              <td class="py-4 px-6 text-right">
+                <button type="button" (click)="deleteUser(user)" [disabled]="isCurrentUser(user)"
+                  class="px-3.5 py-1.5 rounded-lg text-xs font-bold tracking-wide uppercase transition-all duration-150 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed border hover:bg-opacity-10 shadow-sm"
+                  [style]="isCurrentUser(user) ? 'background-color: transparent; border-color: var(--border); color: var(--foreground-muted);' : 'background-color: transparent; border-color: var(--error); color: var(--error);'">
+                  Delete
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- No Users State -->
+    <ng-template #noUsers>
+      <div class="flex items-center justify-center min-h-[350px] rounded-xl border border-dashed"
+        style="border-color: var(--border); background-color: var(--surface);">
+        <div class="text-center max-w-sm p-6">
+          <svg class="w-12 h-12 mx-auto mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+            style="color: var(--foreground-muted);">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+              d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+          <p class="text-lg font-bold mb-1" style="color: var(--foreground);">No accounts found</p>
+          <p class="text-xs" style="color: var(--foreground-muted);">There are no registered users in the database
+            matching this page.</p>
+        </div>
+      </div>
+    </ng-template>
+  </ng-container>
+</div>

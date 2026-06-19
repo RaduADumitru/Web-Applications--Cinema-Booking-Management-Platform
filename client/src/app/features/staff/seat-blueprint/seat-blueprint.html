@@ -1,0 +1,77 @@
+<section class="staff-panel">
+  <header class="panel-heading">
+    <div>
+      <p style="color: var(--primary);">Seat Blueprint</p>
+      <h2 style="color: var(--foreground);">Coordinate grid generator</h2>
+      <span style="color: var(--foreground-muted);">Create seat charts using the same row and seat numbers shown to customers.</span>
+    </div>
+  </header>
+
+  <div class="panel-grid">
+    <form class="ops-card" style="background-color: var(--surface); border-color: var(--border);" (ngSubmit)="createBlueprint()">
+      <h3 style="color: var(--foreground);">Generate seats</h3>
+
+      <label>
+        <span>Room</span>
+        <select [(ngModel)]="roomId" name="roomId" required>
+          <option [ngValue]="null">Select room</option>
+          <option *ngFor="let room of rooms(); trackBy: trackByRoom" [ngValue]="room.id">
+            {{ room.name }} (#{{ room.id }})
+          </option>
+        </select>
+      </label>
+
+      <div class="two-column">
+        <label>
+          <span>Rows</span>
+          <input [(ngModel)]="rows" name="rows" type="number" min="1" required />
+        </label>
+        <label>
+          <span>Seats per row</span>
+          <input [(ngModel)]="seatsPerRow" name="seatsPerRow" type="number" min="1" required />
+        </label>
+      </div>
+
+      <div class="two-column">
+        <label>
+          <span>Start row</span>
+          <input [(ngModel)]="startRow" name="startRow" type="number" min="1" required />
+        </label>
+        <label>
+          <span>Start seat</span>
+          <input [(ngModel)]="startSeatNumber" name="startSeatNumber" type="number" min="1" required />
+        </label>
+      </div>
+
+      <div class="two-column">
+        <label>
+          <span>Zone</span>
+          <select [(ngModel)]="zone" name="zone">
+            <option *ngFor="let item of zones" [ngValue]="item">{{ item }}</option>
+          </select>
+        </label>
+        <label>
+          <span>Ticket Category</span>
+          <select [(ngModel)]="categoryId" name="categoryId">
+            <option [ngValue]="null">No category (Standard)</option>
+            <option *ngFor="let cat of categories(); trackBy: trackByCategory" [ngValue]="cat.id">
+              {{ cat.type }} (${{ cat.price.toFixed(2) }})
+            </option>
+          </select>
+        </label>
+      </div>
+
+      <button type="submit" [disabled]="creating() || roomId == null">{{ creating() ? 'Creating seats...' : 'Create blueprint' }}</button>
+    </form>
+
+    <div class="ops-card" style="background-color: var(--surface); border-color: var(--border);">
+      <h3 style="color: var(--foreground);">Preview</h3>
+      <div class="mini-seat-map" [style.grid-template-columns]="'2rem repeat(' + seatPreview().length + ', minmax(1.6rem, 1fr))'">
+        <ng-container *ngFor="let row of rowPreview()">
+          <span class="mini-row" style="color: var(--foreground-muted);">{{ row }}</span>
+          <span class="mini-seat" *ngFor="let seat of seatPreview()" style="border-color: var(--border); color: var(--foreground);">{{ seat }}</span>
+        </ng-container>
+      </div>
+    </div>
+  </div>
+</section>

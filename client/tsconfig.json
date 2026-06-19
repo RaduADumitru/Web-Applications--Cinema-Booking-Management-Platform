@@ -25,7 +25,8 @@
       "@components/*": ["app/shared/components/*"],
       "@pipes/*": ["app/shared/pipes/*"],
       "@features/*": ["app/features/*"],
-      "@dtos/*": ["app/shared/dtos/*"]
+      "@dtos/*": ["app/shared/dtos/*"],
+      "@environments/*": ["environments/*"]
     }
   },
   "angularCompilerOptions": {

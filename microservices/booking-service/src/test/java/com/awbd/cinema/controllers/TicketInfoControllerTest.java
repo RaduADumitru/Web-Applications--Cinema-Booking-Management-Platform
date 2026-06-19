@@ -5,12 +5,14 @@ import com.awbd.cinema.DTOs.TicketInfoDTOs.TicketInfoDTO;
 import com.awbd.cinema.enums.Role;
 import com.awbd.cinema.enums.TicketType;
 import com.awbd.cinema.services.TicketInfoService.TicketInfoService;
+import com.awbd.cinema.utils.RestPage;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -107,12 +109,13 @@ class TicketInfoControllerTest extends BaseControllerTest {
         void getTicketInfos_ReturnsOk() throws Exception {
             loginAsDefaultUser();
             TicketInfoDTO info = createSampleTicketInfoDTO();
-            when(ticketInfoService.getTicketInfos()).thenReturn(List.of(info));
+            RestPage<TicketInfoDTO> page = new RestPage<>(new PageImpl<>(List.of(info)));
+            when(ticketInfoService.getTicketInfos()).thenReturn(page);
 
             mockMvc.perform(get("/ticket-info"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$[0].id").value(1L))
-                    .andExpect(jsonPath("$[0].type").value("ADULT"));
+                    .andExpect(jsonPath("$.content[0].id").value(1L))
+                    .andExpect(jsonPath("$.content[0].type").value("ADULT"));
         }
 
         @Test

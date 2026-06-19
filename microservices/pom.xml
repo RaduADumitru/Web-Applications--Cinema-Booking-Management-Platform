@@ -23,6 +23,7 @@
     </properties>
 
     <modules>
+        <module>discovery-server</module>
         <module>common</module>
         <module>user-service</module>
         <module>catalog-service</module>
