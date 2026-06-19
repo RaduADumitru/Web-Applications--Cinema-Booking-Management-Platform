@@ -101,10 +101,9 @@ curl -X POST http://localhost:8080/actuator/busrefresh
 Every service receives the event over RabbitMQ and rebinds. Watch the broadcast
 in the RabbitMQ management UI at **http://localhost:15672** (default `guest`/`guest`).
 
-**Demo:** change `logging.level.com.awbd.cinema` in
+**Test:** change `logging.level.com.awbd.cinema` in
 `microservices/config-server/config-repo/application.yml` from `DEBUG` to `INFO`, run
-the `busrefresh` above, and the services' log verbosity changes immediately —
-live proof of dynamic refresh without restarting anything.
+the `busrefresh` above, and the services' log verbosity changes immediately.
 
 ## Default owner login (first run)
 
@@ -116,25 +115,14 @@ does **not** alter an existing owner's password.
 
 ## Providing the TMDB API key
 
-The TMDB API key is an external third-party credential and is **not** committed to
-the repository (not even encrypted). `catalog-service` needs it, so provide your
-own:
+The TMDB API key is an external third-party credential, so — like the DB
+password — it is **never** committed to the repository. The served
+`catalog-service.yml` references it as an environment placeholder
+(`tmdb.api.key: ${TMDB_API_KEY}`) that `catalog-service` resolves from its own
+environment, fed by the gitignored `.env`.
 
-1. Start the config server (or the full stack).
-2. Encrypt your key: `curl -X POST http://localhost:8888/encrypt -d '<your-tmdb-key>'`
-3. In `microservices/config-server/config-repo/catalog-service.yml`, uncomment the
-   `tmdb` block and paste the result as `key: '{cipher}<output>'`.
-4. Restart `catalog-service` (or `busrefresh`) so it picks up the key.
-
-Because `catalog-service.yml` is version-controlled but your key must not be
-committed, tell git to ignore your local edit to it:
-
-```bash
-git update-index --skip-worktree microservices/config-server/config-repo/catalog-service.yml
-```
-
-Undo with `--no-skip-worktree` before intentionally changing the committed version
-(e.g. before a `git pull` that touches the file).
+To provide it, set `TMDB_API_KEY` in your `.env` (copy `.env.example` and fill it
+in). That is the same `.env` entry the monolith already uses.
 
 # Running the Microservices Stack (Docker)
 
