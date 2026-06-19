@@ -82,6 +82,6 @@ logging:
   threshold:
     file: ERROR
   level:
-    com.awbd.cinema: DEBUG
+    com.awbd.cinema: INFO
     com.netflix.discovery: INFO
     org.springframework.cloud.loadbalancer: DEBUG
