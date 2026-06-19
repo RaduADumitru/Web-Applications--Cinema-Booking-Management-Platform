@@ -7,6 +7,24 @@ spring:
     openfeign:
       circuitbreaker:
         enabled: true
+    # Spring Cloud Bus refresh transport. By default the bus binds an anonymous,
+    # exclusive, auto-delete queue per instance; that queue trips a binder bug
+    # where, after any consumer reset, it can only re-declare the queue
+    # passively and loops on 404 NOT_FOUND. Giving the consumer a named group
+    # makes the queue non-exclusive and actively declared (no loop). The group
+    # is unique per INSTANCE (app name + random id), so every instance still
+    # gets its own queue bound to the springCloudBus exchange => busrefresh
+    # fans out to all instances of all services. durableSubscription=false makes
+    # each queue auto-delete when its instance stops, so per-start ids never leak.
+    stream:
+      bindings:
+        springCloudBusInput:
+          group: ${spring.application.name}-${random.uuid}
+      rabbit:
+        bindings:
+          springCloudBusInput:
+            consumer:
+              durableSubscription: false
   data:
     redis:
       host: ${REDIS_HOST:localhost}
