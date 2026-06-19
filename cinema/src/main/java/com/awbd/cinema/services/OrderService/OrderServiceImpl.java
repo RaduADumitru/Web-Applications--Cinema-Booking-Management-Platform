@@ -47,7 +47,8 @@ public class OrderServiceImpl implements OrderService {
             @CacheEvict(value = "ticket_lists", allEntries = true),
             @CacheEvict(value = "single_ticket", allEntries = true),
             @CacheEvict(value = "user_discount_previews", key = "#userId"),
-            @CacheEvict(value = "user_notifications", key = "#userId")
+            @CacheEvict(value = "user_notifications", key = "#userId"),
+            @CacheEvict(value = "user_profile", key = "#userId")
     })
     public OrderDTO createOrder(CreateOrderDTO dto, Long userId) {
         User user = userRepository.findById(userId)
@@ -208,7 +209,8 @@ public class OrderServiceImpl implements OrderService {
             @CacheEvict(value = "order_lists", allEntries = true),
             @CacheEvict(value = "user_orders", allEntries = true),
             @CacheEvict(value = "user_past_orders", allEntries = true),
-            @CacheEvict(value = "user_discount_previews", key = "#result.userId()")
+            @CacheEvict(value = "user_discount_previews", key = "#result.userId()"),
+            @CacheEvict(value = "user_profile", key = "#result.userId()")
     })
     public OrderDTO payOrder(Long id) {
         Order order = orderRepository.findById(id)
