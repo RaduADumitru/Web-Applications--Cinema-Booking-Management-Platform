@@ -101,9 +101,14 @@ curl -X POST http://localhost:8080/actuator/busrefresh
 Every service receives the event over RabbitMQ and rebinds. Watch the broadcast
 in the RabbitMQ management UI at **http://localhost:15672** (default `guest`/`guest`).
 
-**Test:** change `logging.level.com.awbd.cinema` in
-`microservices/config-server/config-repo/application.yml` from `DEBUG` to `INFO`, run
-the `busrefresh` above, and the services' log verbosity changes immediately.
+**Test:** the business services' `JwtAuthenticationFilter` logs one line per
+request at DEBUG (`JWT filter processing GET /api/v1/... (jwt cookie absent)`).
+With `logging.level.com.awbd.cinema` at its default `DEBUG`, hit any business
+endpoint through the gateway (e.g. `curl http://localhost:8080/api/v1/movies`)
+and watch that line appear in the catalog-service logs. Now set the level to
+`INFO` in `microservices/config-server/config-repo/application.yml`, run the
+`busrefresh` above, and repeat the request — the line is gone, with no restart.
+Flip it back to `DEBUG` + `busrefresh` and it returns.
 
 ### RabbitMQ management UI
 
