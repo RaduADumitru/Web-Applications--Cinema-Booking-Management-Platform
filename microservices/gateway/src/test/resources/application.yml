@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: gateway
+  cloud:
+    config:
+      enabled: false
+    bus:
+      enabled: false
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+gateway:
+  rate-limit:
+    replenish-rate: 50
+    burst-capacity: 100
+
+eureka:
+  client:
+    enabled: false
