@@ -2,7 +2,7 @@ package com.awbd.cinema.services.AuthService;
 
 import com.awbd.cinema.DTOs.AuthDTOs.*;
 import com.awbd.cinema.DTOs.NotificationDTOs.CreateNotificationDTO;
-import com.awbd.cinema.clients.NotificationServiceClient;
+import com.awbd.cinema.clients.BookingServiceClient;
 import com.awbd.cinema.entities.User;
 import com.awbd.cinema.enums.NotificationType;
 import com.awbd.cinema.enums.Role;
@@ -30,7 +30,7 @@ import org.springframework.web.util.HtmlUtils;
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
-    private final NotificationServiceClient notificationServiceClient;
+    private final BookingServiceClient bookingServiceClient;
     private final BCryptPasswordEncoder passwordEncoder;
     private final LoginAttemptService loginAttemptService;
     private final AuthenticationManager authenticationManager;
@@ -56,7 +56,7 @@ public class AuthServiceImpl implements AuthService {
                 "Welcome, " + savedUser.getFirstName() + "! Please verify your email address ("
                         + savedUser.getEmail() + ") to activate your account.",
                 savedUser.getId());
-        notificationServiceClient.createNotification(notification);
+        bookingServiceClient.createNotification(notification);
 
         return new RegisterResponseDTO("Account created successfully.", savedUser.getUsername());
     }

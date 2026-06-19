@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 @FeignClient(
         name = "catalog-service",
         path = "/api/v1",
-        fallback = CatalogServiceClientFallback.class
+        fallbackFactory = CatalogServiceClientFallbackFactory.class
 )
 public interface CatalogServiceClient {
 

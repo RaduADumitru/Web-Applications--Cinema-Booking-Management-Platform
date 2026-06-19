@@ -8,9 +8,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 @FeignClient(
         name = "booking-service",
         path = "/api/v1",
-        fallback = NotificationServiceClientFallback.class
+        fallbackFactory = BookingServiceClientFallbackFactory.class
 )
-public interface NotificationServiceClient {
+public interface BookingServiceClient {
 
     @PostMapping("/internal/notifications")
     void createNotification(@RequestBody CreateNotificationDTO dto);
