@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: Cinema Platform
+    orgId: 1
+    folder: Cinema Platform
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards
