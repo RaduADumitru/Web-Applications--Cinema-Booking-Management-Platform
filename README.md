@@ -57,6 +57,91 @@ that services discover each other with no static configuration.
 Because resolution is by service name, no URL changes are needed to move or scale
 a service — the registry always reports its current location.
 
+# Centralized Configuration (Spring Cloud Config)
+
+All four microservices fetch their configuration at startup from a **Spring Cloud
+Config server** (`config-server`, host port **8888**) rather than carrying full
+local config. Each service keeps only a tiny bootstrap (its name +
+`spring.config.import=configserver:...`); everything else — shared defaults in
+`application.yml` plus a per-service `<service>.yml` — lives in
+`microservices/config-server/config-repo/` and is served centrally. The server uses the
+**native** (filesystem) backend, and that directory is mounted into the container
+as a volume, so edits on the host are served on the next fetch without rebuilding.
+
+## Encrypted secrets
+
+Sensitive values are stored as `{cipher}`-encrypted text and decrypted by the
+config server before being served (clients receive plaintext and need no crypto
+of their own). Encryption is symmetric, keyed by `ENCRYPT_KEY` from `.env`.
+`JWT_SECRET_KEY` ships this way in the committed `application.yml`.
+
+To (re)encrypt a value, with the config server running:
+
+```bash
+curl -X POST http://localhost:8888/encrypt -d 'the-secret-value'
+```
+
+Copy the output and paste it into the relevant config file as `'{cipher}<output>'`.
+To rotate a secret, re-encrypt and then `busrefresh` (below) — no restart.
+
+> **Security note:** the config server also exposes `/decrypt`. That's convenient
+> locally (port 8888 is mapped to the host), but in a real deployment you should
+> disable `/decrypt` or keep 8888 off the host.
+
+## Live configuration refresh (no restart)
+
+Config changes propagate to running services via **Spring Cloud Bus over
+RabbitMQ** — no restart, no redeploy. Edit a served value, then broadcast a
+refresh to the whole fleet by POSTing to the gateway:
+
+```bash
+curl -X POST http://localhost:8080/actuator/busrefresh
+```
+
+Every service receives the event over RabbitMQ and rebinds. Watch the broadcast
+in the RabbitMQ management UI at **http://localhost:15672** (default `guest`/`guest`).
+
+**Test:** the business services' `JwtAuthenticationFilter` logs one line per
+request at DEBUG (`JWT filter processing GET /api/v1/... (jwt cookie absent)`).
+`logging.level.com.awbd.cinema` defaults to `INFO`, so that line is hidden. Set
+it to `DEBUG` in `microservices/config-server/config-repo/application.yml`, run
+the `busrefresh` above, then hit any business endpoint through the gateway
+(e.g. `curl http://localhost:8080/api/v1/movies`) — the line now appears in the
+catalog-service logs, with no restart. Set it back to `INFO` + `busrefresh` and
+it's gone again.
+
+### RabbitMQ management UI
+
+The bus broker (`rabbitmq:3-management`) exposes a web console at
+**http://localhost:15672**.
+
+- **Username / password:** `guest` / `guest` (the image default — no credentials
+  are configured in `docker-compose.microservices.yml`, and the services connect
+  with Spring's default `guest`/`guest`).
+- Under **Queues** you'll see one queue per running instance, named
+  `springCloudBus.<service>-<uuid>` (e.g. `springCloudBus.catalog-service-…`), each
+  bound to the `springCloudBus` exchange. Watching their message rates while you
+  run `busrefresh` shows the refresh event fanning out to every service.
+
+## Default owner login (first run)
+
+On first startup against an empty database, user-service seeds an owner account
+from the `BOOTSTRAP_OWNER_*` values in `.env` (defaults: username **`admin`**,
+password **`Redacted1!`**). This is a one-time DB seed — it is intentionally not
+part of the config server, and changing the values later (or refreshing config)
+does **not** alter an existing owner's password.
+
+## Providing the TMDB API key
+
+The TMDB API key is an external third-party credential, so — like the DB
+password — it is **never** committed to the repository. The served
+`catalog-service.yml` references it as an environment placeholder
+(`tmdb.api.key: ${TMDB_API_KEY}`) that `catalog-service` resolves from its own
+environment, fed by the gitignored `.env`.
+
+To provide it, set `TMDB_API_KEY` in your `.env` (copy `.env.example` and fill it
+in). That is the same `.env` entry the monolith already uses.
+
 # Running the Microservices Stack (Docker)
 
 The new microservices architecture lives in `microservices/` (a multi-module Maven
@@ -76,8 +161,10 @@ original monolith (`docker-compose.yml`) — run one or the other, not both at o
   BOOKING_DB_NAME=booking_db
   ```
 
-  All other vars (`DATABASE_USER`, `DATABASE_PASSWORD`, `JWT_SECRET_KEY`,
-  `TMDB_API_KEY`, `BOOTSTRAP_OWNER_*`, `SECURITY_*`) are shared with the monolith.
+  It must also include `ENCRYPT_KEY` (the config server's symmetric decryption
+  key — see *Centralized Configuration* above). All other vars (`DATABASE_USER`,
+  `DATABASE_PASSWORD`, `JWT_SECRET_KEY`, `TMDB_API_KEY`, `BOOTSTRAP_OWNER_*`,
+  `SECURITY_*`) are shared with the monolith.
 
 ## Start
 
@@ -99,6 +186,8 @@ gateway only starts routing once `user-service`, `catalog-service`, and
 | http://localhost:8081/api/v1 | user-service (direct, debugging) |
 | http://localhost:8082/api/v1 | catalog-service (direct) |
 | http://localhost:8083/api/v1 | booking-service (direct) |
+| http://localhost:8888 | config-server (Spring Cloud Config; `/encrypt`, `/<service>/default`) |
+| http://localhost:15672 | RabbitMQ management UI (Spring Cloud Bus; `guest`/`guest`) |
 
 Internal `/internal/**` endpoints are **not** routed by the gateway — they are reachable
 only over the Docker network (service-to-service Feign calls).

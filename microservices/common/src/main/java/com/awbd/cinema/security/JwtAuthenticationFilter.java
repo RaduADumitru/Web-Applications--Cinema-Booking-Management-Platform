@@ -64,6 +64,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
 
+        log.debug("JWT filter processing {} {} (jwt cookie {})",
+                request.getMethod(), request.getRequestURI(), token != null ? "present" : "absent");
+
         if (token != null) {
             try {
                 String type = jwtUtil.extractClaim(token, claims -> claims.get("typ", String.class));

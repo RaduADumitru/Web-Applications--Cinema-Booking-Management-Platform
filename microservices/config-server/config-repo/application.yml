@@ -1,0 +1,87 @@
+spring:
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+  cloud:
+    openfeign:
+      circuitbreaker:
+        enabled: true
+    # Spring Cloud Bus refresh transport. By default the bus binds an anonymous,
+    # exclusive, auto-delete queue per instance; that queue trips a binder bug
+    # where, after any consumer reset, it can only re-declare the queue
+    # passively and loops on 404 NOT_FOUND. Giving the consumer a named group
+    # makes the queue non-exclusive and actively declared (no loop). The group
+    # is unique per INSTANCE (app name + random id), so every instance still
+    # gets its own queue bound to the springCloudBus exchange => busrefresh
+    # fans out to all instances of all services. durableSubscription=false makes
+    # each queue auto-delete when its instance stops, so per-start ids never leak.
+    stream:
+      bindings:
+        springCloudBusInput:
+          group: ${spring.application.name}-${random.uuid}
+      rabbit:
+        bindings:
+          springCloudBusInput:
+            consumer:
+              durableSubscription: false
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+
+jwt:
+  secret:
+    key: '{cipher}a655e7a74ec967155343ef0fda0e79dc56225ea8a40e3e35ba4bb0c14c458e9bfec7f3b054d77141d3359291a746da9090d45a25b66512a135200c3af89cb49fad1c9a88e3233a6b155ff78a962c47569b247c35f76ccb698b1ffccda5519479ad1a931b7efc75694c71fffc43cd0902814050efc44649f6e69cf0cdde3f159627bdde2d12b3df19c3e1592a8725a5662b5383193195bbe68e0376818a92a56d952bf9bcb6cbcb6c3e6c1aa4a94507a87c22b89748a211e6e9917b43602fdf224698beef6391ec13d1e7f6d7767233c7836143778e24f69ad3ae0f6cea83cb6c9c943c16e2bd04394fcd67d6f21586a5ed5eff0e621e96eeff574eefed1ffb05'
+
+auth:
+  cookie:
+    secure: ${SECURITY_COOKIE_SECURE:true}
+    same-site: ${SECURITY_COOKIE_SAME_SITE:LAX}
+
+security:
+  csrf:
+    enabled: ${SECURITY_CSRF_ENABLED:true}
+  max-attempts: ${SECURITY_MAX_ATTEMPTS:5}
+  website:
+    domain: ${SECURITY_WEBSITE_DOMAIN:http://localhost:4200}
+  cors:
+    allowed-origins: ${SECURITY_CORS_ALLOWED_ORIGINS:http://localhost:4200}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:8761/eureka/}
+    # Keep the Eureka client OUT of refresh scope. Otherwise a Spring Cloud Bus
+    # busrefresh tears down and rebuilds the DiscoveryClient, and the rebuild
+    # crashes on this version (spring-cloud-netflix 5.0.2 mis-deserializes a 404
+    # heartbeat response -> "Root name ('timestamp')..." -> NPE), 500-ing the
+    # service's /actuator/health and the refresh itself. We never refresh Eureka
+    # settings live, so disabling refresh scope here is free.
+    refresh:
+      enable: false
+  instance:
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 5
+    lease-expiration-duration-in-seconds: 10
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,busrefresh
+
+logging:
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB
+      total-size-cap: 100MB
+  threshold:
+    file: ERROR
+  level:
+    com.awbd.cinema: INFO
+    com.netflix.discovery: INFO
+    org.springframework.cloud.loadbalancer: DEBUG

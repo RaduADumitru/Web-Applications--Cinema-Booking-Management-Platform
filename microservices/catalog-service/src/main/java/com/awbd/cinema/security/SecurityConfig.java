@@ -74,7 +74,7 @@ public class SecurityConfig {
             http.csrf(csrf -> csrf
                     .csrfTokenRepository(cookieCsrfTokenRepository())
                     .csrfTokenRequestHandler(requestHandler)
-                    .ignoringRequestMatchers("/internal/**")
+                    .ignoringRequestMatchers("/internal/**", "/actuator/**")
             );
         } else {
             http.csrf(AbstractHttpConfigurer::disable);
