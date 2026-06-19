@@ -19,7 +19,7 @@ public class RouteConfig {
                         .filters(f -> f.requestRateLimiter(c -> c.setRateLimiter(rateLimiter).setKeyResolver(keyResolver)))
                         .uri("lb://user-service"))
                 .route("catalog-service", r -> r
-                        .path("/api/v1/movies/**", "/api/v1/rooms/**", "/api/v1/seats/**", "/api/v1/screen-sessions/**")
+                        .path("/api/v1/movies/**", "/api/v1/rooms/**", "/api/v1/seats/**", "/api/v1/screen-sessions/**", "/api/v1/session-infos/**")
                         .filters(f -> f.requestRateLimiter(c -> c.setRateLimiter(rateLimiter).setKeyResolver(keyResolver)))
                         .uri("lb://catalog-service"))
                 .route("booking-service", r -> r
