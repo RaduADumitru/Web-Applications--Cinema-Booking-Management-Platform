@@ -1,0 +1,23 @@
+server:
+  port: 8082
+  servlet:
+    context-path: /api/v1
+
+spring:
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USER}
+    password: ${DATABASE_PASSWORD}
+
+# The TMDB API key is an external third-party credential and is intentionally
+# NOT committed to the repository (not even encrypted). Provide your own:
+# encrypt your TMDB key via the config server's /encrypt endpoint, then
+# uncomment the block below and paste the result as a '{cipher}...' value.
+# See the README section "Providing the TMDB API key".
+#tmdb:
+#  api:
+#    key: '{cipher}<your-encrypted-tmdb-key>'
+
+logging:
+  file:
+    name: logs/catalog-service.log
