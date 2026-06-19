@@ -33,3 +33,6 @@ build/
 .vscode/
 .env
 logs/
+
+### Prometheus runtime data ###
+infrastructure/prometheus/durable/
