@@ -103,12 +103,12 @@ in the RabbitMQ management UI at **http://localhost:15672** (default `guest`/`gu
 
 **Test:** the business services' `JwtAuthenticationFilter` logs one line per
 request at DEBUG (`JWT filter processing GET /api/v1/... (jwt cookie absent)`).
-With `logging.level.com.awbd.cinema` at its default `DEBUG`, hit any business
-endpoint through the gateway (e.g. `curl http://localhost:8080/api/v1/movies`)
-and watch that line appear in the catalog-service logs. Now set the level to
-`INFO` in `microservices/config-server/config-repo/application.yml`, run the
-`busrefresh` above, and repeat the request — the line is gone, with no restart.
-Flip it back to `DEBUG` + `busrefresh` and it returns.
+`logging.level.com.awbd.cinema` defaults to `INFO`, so that line is hidden. Set
+it to `DEBUG` in `microservices/config-server/config-repo/application.yml`, run
+the `busrefresh` above, then hit any business endpoint through the gateway
+(e.g. `curl http://localhost:8080/api/v1/movies`) — the line now appears in the
+catalog-service logs, with no restart. Set it back to `INFO` + `busrefresh` and
+it's gone again.
 
 ### RabbitMQ management UI
 
