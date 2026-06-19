@@ -105,6 +105,19 @@ in the RabbitMQ management UI at **http://localhost:15672** (default `guest`/`gu
 `microservices/config-server/config-repo/application.yml` from `DEBUG` to `INFO`, run
 the `busrefresh` above, and the services' log verbosity changes immediately.
 
+### RabbitMQ management UI
+
+The bus broker (`rabbitmq:3-management`) exposes a web console at
+**http://localhost:15672**.
+
+- **Username / password:** `guest` / `guest` (the image default — no credentials
+  are configured in `docker-compose.microservices.yml`, and the services connect
+  with Spring's default `guest`/`guest`).
+- Under **Queues** you'll see one queue per running instance, named
+  `springCloudBus.<service>-<uuid>` (e.g. `springCloudBus.catalog-service-…`), each
+  bound to the `springCloudBus` exchange. Watching their message rates while you
+  run `busrefresh` shows the refresh event fanning out to every service.
+
 ## Default owner login (first run)
 
 On first startup against an empty database, user-service seeds an owner account
