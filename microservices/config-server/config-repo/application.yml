@@ -55,6 +55,14 @@ eureka:
   client:
     service-url:
       defaultZone: ${EUREKA_SERVER_URL:http://localhost:8761/eureka/}
+    # Keep the Eureka client OUT of refresh scope. Otherwise a Spring Cloud Bus
+    # busrefresh tears down and rebuilds the DiscoveryClient, and the rebuild
+    # crashes on this version (spring-cloud-netflix 5.0.2 mis-deserializes a 404
+    # heartbeat response -> "Root name ('timestamp')..." -> NPE), 500-ing the
+    # service's /actuator/health and the refresh itself. We never refresh Eureka
+    # settings live, so disabling refresh scope here is free.
+    refresh:
+      enable: false
   instance:
     prefer-ip-address: true
     lease-renewal-interval-in-seconds: 5
