@@ -27,16 +27,16 @@ change a running service's configuration without restarting it.
 
 ## Decisions
 
-| Decision | Choice |
-|---|---|
-| Config backend | Native filesystem (files mounted as a Docker volume) |
-| Discovery model | Config-first: services contact config server by direct URL, then register with Eureka |
-| Secrets at rest | Symmetric `{cipher}` encryption for `JWT_SECRET_KEY` and `TMDB_API_KEY` only |
-| DB password | Plain `${DATABASE_PASSWORD}` env placeholder (Postgres containers need it anyway) |
+| Decision                 | Choice                                                                                           |
+|--------------------------|--------------------------------------------------------------------------------------------------|
+| Config backend           | Native filesystem (files mounted as a Docker volume)                                             |
+| Discovery model          | Config-first: services contact config server by direct URL, then register with Eureka            |
+| Secrets at rest          | Symmetric `{cipher}` encryption for `JWT_SECRET_KEY` and `TMDB_API_KEY` only                     |
+| DB password              | Plain `${DATABASE_PASSWORD}` env placeholder (Postgres containers need it anyway)                |
 | Bootstrap owner password | NOT externalized — it is a one-time seed; kept as a local env-backed value, documented in README |
-| Dynamic refresh | Spring Cloud Bus over RabbitMQ; `POST /actuator/busrefresh` broadcasts to the whole fleet |
-| Primary refresh trigger | The gateway (`http://localhost:8080/actuator/busrefresh`) |
-| Demo refresh target | Logging level (`logging.level.com.awbd.cinema`) — refreshes natively, no code changes |
+| Dynamic refresh          | Spring Cloud Bus over RabbitMQ; `POST /actuator/busrefresh` broadcasts to the whole fleet        |
+| Primary refresh trigger  | The gateway (`http://localhost:8080/actuator/busrefresh`)                                        |
+| Demo refresh target      | Logging level (`logging.level.com.awbd.cinema`) — refreshes natively, no code changes            |
 
 ## Architecture
 
