@@ -5,7 +5,7 @@ import com.awbd.cinema.DTOs.AuthDTOs.LoginDTO;
 import com.awbd.cinema.DTOs.AuthDTOs.RegisterDTO;
 import com.awbd.cinema.DTOs.AuthDTOs.RegisterResponseDTO;
 import com.awbd.cinema.DTOs.NotificationDTOs.CreateNotificationDTO;
-import com.awbd.cinema.clients.NotificationServiceClient;
+import com.awbd.cinema.clients.BookingServiceClient;
 import com.awbd.cinema.entities.User;
 import com.awbd.cinema.enums.NotificationType;
 import com.awbd.cinema.enums.Role;
@@ -42,7 +42,7 @@ import static org.mockito.Mockito.*;
 class AuthServiceTest {
 
     @Mock private UserRepository userRepository;
-    @Mock private NotificationServiceClient notificationServiceClient;
+    @Mock private BookingServiceClient bookingServiceClient;
     @Mock private BCryptPasswordEncoder passwordEncoder;
     @Mock private LoginAttemptService loginAttemptService;
     @Mock private AuthenticationManager authenticationManager;
@@ -90,7 +90,7 @@ class AuthServiceTest {
             assertEquals("testuser", response.username());
 
             ArgumentCaptor<CreateNotificationDTO> notificationCaptor = ArgumentCaptor.forClass(CreateNotificationDTO.class);
-            verify(notificationServiceClient, times(1)).createNotification(notificationCaptor.capture());
+            verify(bookingServiceClient, times(1)).createNotification(notificationCaptor.capture());
 
             CreateNotificationDTO sentNotification = notificationCaptor.getValue();
             assertEquals(NotificationType.EMAIL_VERIFICATION, sentNotification.type());
@@ -105,7 +105,7 @@ class AuthServiceTest {
 
             assertThrows(AlreadyExistsException.class, () -> authService.register(sampleRegisterDTO));
             verify(userRepository, never()).save(any(User.class));
-            verify(notificationServiceClient, never()).createNotification(any(CreateNotificationDTO.class));
+            verify(bookingServiceClient, never()).createNotification(any(CreateNotificationDTO.class));
         }
     }
 
