@@ -64,7 +64,7 @@ Config server** (`config-server`, host port **8888**) rather than carrying full
 local config. Each service keeps only a tiny bootstrap (its name +
 `spring.config.import=configserver:...`); everything else — shared defaults in
 `application.yml` plus a per-service `<service>.yml` — lives in
-`microservices/config-server/config/` and is served centrally. The server uses the
+`microservices/config-server/config-repo/` and is served centrally. The server uses the
 **native** (filesystem) backend, and that directory is mounted into the container
 as a volume, so edits on the host are served on the next fetch without rebuilding.
 
@@ -102,7 +102,7 @@ Every service receives the event over RabbitMQ and rebinds. Watch the broadcast
 in the RabbitMQ management UI at **http://localhost:15672** (default `guest`/`guest`).
 
 **Demo:** change `logging.level.com.awbd.cinema` in
-`microservices/config-server/config/application.yml` from `DEBUG` to `INFO`, run
+`microservices/config-server/config-repo/application.yml` from `DEBUG` to `INFO`, run
 the `busrefresh` above, and the services' log verbosity changes immediately —
 live proof of dynamic refresh without restarting anything.
 
@@ -122,7 +122,7 @@ own:
 
 1. Start the config server (or the full stack).
 2. Encrypt your key: `curl -X POST http://localhost:8888/encrypt -d '<your-tmdb-key>'`
-3. In `microservices/config-server/config/catalog-service.yml`, uncomment the
+3. In `microservices/config-server/config-repo/catalog-service.yml`, uncomment the
    `tmdb` block and paste the result as `key: '{cipher}<output>'`.
 4. Restart `catalog-service` (or `busrefresh`) so it picks up the key.
 
@@ -130,7 +130,7 @@ Because `catalog-service.yml` is version-controlled but your key must not be
 committed, tell git to ignore your local edit to it:
 
 ```bash
-git update-index --skip-worktree microservices/config-server/config/catalog-service.yml
+git update-index --skip-worktree microservices/config-server/config-repo/catalog-service.yml
 ```
 
 Undo with `--no-skip-worktree` before intentionally changing the committed version

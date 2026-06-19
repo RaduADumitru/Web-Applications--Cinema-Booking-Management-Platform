@@ -77,7 +77,7 @@ services:
       SPRING_PROFILES_ACTIVE: native
       CONFIG_SEARCH_LOCATIONS: file:/config
     volumes:
-      - ./microservices/config-server/config:/config:ro
+      - ./microservices/config-server/config-repo:/config:ro
     ports:
       - "8888:8888"
     healthcheck:
