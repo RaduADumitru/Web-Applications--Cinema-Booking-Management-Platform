@@ -1,0 +1,3 @@
+demo:
+  plain: a-plain-value
+  from-env: ${DEMO_ENV_VALUE}
