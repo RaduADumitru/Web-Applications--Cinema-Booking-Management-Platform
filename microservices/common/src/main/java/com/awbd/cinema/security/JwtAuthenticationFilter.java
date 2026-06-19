@@ -76,6 +76,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         && jwtUtil.isTokenValid(token, username)) {
                     Long userId = jwtUtil.extractUserId(token);
                     Role role = jwtUtil.extractRole(token);
+                    if (role == null) {
+                        clearJwtCookie(response);
+                        chain.doFilter(request, response);
+                        return;
+                    }
                     CustomUserDetails userDetails =
                             new CustomUserDetails(userId, username, "", role, null);
                     UsernamePasswordAuthenticationToken authToken =
