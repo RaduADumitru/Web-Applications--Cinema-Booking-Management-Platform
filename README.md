@@ -144,6 +144,48 @@ environment, fed by the gitignored `.env`.
 To provide it, set `TMDB_API_KEY` in your `.env` (copy `.env.example` and fill it
 in). That is the same `.env` entry the monolith already uses.
 
+# Service-to-Service Security
+
+Internal endpoints (`/internal/**`) are authenticated with a short-lived
+service JWT, not just network isolation. On every outgoing Feign call the
+calling service mints a ~60s token (`typ=SERVICE`, `sub=<service-name>`,
+signed with the shared `jwt.secret.key`) and sends it as
+`Authorization: Bearer …`. Each service enforces a dedicated `/internal/**`
+security chain that validates the token and requires `ROLE_SERVICE`. This is
+independent of the user's `jwt` cookie (which still authenticates public
+endpoints) — the `typ` claim keeps the two token kinds non-interchangeable.
+The TTL is tunable via `SERVICE_TOKEN_TTL_SECONDS` (default 60).
+
+## Seeing it work (logs)
+
+Every internal call leaves a matched pair of `INFO` lines across two
+services' logs — one where the caller mints/attaches the token, one where
+the callee verifies it. Registration is the easiest trigger (user-service →
+booking-service):
+
+```bash
+# Trigger a user->booking internal call
+curl -s -X POST http://localhost:8080/api/v1/auth/register \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"demo","password":"Password123!","confirmPassword":"Password123!","email":"demo@example.com","firstName":"Demo","lastName":"User","phoneNumber":"+1234567890"}' >/dev/null
+
+# Caller side (user-service minted + attached the token):
+docker compose -f docker-compose.microservices.yml logs user-service | grep "Attached service token"
+# Callee side (booking-service verified it as ROLE_SERVICE):
+docker compose -f docker-compose.microservices.yml logs booking-service | grep "authenticated as service"
+```
+
+Negative proof — calling an internal endpoint directly (bypassing the
+gateway, via a service's debug host port) is rejected:
+
+```bash
+# No token -> 401
+curl -i "http://localhost:8082/api/v1/internal/ticket-setup?seatId=1&roomId=1&sessionId=1"
+# Forged token -> 401, and catalog-service logs "Rejecting internal request with invalid service token"
+curl -i -H "Authorization: Bearer garbage" \
+  "http://localhost:8082/api/v1/internal/ticket-setup?seatId=1&roomId=1&sessionId=1"
+```
+
 # Running the Microservices Stack (Docker)
 
 The new microservices architecture lives in `microservices/` (a multi-module Maven
