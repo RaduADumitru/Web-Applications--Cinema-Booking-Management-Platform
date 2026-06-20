@@ -1,9 +1,5 @@
 # Spring Cloud Config Server — Design
 
-**Date:** 2026-06-19
-**Branch:** `config-server`
-**Status:** Approved (pending spec review)
-
 ## Goal
 
 Add a Spring Cloud Config server to the microservices architecture. It must:
