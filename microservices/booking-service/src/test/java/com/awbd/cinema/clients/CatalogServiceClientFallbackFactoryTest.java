@@ -1,5 +1,6 @@
 package com.awbd.cinema.clients;
 
+import com.awbd.cinema.config.FeignClientErrorTranslator;
 import com.awbd.cinema.exceptions.AlreadyExistsException;
 import com.awbd.cinema.exceptions.BadRequestException;
 import com.awbd.cinema.exceptions.NotFoundException;
@@ -19,7 +20,7 @@ class CatalogServiceClientFallbackFactoryTest {
 
     @BeforeEach
     void setUp() {
-        factory = new CatalogServiceClientFallbackFactory(new ObjectMapper());
+        factory = new CatalogServiceClientFallbackFactory(new FeignClientErrorTranslator(new ObjectMapper()));
     }
 
     private FeignException feign(int status, String body) {
