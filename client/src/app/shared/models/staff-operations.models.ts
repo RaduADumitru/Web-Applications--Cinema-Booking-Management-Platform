@@ -75,6 +75,12 @@ export interface SaveTicketRequest {
   screenSessionId: number;
 }
 
+export interface SaveTicketsRequest {
+  seatIds: number[];
+  roomId: number;
+  screenSessionId: number;
+}
+
 export interface TicketInfoResponse {
   id: number;
   type: TicketType;

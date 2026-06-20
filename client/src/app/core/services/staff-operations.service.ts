@@ -11,6 +11,7 @@ import {
   SaveSessionInfoRequest,
   SaveSeatRequest,
   SaveTicketRequest,
+  SaveTicketsRequest,
   ScreenSessionResponse,
   SessionInfoResponse,
   TicketInfoResponse,
@@ -98,6 +99,10 @@ export class StaffOperationsService {
 
   createTicket(payload: SaveTicketRequest): Observable<TicketResponse> {
     return this.api.post<TicketResponse>('/tickets', payload);
+  }
+
+  createTickets(payload: SaveTicketsRequest): Observable<TicketResponse[]> {
+    return this.api.post<TicketResponse[]>('/tickets/bulk', payload);
   }
 
   getMovies(): Observable<PagedResponse<MovieResponse>> {

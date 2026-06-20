@@ -108,11 +108,11 @@ export class TicketAllocationComponent implements OnInit {
     }
 
     this.generating.set(true);
-    forkJoin(missing.map((seat) => this.staffOperations.createTicket({
-      seatId: seat.id,
+    this.staffOperations.createTickets({
+      seatIds: missing.map((seat) => seat.id),
       roomId: this.roomId as number,
       screenSessionId: this.screenSessionId as number,
-    }))).subscribe({
+    }).subscribe({
       next: () => {
         Swal.fire('Tickets generated', `${missing.length} tickets are now available for booking.`, 'success');
         this.loadInventory();
