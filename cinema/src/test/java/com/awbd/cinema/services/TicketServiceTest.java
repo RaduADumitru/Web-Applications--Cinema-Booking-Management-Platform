@@ -85,7 +85,7 @@ class TicketServiceTest {
         void createTicket_Success() {
             when(seatRepository.findById(1L)).thenReturn(Optional.of(sampleSeat));
             when(roomRepository.findById(2L)).thenReturn(Optional.of(sampleRoom));
-            when(screenSessionRepository.findById(3L)).thenReturn(Optional.of(sampleSession));
+            when(screenSessionRepository.findActiveById(3L)).thenReturn(Optional.of(sampleSession));
             when(roomRepository.existsByIdAndSeatsId(2L, 1L)).thenReturn(true);
             when(roomRepository.existsByIdAndScreenSessionsId(2L, 3L)).thenReturn(true);
             when(ticketRepository.existsBySeatIdAndRoomIdAndScreenSessionId(1L, 2L, 3L)).thenReturn(false);
@@ -113,7 +113,7 @@ class TicketServiceTest {
         void createTicket_SeatNotInRoom() {
             when(seatRepository.findById(1L)).thenReturn(Optional.of(sampleSeat));
             when(roomRepository.findById(2L)).thenReturn(Optional.of(sampleRoom));
-            when(screenSessionRepository.findById(3L)).thenReturn(Optional.of(sampleSession));
+            when(screenSessionRepository.findActiveById(3L)).thenReturn(Optional.of(sampleSession));
             when(roomRepository.existsByIdAndSeatsId(2L, 1L)).thenReturn(false);
 
             assertThrows(BadRequestException.class, () -> ticketService.createTicket(saveDto));
@@ -124,12 +124,24 @@ class TicketServiceTest {
         void createTicket_AlreadyExists() {
             when(seatRepository.findById(1L)).thenReturn(Optional.of(sampleSeat));
             when(roomRepository.findById(2L)).thenReturn(Optional.of(sampleRoom));
-            when(screenSessionRepository.findById(3L)).thenReturn(Optional.of(sampleSession));
+            when(screenSessionRepository.findActiveById(3L)).thenReturn(Optional.of(sampleSession));
             when(roomRepository.existsByIdAndSeatsId(2L, 1L)).thenReturn(true);
             when(roomRepository.existsByIdAndScreenSessionsId(2L, 3L)).thenReturn(true);
             when(ticketRepository.existsBySeatIdAndRoomIdAndScreenSessionId(1L, 2L, 3L)).thenReturn(true);
 
             assertThrows(AlreadyExistsException.class, () -> ticketService.createTicket(saveDto));
+        }
+
+        @Test
+        @DisplayName("Should throw NotFoundException when the session's movie is soft-deleted")
+        void createTicket_SessionOfSoftDeletedMovie_ThrowsNotFound() {
+            when(seatRepository.findById(1L)).thenReturn(Optional.of(sampleSeat));
+            when(roomRepository.findById(2L)).thenReturn(Optional.of(sampleRoom));
+            // findActiveById returns empty for a session whose movie is soft-deleted (hidden).
+            when(screenSessionRepository.findActiveById(3L)).thenReturn(Optional.empty());
+
+            assertThrows(NotFoundException.class, () -> ticketService.createTicket(saveDto));
+            verify(ticketRepository, never()).save(any());
         }
     }
 

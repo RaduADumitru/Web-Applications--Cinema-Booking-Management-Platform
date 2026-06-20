@@ -100,4 +100,48 @@ class ScreenSessionIntegrationTest {
         assertThatThrownBy(() -> screenSessionService.getScreenSession(sessionId))
                 .isInstanceOf(NotFoundException.class);
     }
+
+    @Test
+    void findActiveById_excludesSoftDeletedMovieSessions_returnsActiveOnes() {
+        Long hiddenSessionId = seedSessionForSoftDeletedMovie();
+        assertThat(screenSessionRepository.findActiveById(hiddenSessionId)).isEmpty();
+
+        ScreenSession active = seedActiveSession(112233L, LocalDate.of(2026, 9, 1));
+        assertThat(screenSessionRepository.findActiveById(active.getId())).isPresent();
+    }
+
+    @Test
+    void findByDate_excludesSessionsWhoseMovieIsSoftDeleted() {
+        LocalDate date = LocalDate.of(2026, 8, 1); // the date used by the soft-deleted fixture
+        Long hiddenSessionId = seedSessionForSoftDeletedMovie();
+        ScreenSession active = seedActiveSession(223344L, date);
+
+        List<ScreenSession> onDate = screenSessionRepository.findByDate(date);
+
+        assertThat(onDate).extracting(ScreenSession::getId)
+                .contains(active.getId())
+                .doesNotContain(hiddenSessionId);
+    }
+
+    private ScreenSession seedActiveSession(long movieId, LocalDate date) {
+        Movie active = movieRepository.save(Movie.builder()
+                .id(movieId)
+                .title("Active Fixture " + movieId)
+                .duration(100)
+                .description("fixture")
+                .rating(6.0)
+                .releaseDate(LocalDateTime.of(2024, 2, 2, 0, 0))
+                .ageRating("PG")
+                .genres(List.of())
+                .build());
+        ScreenSession session = screenSessionRepository.save(ScreenSession.builder()
+                .date(date)
+                .startTime(LocalTime.of(10, 0))
+                .endTime(LocalTime.of(12, 0))
+                .movie(active)
+                .build());
+        em.flush();
+        em.clear();
+        return session;
+    }
 }

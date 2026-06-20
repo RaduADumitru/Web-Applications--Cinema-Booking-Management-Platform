@@ -100,4 +100,31 @@ class ScreenSessionIntegrationTest {
         assertThatThrownBy(() -> screenSessionService.getScreenSession(sessionId))
                 .isInstanceOf(NotFoundException.class);
     }
+
+    @Test
+    void findActiveById_excludesSoftDeletedMovieSessions_returnsActiveOnes() {
+        Long hiddenSessionId = seedSessionForSoftDeletedMovie();
+        assertThat(screenSessionRepository.findActiveById(hiddenSessionId)).isEmpty();
+
+        Movie active = movieRepository.save(Movie.builder()
+                .id(112233L)
+                .title("Active Movie Fixture")
+                .duration(100)
+                .description("fixture")
+                .rating(6.0)
+                .releaseDate(LocalDateTime.of(2024, 2, 2, 0, 0))
+                .ageRating("PG")
+                .genres(List.of())
+                .build());
+        ScreenSession activeSession = screenSessionRepository.save(ScreenSession.builder()
+                .date(LocalDate.of(2026, 9, 1))
+                .startTime(LocalTime.of(10, 0))
+                .endTime(LocalTime.of(12, 0))
+                .movie(active)
+                .build());
+        em.flush();
+        em.clear();
+
+        assertThat(screenSessionRepository.findActiveById(activeSession.getId())).isPresent();
+    }
 }

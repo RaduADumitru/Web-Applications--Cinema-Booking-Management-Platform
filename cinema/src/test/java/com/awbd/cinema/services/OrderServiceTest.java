@@ -47,6 +47,7 @@ class OrderServiceTest {
     @Mock private UserRepository userRepository;
     @Mock private OfferRepository offerRepository;
     @Mock private NotificationRepository notificationRepository;
+    @Mock private ScreenSessionRepository screenSessionRepository;
 
     @InjectMocks
     private OrderServiceImpl orderService;
@@ -128,6 +129,8 @@ class OrderServiceTest {
             when(ticket.isAvailable()).thenReturn(true);
             when(ticket.getSeat()).thenReturn(seat);
             when(ticket.getScreenSession()).thenReturn(screenSession);
+            when(screenSession.getId()).thenReturn(3L);
+            when(screenSessionRepository.findActiveById(3L)).thenReturn(Optional.of(screenSession));
             when(screenSession.getMovie()).thenReturn(movie);
             when(screenSession.getDate()).thenReturn(LocalDate.now());
             when(screenSession.getStartTime()).thenReturn(LocalTime.now());
@@ -169,6 +172,8 @@ class OrderServiceTest {
             when(ticket.isAvailable()).thenReturn(true);
             when(ticket.getSeat()).thenReturn(seat);
             when(ticket.getScreenSession()).thenReturn(screenSession);
+            when(screenSession.getId()).thenReturn(3L);
+            when(screenSessionRepository.findActiveById(3L)).thenReturn(Optional.of(screenSession));
             when(screenSession.getMovie()).thenReturn(movie);
 
             TicketInfo ticketInfo = TicketInfo.builder().type(TicketType.ADULT).price(BigDecimal.valueOf(50.00)).build();
@@ -191,6 +196,29 @@ class OrderServiceTest {
 
             assertThat(sampleUser.getLoyaltyPoints()).isZero();
             verify(userRepository, times(1)).save(sampleUser);
+        }
+
+        @Test
+        @DisplayName("Should reject ordering a ticket whose session's movie is soft-deleted")
+        void createOrder_TicketSessionMovieSoftDeleted_ThrowsBadRequest() {
+            OrderItemDTO itemDto = new OrderItemDTO(1L, TicketType.ADULT);
+            CreateOrderDTO dto = new CreateOrderDTO(List.of(itemDto), false);
+
+            Ticket ticket = mock(Ticket.class);
+            ScreenSession screenSession = mock(ScreenSession.class);
+
+            when(ticket.isAvailable()).thenReturn(true);
+            when(ticket.getScreenSession()).thenReturn(screenSession);
+            when(screenSession.getId()).thenReturn(3L);
+            // findActiveById empty => the session's movie is soft-deleted (hidden).
+            when(screenSessionRepository.findActiveById(3L)).thenReturn(Optional.empty());
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(sampleUser));
+            when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
+
+            assertThatThrownBy(() -> orderService.createOrder(dto, 1L))
+                    .isInstanceOf(BadRequestException.class);
+            verify(orderRepository, never()).save(any());
         }
     }
 
