@@ -38,4 +38,8 @@ export class SeatSelectionService {
 
     return this.api.post<OrderResponse>('/orders', payload);
   }
+
+  getDiscountPreview(): Observable<{ points: number; discount: number }> {
+    return this.api.get<{ points: number; discount: number }>('/orders/my/discount-preview');
+  }
 }

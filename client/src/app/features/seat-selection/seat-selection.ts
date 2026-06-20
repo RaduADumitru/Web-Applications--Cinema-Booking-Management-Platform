@@ -12,7 +12,7 @@ import { OrdersService } from '@app/core/services/orders.service';
 import { SeatResponse } from '@app/shared/models/seat.models';
 import { TicketResponse, TicketType } from '@app/shared/models/ticket.models';
 import { MovieResponse } from '@app/shared/models/movie.models';
-import { ScreenSessionResponse } from '@app/shared/models/staff-operations.models';
+import { ScreenSessionResponse, TicketInfoResponse } from '@app/shared/models/staff-operations.models';
 
 interface SeatView {
   seat: SeatResponse;
@@ -37,8 +37,8 @@ export class SeatSelectionComponent implements OnInit, OnChanges {
   @Input() roomType: string | null = null;
 
   readonly ticketTypes: TicketType[] = ['ADULT', 'STUDENT', 'CHILD'];
-  selectedTicketType: TicketType = 'ADULT';
-  useDiscount = false;
+  selectedTicketType = signal<TicketType>('ADULT');
+  useDiscount = signal<boolean>(false);
 
   seats = signal<SeatResponse[]>([]);
   tickets = signal<TicketResponse[]>([]);
@@ -50,6 +50,9 @@ export class SeatSelectionComponent implements OnInit, OnChanges {
   movie = signal<MovieResponse | null>(null);
   showtimes = signal<ScreenSessionResponse[]>([]);
   selectedShowtimeId = signal<number | null>(null);
+
+  ticketInfos = signal<TicketInfoResponse[]>([]);
+  discountAmount = signal<number>(0);
 
   private initialized = false;
 
@@ -113,8 +116,17 @@ export class SeatSelectionComponent implements OnInit, OnChanges {
     return this.seatViews().filter((view) => selectedIds.has(view.seat.id));
   });
 
+  selectedTicketTypePrice = computed(() => {
+    const info = this.ticketInfos().find((t) => t.type === this.selectedTicketType());
+    return info ? info.price : 0;
+  });
+
   selectedTotal = computed(() => {
-    return this.selectedViews().reduce((total, view) => total + (view.ticket?.price ?? 0), 0);
+    const baseTotal = this.selectedViews().length * this.selectedTicketTypePrice();
+    if (this.useDiscount()) {
+      return Math.max(0, baseTotal - this.discountAmount());
+    }
+    return baseTotal;
   });
 
   availableCount = computed(() => {
@@ -146,6 +158,19 @@ export class SeatSelectionComponent implements OnInit, OnChanges {
     }
 
     this.loadLayout();
+    this.loadTicketPricesAndDiscount();
+  }
+
+  loadTicketPricesAndDiscount(): void {
+    this.staffOperationsService.getTicketInfos().subscribe({
+      next: (response) => this.ticketInfos.set(response.content),
+      error: (err) => console.error('Error loading ticket prices:', err)
+    });
+
+    this.seatSelectionService.getDiscountPreview().subscribe({
+      next: (preview) => this.discountAmount.set(preview.discount),
+      error: (err) => console.error('Error loading discount preview:', err)
+    });
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -283,13 +308,17 @@ export class SeatSelectionComponent implements OnInit, OnChanges {
     }
 
     this.isBooking.set(true);
-    this.seatSelectionService.createOrder(ticketIds, this.selectedTicketType, this.useDiscount)
+    this.seatSelectionService.createOrder(ticketIds, this.selectedTicketType(), this.useDiscount())
       .pipe(finalize(() => this.isBooking.set(false)))
       .subscribe({
         next: (order) => {
           Swal.fire('Reserved!', `Order #${order.id} is pending payment.`, 'success');
           this.ordersService.refreshOrders();
           this.loadLayout();
+          this.seatSelectionService.getDiscountPreview().subscribe({
+            next: (preview) => this.discountAmount.set(preview.discount),
+            error: (err) => console.error('Error reloading discount preview:', err)
+          });
         },
         error: (error) => {
           console.error('Unable to reserve selected seats:', error);
