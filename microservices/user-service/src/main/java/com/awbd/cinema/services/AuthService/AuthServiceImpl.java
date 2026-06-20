@@ -13,6 +13,7 @@ import com.awbd.cinema.repositories.UserRepository;
 import com.awbd.cinema.services.LoginAttemptService.LoginAttemptService;
 import com.awbd.cinema.utils.JwtUtil;
 import jakarta.transaction.Transactional;
+import org.springframework.dao.DataIntegrityViolationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -108,11 +109,15 @@ public class AuthServiceImpl implements AuthService {
     public void createOwner(RegisterDTO owner) {
         userRepository.findByUsernameIgnoreCaseOrEmailIgnoreCase(owner.username(), owner.email())
                 .orElseGet(() -> {
-                    User u = maptoEntity(owner);
-                    u.setRole(Role.OWNER);
-
-                    log.info("Created owner: {}", u.getUsername());
-                    return userRepository.save(u);
+                    try {
+                        User u = maptoEntity(owner);
+                        u.setRole(Role.OWNER);
+                        log.info("Created owner: {}", u.getUsername());
+                        return userRepository.save(u);
+                    } catch (DataIntegrityViolationException e) {
+                        log.info("Owner already created by another instance, skipping.");
+                        return null;
+                    }
                 });
     }
 
