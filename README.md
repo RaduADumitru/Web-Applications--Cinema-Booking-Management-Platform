@@ -41,9 +41,11 @@ Feign clients resolve their targets by service name through the registry.
 With the stack running, open **http://localhost:8761**. The "Instances currently
 registered with Eureka" table lists every running app:
 `USER-SERVICE`, `CATALOG-SERVICE`, `BOOKING-SERVICE`, and `GATEWAY`. Stop a
-container (`docker stop ms-catalog-service`) and refresh — it disappears from the
-table; start it again and it re-registers automatically. This is the live proof
-that services discover each other with no static configuration.
+service (`docker compose -f docker-compose.microservices.yml stop catalog-service`)
+and refresh — its instances disappear from the table; start it again
+(`docker compose -f docker-compose.microservices.yml start catalog-service`) and they
+re-register automatically. This is the live proof that services discover each other
+with no static configuration.
 
 ## What the logs show
 
