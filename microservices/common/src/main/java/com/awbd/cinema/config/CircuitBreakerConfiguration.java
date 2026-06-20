@@ -10,8 +10,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Tunes the Feign circuit breakers (catalog-service, user-service clients) so that benign client
- * (4xx) errors do not trip the breaker.
+ * Tunes every Feign circuit breaker (in any service that depends on {@code common}) so that benign
+ * client (4xx) errors do not trip the breaker.
  *
  * <p>A {@code 404}/{@code 400}/{@code 409}/{@code 422} means the downstream is healthy and is
  * correctly rejecting a specific request, so counting them as breaker failures would let, say, a
