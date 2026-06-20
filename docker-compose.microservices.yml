@@ -131,7 +131,7 @@ services:
     <<: *ms-common
     command: sh -c "mvn -o -pl user-service spring-boot:run"
     deploy:
-      replicas: 1
+      replicas: 2
     environment:
       SERVER_PORT: 8080
       DATABASE_URL: jdbc:postgresql://user-db:5432/${USER_DB_NAME}
@@ -161,7 +161,7 @@ services:
     <<: *ms-common
     command: sh -c "mvn -o -pl catalog-service spring-boot:run"
     deploy:
-      replicas: 1
+      replicas: 2
     environment:
       SERVER_PORT: 8080
       DATABASE_URL: jdbc:postgresql://catalog-db:5432/${CATALOG_DB_NAME}
@@ -194,7 +194,7 @@ services:
     <<: *ms-common
     command: sh -c "mvn -o -pl booking-service spring-boot:run"
     deploy:
-      replicas: 1
+      replicas: 2
     environment:
       SERVER_PORT: 8080
       DATABASE_URL: jdbc:postgresql://booking-db:5432/${BOOKING_DB_NAME}
