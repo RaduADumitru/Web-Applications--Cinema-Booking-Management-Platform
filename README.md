@@ -144,6 +144,57 @@ environment, fed by the gitignored `.env`.
 To provide it, set `TMDB_API_KEY` in your `.env` (copy `.env.example` and fill it
 in). That is the same `.env` entry the monolith already uses.
 
+# Service-to-Service Security
+
+Internal endpoints (`/internal/**`) are authenticated with a short-lived
+service JWT, not just network isolation. On every outgoing Feign call the
+calling service mints a ~60s token (`typ=SERVICE`, `sub=<service-name>`,
+signed with the shared `jwt.secret.key`) and sends it as
+`Authorization: Bearer …`. Each service enforces a dedicated `/internal/**`
+security chain that validates the token and requires `ROLE_SERVICE`. This is
+independent of the user's `jwt` cookie (which still authenticates public
+endpoints) — the `typ` claim keeps the two token kinds non-interchangeable.
+The TTL is tunable via `SERVICE_TOKEN_TTL_SECONDS` (default 60).
+
+## Seeing it work (logs)
+
+Every internal call leaves a matched pair of `INFO` lines across two
+services' logs — one where the caller mints/attaches the token, one where
+the callee verifies it. Registration is the easiest trigger (user-service →
+booking-service):
+
+```bash
+# Trigger a user->booking internal call
+curl -s -X POST http://localhost:8080/api/v1/auth/register \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"demo","password":"Password123!","confirmPassword":"Password123!","email":"demo@example.com","firstName":"Demo","lastName":"User","phoneNumber":"+1234567890"}' >/dev/null
+
+# Caller side (user-service minted + attached the token):
+docker compose -f docker-compose.microservices.yml logs user-service | grep "Attached service token"
+# Callee side (booking-service verified it as ROLE_SERVICE):
+docker compose -f docker-compose.microservices.yml logs booking-service | grep "authenticated as service"
+```
+
+Negative proof — `/internal/**` is **not reachable from the host** at all: the
+business services publish no host ports (they run as load-balanced replicas),
+and the gateway does not route `/internal/**`. To show the rejection you must
+call the endpoint from *inside* the Docker network, bypassing the gateway by
+hitting the service name directly (`curl` is present in the service image):
+
+```bash
+# No token -> 401
+docker compose -f docker-compose.microservices.yml exec gateway \
+  curl -i "http://catalog-service:8080/api/v1/internal/ticket-setup?seatId=1&roomId=1&sessionId=1"
+# Forged token -> 401, and catalog-service logs "Rejecting internal request with invalid service token"
+docker compose -f docker-compose.microservices.yml exec gateway \
+  curl -i -H "Authorization: Bearer garbage" \
+  "http://catalog-service:8080/api/v1/internal/ticket-setup?seatId=1&roomId=1&sessionId=1"
+```
+
+(From the host, `curl http://localhost:8080/api/v1/internal/ticket-setup` just
+returns `404` — the gateway has no such route — which is itself a form of
+proof that internal endpoints aren't externally exposed.)
+
 # Running the Microservices Stack (Docker)
 
 The new microservices architecture lives in `microservices/` (a multi-module Maven
