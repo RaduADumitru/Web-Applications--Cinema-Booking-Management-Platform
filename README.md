@@ -175,16 +175,25 @@ docker compose -f docker-compose.microservices.yml logs user-service | grep "Att
 docker compose -f docker-compose.microservices.yml logs booking-service | grep "authenticated as service"
 ```
 
-Negative proof — calling an internal endpoint directly (bypassing the
-gateway, via a service's debug host port) is rejected:
+Negative proof — `/internal/**` is **not reachable from the host** at all: the
+business services publish no host ports (they run as load-balanced replicas),
+and the gateway does not route `/internal/**`. To show the rejection you must
+call the endpoint from *inside* the Docker network, bypassing the gateway by
+hitting the service name directly (`curl` is present in the service image):
 
 ```bash
 # No token -> 401
-curl -i "http://localhost:8082/api/v1/internal/ticket-setup?seatId=1&roomId=1&sessionId=1"
+docker compose -f docker-compose.microservices.yml exec gateway \
+  curl -i "http://catalog-service:8080/api/v1/internal/ticket-setup?seatId=1&roomId=1&sessionId=1"
 # Forged token -> 401, and catalog-service logs "Rejecting internal request with invalid service token"
-curl -i -H "Authorization: Bearer garbage" \
-  "http://localhost:8082/api/v1/internal/ticket-setup?seatId=1&roomId=1&sessionId=1"
+docker compose -f docker-compose.microservices.yml exec gateway \
+  curl -i -H "Authorization: Bearer garbage" \
+  "http://catalog-service:8080/api/v1/internal/ticket-setup?seatId=1&roomId=1&sessionId=1"
 ```
+
+(From the host, `curl http://localhost:8080/api/v1/internal/ticket-setup` just
+returns `404` — the gateway has no such route — which is itself a form of
+proof that internal endpoints aren't externally exposed.)
 
 # Running the Microservices Stack (Docker)
 
