@@ -37,7 +37,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
-class ScreenSessionSoftDeletedMovieIntegrationTest {
+class ScreenSessionIntegrationTest {
 
     @Autowired
     private ScreenSessionService screenSessionService;
