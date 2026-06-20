@@ -297,6 +297,8 @@ public class ServiceTokenAuthenticationFilter extends OncePerRequestFilter {
                                 serviceName, null, List.of(new SimpleGrantedAuthority("ROLE_SERVICE")));
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authToken);
+                log.info("Internal request authenticated as service '{}' -> {} {}",
+                        serviceName, request.getMethod(), request.getRequestURI());
             } catch (JwtException e) {
                 log.warn("Rejecting internal request with invalid service token: {}", e.getMessage());
             }
@@ -387,10 +389,12 @@ import com.awbd.cinema.utils.JwtUtil;
 import feign.RequestInterceptor;
 import feign.RequestTemplate;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class ServiceTokenInterceptor implements RequestInterceptor {
@@ -404,6 +408,8 @@ public class ServiceTokenInterceptor implements RequestInterceptor {
     public void apply(RequestTemplate template) {
         String token = jwtUtil.generateServiceToken(applicationName);
         template.header(HttpHeaders.AUTHORIZATION, "Bearer " + token);
+        log.info("Attached service token as '{}' for outgoing {} {}",
+                applicationName, template.method(), template.path());
     }
 }
 ```
@@ -912,6 +918,36 @@ security chain that validates the token and requires `ROLE_SERVICE`. This is
 independent of the user's `jwt` cookie (which still authenticates public
 endpoints) — the `typ` claim keeps the two token kinds non-interchangeable.
 The TTL is tunable via `SERVICE_TOKEN_TTL_SECONDS` (default 60).
+
+### Seeing it work (logs)
+
+Every internal call leaves a matched pair of `INFO` lines across two
+services' logs — one where the caller mints/attaches the token, one where
+the callee verifies it. Registration is the easiest trigger (user-service →
+booking-service):
+
+```bash
+# Trigger a user->booking internal call
+curl -s -X POST http://localhost:8080/api/v1/auth/register \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"demo","password":"Password123!","confirmPassword":"Password123!","email":"demo@example.com","firstName":"Demo","lastName":"User","phoneNumber":"+1234567890"}' >/dev/null
+
+# Caller side (user-service minted + attached the token):
+docker compose -f docker-compose.microservices.yml logs user-service | grep "Attached service token"
+# Callee side (booking-service verified it as ROLE_SERVICE):
+docker compose -f docker-compose.microservices.yml logs booking-service | grep "authenticated as service"
+```
+
+Negative proof — calling an internal endpoint directly (bypassing the
+gateway, via a service's debug host port) is rejected:
+
+```bash
+# No token -> 401
+curl -i "http://localhost:8082/api/v1/internal/ticket-setup?seatId=1&roomId=1&sessionId=1"
+# Forged token -> 401, and catalog-service logs "Rejecting internal request with invalid service token"
+curl -i -H "Authorization: Bearer garbage" \
+  "http://localhost:8082/api/v1/internal/ticket-setup?seatId=1&roomId=1&sessionId=1"
+```
 ```
 
 - [ ] **Step 3: Build and verify the entire reactor**
@@ -937,4 +973,5 @@ git commit -m "Document service-to-service JWT security and surface its TTL in s
 - `ServiceTokenAuthenticationFilter` validates that token and grants `ROLE_SERVICE`.
 - Each of the three services has a dedicated `@Order(1)` `/internal/**` security chain requiring `ROLE_SERVICE`; the main chain (`@Order(2)`) no longer treats `/internal/**` as `permitAll`. `/actuator/**` stays open for healthchecks.
 - The registration flow (user→booking `/internal/notifications`, which fires before any user JWT exists) now authenticates with a real service credential instead of relying on `permitAll`.
+- **Demo:** each internal call emits a matched pair of `INFO` log lines (caller "Attached service token…", callee "…authenticated as service…"), and a direct `curl` to an internal endpoint without/with a forged token returns 401 (and logs the rejection) — documented in the README.
 - HTTPS remains deferred (design §9), along with per-caller allowlisting and a separate service-token key, as documented future hardening.

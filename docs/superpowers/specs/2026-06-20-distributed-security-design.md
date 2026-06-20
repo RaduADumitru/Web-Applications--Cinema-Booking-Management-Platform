@@ -167,6 +167,23 @@ container healthchecks.
   pre-JWT registration path authenticates properly instead of depending on
   `permitAll`. This closes the flagged gap.
 
+## 7a. Observability / demo
+
+Each internal call emits a matched pair of `INFO` log lines (the default level
+for `com.awbd.cinema`), giving positive, demoable proof that the scheme works
+end to end:
+
+- **Caller** (`ServiceTokenInterceptor`): `Attached service token as
+  '<service>' for outgoing <METHOD> <path>`.
+- **Callee** (`ServiceTokenAuthenticationFilter`, success): `Internal request
+  authenticated as service '<service>' -> <METHOD> <uri>`.
+
+A single user action (e.g. registration → user-service → booking-service)
+produces both lines across two services' logs. The negative path is equally
+visible: a direct call to an internal endpoint with a missing/forged token
+returns `401` and, for a malformed token, logs `Rejecting internal request
+with invalid service token: …`. The README documents the exact commands.
+
 ## 8. Testing
 
 - **Unit — `JwtUtil`:** `generateServiceToken`/`validateServiceToken` round
