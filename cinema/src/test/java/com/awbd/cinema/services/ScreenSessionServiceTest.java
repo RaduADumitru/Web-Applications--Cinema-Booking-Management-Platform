@@ -184,9 +184,10 @@ class ScreenSessionServiceTest {
             Specification<ScreenSession> spec = captureSpecification(500L, "THREE_D");
             assertThat(spec).isNotNull();
 
-            // Mocking the chain: root.get("movie").get("id")
+            // Mocking the chain: root.get("movie").get("deletedAt") (soft-delete guard) and .get("id")
             Path<Object> moviePath = mock(Path.class);
             when(root.get("movie")).thenReturn(moviePath);
+            when(moviePath.get("deletedAt")).thenReturn(pathMock);
             when(moviePath.get("id")).thenReturn(pathMock);
 
             // Mocking the join: root.join("sessionInfo", JoinType.INNER)
@@ -197,10 +198,11 @@ class ScreenSessionServiceTest {
             spec.toPredicate(root, query, cb);
 
             // Assertions
-            verify(root).get("movie");
+            verify(root, times(2)).get("movie"); // once for the deletedAt guard, once for the id filter
             verify(root).join("sessionInfo", JoinType.INNER);
 
             // Verify exact CriteriaBuilder criteria assignments
+            verify(cb).isNull(pathMock); // movie.deletedAt IS NULL (hide soft-deleted movies' sessions)
             verify(cb).equal(pathMock, 500L);
             verify(cb).equal(pathMock, Format.THREE_D);
             verify(cb).and(any(Predicate[].class));
@@ -212,10 +214,16 @@ class ScreenSessionServiceTest {
             Specification<ScreenSession> spec = captureSpecification(null, null);
             assertThat(spec).isNotNull();
 
+            // Even with no filters, the soft-delete guard predicate is always applied.
+            Path<Object> moviePath = mock(Path.class);
+            when(root.get("movie")).thenReturn(moviePath);
+            when(moviePath.get("deletedAt")).thenReturn(pathMock);
+
             spec.toPredicate(root, query, cb);
 
-            verify(root, never()).get(anyString());
+            verify(root).get("movie"); // only the deletedAt guard; no movieId filter
             verify(root, never()).join(anyString(), any(JoinType.class));
+            verify(cb).isNull(pathMock);
             verify(cb).and(any(Predicate[].class));
         }
 
@@ -226,9 +234,15 @@ class ScreenSessionServiceTest {
             Specification<ScreenSession> spec = captureSpecification(null, "   ");
             assertThat(spec).isNotNull();
 
+            // The soft-delete guard predicate is always applied.
+            Path<Object> moviePath = mock(Path.class);
+            when(root.get("movie")).thenReturn(moviePath);
+            when(moviePath.get("deletedAt")).thenReturn(pathMock);
+
             spec.toPredicate(root, query, cb);
 
             verify(root, never()).join(anyString(), any(JoinType.class));
+            verify(cb).isNull(pathMock);
             verify(cb).and(any(Predicate[].class));
         }
 
@@ -257,7 +271,9 @@ class ScreenSessionServiceTest {
         @Test
         @DisplayName("Should pull specific matching session elements if valid record ID is found")
         void getScreenSession_ValidId_ReturnsDTO() {
-            when(screenSessionRepository.findById(1L)).thenReturn(Optional.of(sampleSession));
+            // getScreenSession now filters out soft-deleted movies via a Specification + findOne.
+            when(screenSessionRepository.findOne(any(Specification.class)))
+                    .thenReturn(Optional.of(sampleSession));
 
             ScreenSessionDTO result = screenSessionService.getScreenSession(1L);
 
