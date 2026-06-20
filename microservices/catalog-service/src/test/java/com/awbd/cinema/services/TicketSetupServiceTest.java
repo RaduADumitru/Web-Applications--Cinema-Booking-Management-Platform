@@ -64,7 +64,7 @@ class TicketSetupServiceTest {
     void getTicketSetup_ReturnsSnapshot_WhenValid() {
         when(seatRepository.findById(1L)).thenReturn(Optional.of(seat));
         when(roomRepository.findById(2L)).thenReturn(Optional.of(room));
-        when(screenSessionRepository.findById(3L)).thenReturn(Optional.of(session));
+        when(screenSessionRepository.findActiveById(3L)).thenReturn(Optional.of(session));
         when(roomRepository.existsByIdAndSeatsId(2L, 1L)).thenReturn(true);
         when(roomRepository.existsByIdAndScreenSessionsId(2L, 3L)).thenReturn(true);
 
@@ -87,7 +87,7 @@ class TicketSetupServiceTest {
         session.setSessionInfo(null);
         when(seatRepository.findById(1L)).thenReturn(Optional.of(seat));
         when(roomRepository.findById(2L)).thenReturn(Optional.of(room));
-        when(screenSessionRepository.findById(3L)).thenReturn(Optional.of(session));
+        when(screenSessionRepository.findActiveById(3L)).thenReturn(Optional.of(session));
         when(roomRepository.existsByIdAndSeatsId(2L, 1L)).thenReturn(true);
         when(roomRepository.existsByIdAndScreenSessionsId(2L, 3L)).thenReturn(true);
 
@@ -115,7 +115,7 @@ class TicketSetupServiceTest {
     void getTicketSetup_ThrowsNotFound_WhenSessionMissing() {
         when(seatRepository.findById(1L)).thenReturn(Optional.of(seat));
         when(roomRepository.findById(2L)).thenReturn(Optional.of(room));
-        when(screenSessionRepository.findById(3L)).thenReturn(Optional.empty());
+        when(screenSessionRepository.findActiveById(3L)).thenReturn(Optional.empty());
         assertThrows(NotFoundException.class, () -> ticketSetupService.getTicketSetup(1L, 2L, 3L));
     }
 
@@ -123,7 +123,7 @@ class TicketSetupServiceTest {
     void getTicketSetup_ThrowsBadRequest_WhenSeatNotInRoom() {
         when(seatRepository.findById(1L)).thenReturn(Optional.of(seat));
         when(roomRepository.findById(2L)).thenReturn(Optional.of(room));
-        when(screenSessionRepository.findById(3L)).thenReturn(Optional.of(session));
+        when(screenSessionRepository.findActiveById(3L)).thenReturn(Optional.of(session));
         when(roomRepository.existsByIdAndSeatsId(2L, 1L)).thenReturn(false);
         assertThrows(BadRequestException.class, () -> ticketSetupService.getTicketSetup(1L, 2L, 3L));
     }
@@ -132,7 +132,7 @@ class TicketSetupServiceTest {
     void getTicketSetup_ThrowsBadRequest_WhenSessionNotInRoom() {
         when(seatRepository.findById(1L)).thenReturn(Optional.of(seat));
         when(roomRepository.findById(2L)).thenReturn(Optional.of(room));
-        when(screenSessionRepository.findById(3L)).thenReturn(Optional.of(session));
+        when(screenSessionRepository.findActiveById(3L)).thenReturn(Optional.of(session));
         when(roomRepository.existsByIdAndSeatsId(2L, 1L)).thenReturn(true);
         when(roomRepository.existsByIdAndScreenSessionsId(2L, 3L)).thenReturn(false);
         assertThrows(BadRequestException.class, () -> ticketSetupService.getTicketSetup(1L, 2L, 3L));

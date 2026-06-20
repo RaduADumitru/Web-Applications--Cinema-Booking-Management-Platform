@@ -35,7 +35,9 @@ public class TicketServiceImpl implements TicketService {
                 .orElseThrow(() -> new NotFoundException("Seat not found."));
         Room room = roomRepository.findById(dto.roomId())
                 .orElseThrow(() -> new NotFoundException("Room not found."));
-        ScreenSession session = screenSessionRepository.findById(dto.screenSessionId())
+        // findActiveById (not findById) so you cannot create a ticket for a session whose movie
+        // is soft-deleted (hidden) — it is treated as not found rather than 500ing later.
+        ScreenSession session = screenSessionRepository.findActiveById(dto.screenSessionId())
                 .orElseThrow(() -> new NotFoundException("Screen session not found."));
 
         if (!roomRepository.existsByIdAndSeatsId(room.getId(), seat.getId())) {

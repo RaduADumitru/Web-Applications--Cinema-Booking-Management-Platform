@@ -30,7 +30,10 @@ public class TicketSetupServiceImpl implements TicketSetupService {
                 .orElseThrow(() -> new NotFoundException("Seat not found."));
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new NotFoundException("Room not found."));
-        ScreenSession session = screenSessionRepository.findById(sessionId)
+        // findActiveById (not findById) so a session whose movie is soft-deleted is treated as
+        // not found (404) rather than 500ing when session.getMovie().getTitle() resolves the
+        // @SQLRestriction-filtered proxy below.
+        ScreenSession session = screenSessionRepository.findActiveById(sessionId)
                 .orElseThrow(() -> new NotFoundException("Screen session not found."));
 
         if (!roomRepository.existsByIdAndSeatsId(room.getId(), seat.getId())) {
