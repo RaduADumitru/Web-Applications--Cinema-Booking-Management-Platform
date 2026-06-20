@@ -52,7 +52,8 @@ class ScreenSessionControllerTest extends BaseControllerTest {
                 "Inception",
                 30L,
                 Format.THREE_D,
-                15
+                15,
+                java.util.List.of(2L)
         );
     }
 

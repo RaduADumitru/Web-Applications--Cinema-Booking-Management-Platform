@@ -26,6 +26,7 @@ export interface ScreenSessionResponse {
   sessionInfoId: number | null;
   format: string | null;
   points: number | null;
+  roomIds: number[];
 }
 
 export interface SaveScreenSessionRequest {
