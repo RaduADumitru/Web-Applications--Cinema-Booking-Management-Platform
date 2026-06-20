@@ -1,6 +1,7 @@
 package com.awbd.cinema.services;
 
 import com.awbd.cinema.DTOs.TicketDTOs.BookTicketDTO;
+import com.awbd.cinema.DTOs.TicketDTOs.BulkSaveTicketsDTO;
 import com.awbd.cinema.DTOs.TicketDTOs.SaveTicketDTO;
 import com.awbd.cinema.DTOs.TicketDTOs.TicketDTO;
 import com.awbd.cinema.DTOs.TicketDTOs.TicketSetupDTO;
@@ -62,6 +63,48 @@ class TicketServiceTest {
 
         sampleSetup = new TicketSetupDTO(5, 10, "A", BigDecimal.ZERO, 0,
                 "Inception", LocalDate.of(2026, 7, 1), LocalTime.of(19, 30), 0);
+    }
+
+    @Nested
+    @DisplayName("Create Bulk Tickets Tests")
+    class CreateBulkTicketsTests {
+
+        private BulkSaveTicketsDTO bulkSaveDto;
+
+        @BeforeEach
+        void setup() {
+            bulkSaveDto = new BulkSaveTicketsDTO(java.util.List.of(1L, 5L), 2L, 3L);
+        }
+
+        @Test
+        @DisplayName("Should successfully create bulk tickets while skipping existing ones")
+        void createTickets_Success() {
+            BulkSaveTicketsDTO filteredDto = new BulkSaveTicketsDTO(java.util.List.of(5L), 2L, 3L);
+            when(ticketRepository.findExistingSeatIds(2L, 3L, java.util.List.of(1L, 5L))).thenReturn(java.util.List.of(1L));
+            when(catalogServiceClient.getTicketSetups(filteredDto)).thenReturn(java.util.List.of(sampleSetup));
+            when(ticketRepository.saveAll(anyList())).thenReturn(java.util.List.of(sampleTicket));
+
+            java.util.List<TicketDTO> results = ticketService.createTickets(bulkSaveDto);
+
+            assertNotNull(results);
+            assertEquals(1, results.size());
+            assertEquals(100L, results.get(0).id());
+            verify(catalogServiceClient).getTicketSetups(filteredDto);
+            verify(ticketRepository).saveAll(anyList());
+        }
+
+        @Test
+        @DisplayName("Should return empty list and skip Feign call when all tickets already exist")
+        void createTickets_AllExist() {
+            when(ticketRepository.findExistingSeatIds(2L, 3L, java.util.List.of(1L, 5L))).thenReturn(java.util.List.of(1L, 5L));
+
+            java.util.List<TicketDTO> results = ticketService.createTickets(bulkSaveDto);
+
+            assertNotNull(results);
+            assertTrue(results.isEmpty());
+            verifyNoInteractions(catalogServiceClient);
+            verify(ticketRepository, never()).saveAll(any());
+        }
     }
 
     @Nested

@@ -68,7 +68,7 @@ class ScreenSessionServiceTest {
         sampleSession = ScreenSession.builder()
                 .id(1L)
                 .movie(sampleMovie)
-                .date(LocalDate.of(2026, 7, 1))
+                .date(LocalDate.now().plusDays(1))
                 .startTime(LocalTime.of(18, 0))
                 .endTime(LocalTime.of(20, 30))
                 .sessionInfo(sampleSessionInfo)
@@ -77,7 +77,7 @@ class ScreenSessionServiceTest {
         // Layout: movieId, date, startTime, endTime, sessionInfoId, roomId
         saveDto = new SaveScreenSessionDTO(
                 500L,
-                LocalDate.of(2026, 7, 1),
+                LocalDate.now().plusDays(1),
                 LocalTime.of(18, 0),
                 LocalTime.of(20, 30),
                 30L,
@@ -93,6 +93,23 @@ class ScreenSessionServiceTest {
     @Nested
     @DisplayName("createScreenSession Tests")
     class CreateScreenSessionTests {
+
+        @Test
+        @DisplayName("Should throw BadRequestException when screen session start time is in the past")
+        void createScreenSession_PastDateTime_ThrowsBadRequestException() {
+            SaveScreenSessionDTO pastDto = new SaveScreenSessionDTO(
+                    500L, LocalDate.now().minusDays(1),
+                    LocalTime.of(18, 0), LocalTime.of(20, 30),
+                    30L, 10L
+            );
+
+            when(movieRepository.findById(500L)).thenReturn(Optional.of(sampleMovie));
+            when(roomRepository.findById(10L)).thenReturn(Optional.of(sampleRoom));
+
+            assertThatThrownBy(() -> screenSessionService.createScreenSession(pastDto))
+                    .isInstanceOf(BadRequestException.class)
+                    .hasMessageContaining("Screen session start time must be in the future or present.");
+        }
 
         @Test
         @DisplayName("Should throw NotFoundException when target movie does not exist")
@@ -121,7 +138,7 @@ class ScreenSessionServiceTest {
         @DisplayName("Should throw BadRequestException when end time occurs before or at start time")
         void createScreenSession_InvalidTimes_ThrowsBadRequestException() {
             SaveScreenSessionDTO invalidTimesDto = new SaveScreenSessionDTO(
-                    500L, LocalDate.of(2026, 7, 1),
+                    500L, LocalDate.now().plusDays(1),
                     LocalTime.of(20, 0), LocalTime.of(18, 0), // 20:00 to 18:00 is invalid
                     30L, 10L
             );

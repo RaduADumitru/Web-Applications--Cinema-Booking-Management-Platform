@@ -1,6 +1,7 @@
 package com.awbd.cinema.services;
 
 import com.awbd.cinema.DTOs.TicketDTOs.BookTicketDTO;
+import com.awbd.cinema.DTOs.TicketDTOs.BulkSaveTicketsDTO;
 import com.awbd.cinema.DTOs.TicketDTOs.SaveTicketDTO;
 import com.awbd.cinema.DTOs.TicketDTOs.TicketDTO;
 import com.awbd.cinema.entities.*;
@@ -67,6 +68,63 @@ class TicketServiceTest {
                 .room(sampleRoom)
                 .screenSession(sampleSession)
                 .build();
+    }
+
+    @Nested
+    @DisplayName("Create Bulk Tickets Tests")
+    class CreateBulkTicketsTests {
+
+        private BulkSaveTicketsDTO bulkSaveDto;
+
+        @BeforeEach
+        void setup() {
+            bulkSaveDto = new BulkSaveTicketsDTO(java.util.List.of(1L, 5L), 2L, 3L);
+        }
+
+        @Test
+        @DisplayName("Should successfully create bulk tickets while skipping existing ones")
+        void createTickets_Success() {
+            Seat secondSeat = Seat.builder().id(5L).row(5).number(11).build();
+
+            when(roomRepository.findById(2L)).thenReturn(Optional.of(sampleRoom));
+            when(screenSessionRepository.findActiveById(3L)).thenReturn(Optional.of(sampleSession));
+            when(roomRepository.existsByIdAndScreenSessionsId(2L, 3L)).thenReturn(true);
+            when(seatRepository.findAllById(java.util.List.of(1L, 5L))).thenReturn(java.util.List.of(sampleSeat, secondSeat));
+            when(seatRepository.findByRoomIdAndSeatIds(2L, java.util.List.of(1L, 5L))).thenReturn(java.util.List.of(sampleSeat, secondSeat));
+            when(ticketRepository.findExistingSeatIds(2L, 3L, java.util.List.of(1L, 5L))).thenReturn(java.util.List.of(1L));
+            when(ticketRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+
+            java.util.List<TicketDTO> results = ticketService.createTickets(bulkSaveDto);
+
+            assertNotNull(results);
+            assertEquals(1, results.size());
+            assertEquals(5L, results.get(0).seatId());
+        }
+
+        @Test
+        @DisplayName("Should throw NotFoundException when some seats are missing in database")
+        void createTickets_SeatNotFound() {
+            when(roomRepository.findById(2L)).thenReturn(Optional.of(sampleRoom));
+            when(screenSessionRepository.findActiveById(3L)).thenReturn(Optional.of(sampleSession));
+            when(roomRepository.existsByIdAndScreenSessionsId(2L, 3L)).thenReturn(true);
+            when(seatRepository.findAllById(java.util.List.of(1L, 5L))).thenReturn(java.util.List.of(sampleSeat));
+
+            assertThrows(NotFoundException.class, () -> ticketService.createTickets(bulkSaveDto));
+        }
+
+        @Test
+        @DisplayName("Should throw BadRequestException when some seats do not belong to the room")
+        void createTickets_SeatNotInRoom() {
+            Seat secondSeat = Seat.builder().id(5L).row(5).number(11).build();
+
+            when(roomRepository.findById(2L)).thenReturn(Optional.of(sampleRoom));
+            when(screenSessionRepository.findActiveById(3L)).thenReturn(Optional.of(sampleSession));
+            when(roomRepository.existsByIdAndScreenSessionsId(2L, 3L)).thenReturn(true);
+            when(seatRepository.findAllById(java.util.List.of(1L, 5L))).thenReturn(java.util.List.of(sampleSeat, secondSeat));
+            when(seatRepository.findByRoomIdAndSeatIds(2L, java.util.List.of(1L, 5L))).thenReturn(java.util.List.of(sampleSeat));
+
+            assertThrows(BadRequestException.class, () -> ticketService.createTickets(bulkSaveDto));
+        }
     }
 
     @Nested

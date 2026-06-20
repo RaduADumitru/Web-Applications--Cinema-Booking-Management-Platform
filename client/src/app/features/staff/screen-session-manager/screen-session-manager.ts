@@ -33,6 +33,8 @@ export class ScreenSessionManagerComponent implements OnInit {
   editingId: number | null = null;
   readonly formatOptions: SessionFormatOption[] = ['TWO_D', 'THREE_D'];
 
+  todayDateString: string = '';
+
   form: SaveScreenSessionRequest = this.emptyForm();
   sessionInfoMode: SessionInfoMode = 'existing';
   sessionInfoForm: SaveSessionInfoRequest = this.emptySessionInfoForm();
@@ -41,6 +43,24 @@ export class ScreenSessionManagerComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadData();
+    this.todayDateString = this.getTodayDateString();
+  }
+
+  getTodayDateString(): string {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  isPastSession(dateStr: string, timeStr: string): boolean {
+    if (!dateStr || !timeStr) return false;
+    const now = new Date();
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    const sessionDateTime = new Date(year, month - 1, day, hours, minutes);
+    return sessionDateTime < now;
   }
 
   loadData(): void {
@@ -68,6 +88,11 @@ export class ScreenSessionManagerComponent implements OnInit {
 
   saveSession(): void {
     if (this.form.movieId == null || this.form.roomId == null) {
+      return;
+    }
+
+    if (this.isPastSession(this.form.date, this.form.startTime)) {
+      Swal.fire('Showtime failed', 'The screening session cannot be scheduled in the past.', 'error');
       return;
     }
 

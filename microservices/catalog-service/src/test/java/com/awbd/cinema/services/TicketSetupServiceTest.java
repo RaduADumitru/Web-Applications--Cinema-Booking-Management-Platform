@@ -137,4 +137,35 @@ class TicketSetupServiceTest {
         when(roomRepository.existsByIdAndScreenSessionsId(2L, 3L)).thenReturn(false);
         assertThrows(BadRequestException.class, () -> ticketSetupService.getTicketSetup(1L, 2L, 3L));
     }
+
+    @Test
+    void getTicketSetups_ReturnsSnapshots_WhenValid() {
+        com.awbd.cinema.DTOs.TicketDTOs.BulkSaveTicketsDTO bulkSaveDto =
+                new com.awbd.cinema.DTOs.TicketDTOs.BulkSaveTicketsDTO(java.util.List.of(1L), 2L, 3L);
+
+        when(roomRepository.findById(2L)).thenReturn(Optional.of(room));
+        when(screenSessionRepository.findActiveById(3L)).thenReturn(Optional.of(session));
+        when(roomRepository.existsByIdAndScreenSessionsId(2L, 3L)).thenReturn(true);
+        when(seatRepository.findAllById(java.util.List.of(1L))).thenReturn(java.util.List.of(seat));
+        when(seatRepository.findByRoomIdAndSeatIds(2L, java.util.List.of(1L))).thenReturn(java.util.List.of(seat));
+
+        java.util.List<TicketSetupDTO> dtos = ticketSetupService.getTicketSetups(bulkSaveDto);
+
+        assertNotNull(dtos);
+        assertEquals(1, dtos.size());
+        assertEquals(4, dtos.get(0).seatRow());
+    }
+
+    @Test
+    void getTicketSetups_ThrowsNotFound_WhenSeatMissing() {
+        com.awbd.cinema.DTOs.TicketDTOs.BulkSaveTicketsDTO bulkSaveDto =
+                new com.awbd.cinema.DTOs.TicketDTOs.BulkSaveTicketsDTO(java.util.List.of(1L, 99L), 2L, 3L);
+
+        when(roomRepository.findById(2L)).thenReturn(Optional.of(room));
+        when(screenSessionRepository.findActiveById(3L)).thenReturn(Optional.of(session));
+        when(roomRepository.existsByIdAndScreenSessionsId(2L, 3L)).thenReturn(true);
+        when(seatRepository.findAllById(java.util.List.of(1L, 99L))).thenReturn(java.util.List.of(seat)); // only returns 1 seat
+
+        assertThrows(NotFoundException.class, () -> ticketSetupService.getTicketSetups(bulkSaveDto));
+    }
 }

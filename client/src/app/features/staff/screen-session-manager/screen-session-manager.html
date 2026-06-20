@@ -22,7 +22,7 @@
       <div class="two-column">
         <label>
           <span>Date</span>
-          <input [(ngModel)]="form.date" name="date" type="date" required />
+          <input [(ngModel)]="form.date" name="date" type="date" [min]="todayDateString" required />
         </label>
         <label>
           <span>Room</span>
@@ -44,6 +44,10 @@
           <span>End time</span>
           <input [(ngModel)]="form.endTime" name="endTime" type="time" required />
         </label>
+      </div>
+
+      <div *ngIf="form.date && form.startTime && isPastSession(form.date, form.startTime)" style="color: var(--danger, #ff4d4d); font-size: 0.85rem; margin-top: -0.5rem; margin-bottom: 0.5rem;">
+        Showtime cannot be in the past.
       </div>
 
       <label>
@@ -78,7 +82,7 @@
       </div>
 
       <div class="button-row">
-        <button type="submit" [disabled]="saving() || form.movieId < 1 || form.roomId < 1 || (sessionInfoMode === 'new' && (sessionInfoForm.points == null || sessionInfoForm.points < 0))">{{ saving() ? 'Saving...' : 'Save showtime' }}</button>
+        <button type="submit" [disabled]="saving() || form.movieId < 1 || form.roomId < 1 || (sessionInfoMode === 'new' && (sessionInfoForm.points == null || sessionInfoForm.points < 0)) || isPastSession(form.date, form.startTime)">{{ saving() ? 'Saving...' : 'Save showtime' }}</button>
         <button type="button" class="secondary" (click)="resetForm()" *ngIf="editingId != null">Cancel edit</button>
       </div>
     </form>

@@ -1,6 +1,7 @@
 package com.awbd.cinema.services.TicketService;
 
 import com.awbd.cinema.DTOs.TicketDTOs.BookTicketDTO;
+import com.awbd.cinema.DTOs.TicketDTOs.BulkSaveTicketsDTO;
 import com.awbd.cinema.DTOs.TicketDTOs.SaveTicketDTO;
 import com.awbd.cinema.DTOs.TicketDTOs.TicketDTO;
 import com.awbd.cinema.DTOs.TicketDTOs.TicketSetupDTO;
@@ -20,6 +21,13 @@ import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 
 @Service
 @RequiredArgsConstructor
@@ -57,6 +65,52 @@ public class TicketServiceImpl implements TicketService {
                 .build();
 
         return TicketDTO.from(ticketRepository.save(ticket));
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(value = "ticket_lists", allEntries = true)
+    public List<TicketDTO> createTickets(BulkSaveTicketsDTO dto) {
+        List<Long> existingSeatIds = ticketRepository.findExistingSeatIds(dto.roomId(), dto.screenSessionId(), dto.seatIds());
+        Set<Long> existingSeatIdSet = new HashSet<>(existingSeatIds);
+
+        List<Long> missingSeatIds = new ArrayList<>();
+        for (Long seatId : dto.seatIds()) {
+            if (!existingSeatIdSet.contains(seatId)) {
+                missingSeatIds.add(seatId);
+            }
+        }
+
+        if (missingSeatIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        BulkSaveTicketsDTO filteredDto = new BulkSaveTicketsDTO(missingSeatIds, dto.roomId(), dto.screenSessionId());
+        List<TicketSetupDTO> setups = catalogServiceClient.getTicketSetups(filteredDto);
+
+        List<Ticket> tickets = new ArrayList<>();
+        for (int i = 0; i < missingSeatIds.size(); i++) {
+            Long seatId = missingSeatIds.get(i);
+            TicketSetupDTO setup = setups.get(i);
+
+            Ticket ticket = Ticket.builder()
+                    .isAvailable(true)
+                    .seatId(seatId)
+                    .roomId(dto.roomId())
+                    .screenSessionId(dto.screenSessionId())
+                    .seatRow(setup.seatRow())
+                    .seatNumber(setup.seatNumber())
+                    .seatZone(setup.seatZone())
+                    .extraFee(setup.extraFee())
+                    .extraPoints(setup.extraPoints())
+                    .movieTitle(setup.movieTitle())
+                    .sessionDate(setup.sessionDate())
+                    .sessionStartTime(setup.sessionStartTime())
+                    .sessionPoints(setup.sessionPoints())
+                    .build();
+            tickets.add(ticket);
+        }
+        return ticketRepository.saveAll(tickets).stream().map(TicketDTO::from).toList();
     }
 
     @Override

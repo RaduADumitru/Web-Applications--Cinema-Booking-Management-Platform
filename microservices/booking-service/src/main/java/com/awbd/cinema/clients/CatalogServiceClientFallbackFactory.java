@@ -1,5 +1,6 @@
 package com.awbd.cinema.clients;
 
+import com.awbd.cinema.DTOs.TicketDTOs.BulkSaveTicketsDTO;
 import com.awbd.cinema.DTOs.TicketDTOs.TicketSetupDTO;
 import com.awbd.cinema.config.FeignClientErrorTranslator;
 import com.awbd.cinema.exceptions.BadRequestException;
@@ -7,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 @Slf4j
 @Component
@@ -28,6 +31,17 @@ public class CatalogServiceClientFallbackFactory implements FallbackFactory<Cata
                 }
                 log.warn("catalog-service unavailable for ticket-setup (seat={}, room={}, session={}). Cause: {}",
                         seatId, roomId, sessionId, cause.toString());
+                throw new BadRequestException("Catalog service is currently unavailable. Please try again later.");
+            }
+
+            @Override
+            public List<TicketSetupDTO> getTicketSetups(BulkSaveTicketsDTO dto) {
+                // Same hardening as getTicketSetup: surface a real 4xx; only outages fall back.
+                RuntimeException clientError = errorTranslator.clientErrorOrNull(cause);
+                if (clientError != null) {
+                    throw clientError;
+                }
+                log.warn("catalog-service unavailable for bulk ticket-setup. Cause: {}", cause.toString());
                 throw new BadRequestException("Catalog service is currently unavailable. Please try again later.");
             }
         };

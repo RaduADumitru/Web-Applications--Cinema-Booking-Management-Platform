@@ -83,4 +83,22 @@ class CatalogServiceClientFallbackFactoryTest {
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("Catalog service is currently unavailable");
     }
+
+    @Test
+    void bulk_propagatesClientError_whenCatalogReturns404() {
+        Throwable cause = feign(404, "{\"message\":\"Screen session not found.\"}");
+
+        assertThatThrownBy(() -> factory.create(cause).getTicketSetups(null))
+                .isInstanceOf(NotFoundException.class)
+                .hasMessage("Screen session not found.");
+    }
+
+    @Test
+    void bulk_fallsBackToUnavailable_onOutage() {
+        Throwable cause = new RuntimeException("Connection refused");
+
+        assertThatThrownBy(() -> factory.create(cause).getTicketSetups(null))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Catalog service is currently unavailable");
+    }
 }

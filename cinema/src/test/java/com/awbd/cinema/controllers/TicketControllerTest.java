@@ -1,6 +1,7 @@
 package com.awbd.cinema.controllers;
 
 import com.awbd.cinema.DTOs.TicketDTOs.BookTicketDTO;
+import com.awbd.cinema.DTOs.TicketDTOs.BulkSaveTicketsDTO;
 import com.awbd.cinema.DTOs.TicketDTOs.SaveTicketDTO;
 import com.awbd.cinema.DTOs.TicketDTOs.TicketDTO;
 import com.awbd.cinema.enums.Role;
@@ -56,6 +57,53 @@ class TicketControllerTest extends BaseControllerTest {
                 TicketType.ADULT,
                 BigDecimal.valueOf(12.50)
         );
+    }
+
+    @Nested
+    @DisplayName("POST /tickets/bulk (Create Bulk Tickets)")
+    class CreateBulkTicketsTests {
+
+        @Test
+        @DisplayName("Should allow access and create bulk tickets when user is STAFF")
+        void createTickets_AsStaff_ReturnsCreated() throws Exception {
+            loginAs(2L, "staff_user", Role.STAFF);
+            BulkSaveTicketsDTO dto = new BulkSaveTicketsDTO(java.util.List.of(1L, 2L), 2L, 3L);
+
+            when(ticketService.createTickets(any(BulkSaveTicketsDTO.class))).thenReturn(java.util.List.of(sampleTicketDto));
+
+            mockMvc.perform(post("/tickets/bulk")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(dto)))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$[0].id").value(100L));
+        }
+
+        @Test
+        @DisplayName("Should return 403 Forbidden when user is regular USER")
+        void createTickets_AsUser_ReturnsForbidden() throws Exception {
+            loginAsDefaultUser();
+            BulkSaveTicketsDTO dto = new BulkSaveTicketsDTO(java.util.List.of(1L, 2L), 2L, 3L);
+
+            mockMvc.perform(post("/tickets/bulk")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(dto)))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("Should return 422 Unprocessable Content when input validation fails")
+        void createTickets_InvalidDto_ReturnsUnprocessableContent() throws Exception {
+            loginAs(2L, "staff_user", Role.STAFF);
+            BulkSaveTicketsDTO invalidDto = new BulkSaveTicketsDTO(null, null, null);
+
+            mockMvc.perform(post("/tickets/bulk")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(invalidDto)))
+                    .andExpect(status().isUnprocessableContent());
+        }
     }
 
     @Nested
