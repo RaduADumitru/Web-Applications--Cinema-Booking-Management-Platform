@@ -1,0 +1,55 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # These services run multiple replicas (deploy.replicas) with no fixed container_name,
+  # so they are discovered by their Compose service-name DNS alias. dns_sd_configs resolves
+  # the alias to every replica's IP and scrapes each as its own target (a static target would
+  # only ever hit one replica). Each replica's metrics carry application="<service>" plus an
+  # instanceId tag, so they are distinguishable in Grafana.
+  - job_name: user-service
+    metrics_path: /api/v1/actuator/prometheus
+    dns_sd_configs:
+      - names: ['user-service']
+        type: A
+        port: 8080
+        refresh_interval: 15s
+
+  - job_name: catalog-service
+    metrics_path: /api/v1/actuator/prometheus
+    dns_sd_configs:
+      - names: ['catalog-service']
+        type: A
+        port: 8080
+        refresh_interval: 15s
+
+  - job_name: booking-service
+    metrics_path: /api/v1/actuator/prometheus
+    dns_sd_configs:
+      - names: ['booking-service']
+        type: A
+        port: 8080
+        refresh_interval: 15s
+
+  - job_name: gateway
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ['ms-gateway:8080']
+
+  - job_name: discovery-server
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ['ms-discovery-server:8761']
+
+  - job_name: loki
+    static_configs:
+      - targets: ['ms-loki:3100']
+
+  - job_name: promtail
+    static_configs:
+      - targets: ['ms-promtail:9080']

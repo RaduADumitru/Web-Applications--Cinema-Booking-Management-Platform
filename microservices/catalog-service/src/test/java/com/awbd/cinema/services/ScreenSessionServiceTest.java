@@ -68,7 +68,7 @@ class ScreenSessionServiceTest {
         sampleSession = ScreenSession.builder()
                 .id(1L)
                 .movie(sampleMovie)
-                .date(LocalDate.of(2026, 7, 1))
+                .date(LocalDate.now().plusDays(1))
                 .startTime(LocalTime.of(18, 0))
                 .endTime(LocalTime.of(20, 30))
                 .sessionInfo(sampleSessionInfo)
@@ -77,7 +77,7 @@ class ScreenSessionServiceTest {
         // Layout: movieId, date, startTime, endTime, sessionInfoId, roomId
         saveDto = new SaveScreenSessionDTO(
                 500L,
-                LocalDate.of(2026, 7, 1),
+                LocalDate.now().plusDays(1),
                 LocalTime.of(18, 0),
                 LocalTime.of(20, 30),
                 30L,
@@ -93,6 +93,23 @@ class ScreenSessionServiceTest {
     @Nested
     @DisplayName("createScreenSession Tests")
     class CreateScreenSessionTests {
+
+        @Test
+        @DisplayName("Should throw BadRequestException when screen session start time is in the past")
+        void createScreenSession_PastDateTime_ThrowsBadRequestException() {
+            SaveScreenSessionDTO pastDto = new SaveScreenSessionDTO(
+                    500L, LocalDate.now().minusDays(1),
+                    LocalTime.of(18, 0), LocalTime.of(20, 30),
+                    30L, 10L
+            );
+
+            when(movieRepository.findById(500L)).thenReturn(Optional.of(sampleMovie));
+            when(roomRepository.findById(10L)).thenReturn(Optional.of(sampleRoom));
+
+            assertThatThrownBy(() -> screenSessionService.createScreenSession(pastDto))
+                    .isInstanceOf(BadRequestException.class)
+                    .hasMessageContaining("Screen session start time must be in the future or present.");
+        }
 
         @Test
         @DisplayName("Should throw NotFoundException when target movie does not exist")
@@ -121,7 +138,7 @@ class ScreenSessionServiceTest {
         @DisplayName("Should throw BadRequestException when end time occurs before or at start time")
         void createScreenSession_InvalidTimes_ThrowsBadRequestException() {
             SaveScreenSessionDTO invalidTimesDto = new SaveScreenSessionDTO(
-                    500L, LocalDate.of(2026, 7, 1),
+                    500L, LocalDate.now().plusDays(1),
                     LocalTime.of(20, 0), LocalTime.of(18, 0), // 20:00 to 18:00 is invalid
                     30L, 10L
             );
@@ -184,9 +201,10 @@ class ScreenSessionServiceTest {
             Specification<ScreenSession> spec = captureSpecification(500L, "THREE_D");
             assertThat(spec).isNotNull();
 
-            // Mocking the chain: root.get("movie").get("id")
+            // Mocking the chain: root.get("movie").get("deletedAt") (soft-delete guard) and .get("id")
             Path<Object> moviePath = mock(Path.class);
             when(root.get("movie")).thenReturn(moviePath);
+            when(moviePath.get("deletedAt")).thenReturn(pathMock);
             when(moviePath.get("id")).thenReturn(pathMock);
 
             // Mocking the join: root.join("sessionInfo", JoinType.INNER)
@@ -197,10 +215,11 @@ class ScreenSessionServiceTest {
             spec.toPredicate(root, query, cb);
 
             // Assertions
-            verify(root).get("movie");
+            verify(root, times(2)).get("movie"); // once for the deletedAt guard, once for the id filter
             verify(root).join("sessionInfo", JoinType.INNER);
 
             // Verify exact CriteriaBuilder criteria assignments
+            verify(cb).isNull(pathMock); // movie.deletedAt IS NULL (hide soft-deleted movies' sessions)
             verify(cb).equal(pathMock, 500L);
             verify(cb).equal(pathMock, Format.THREE_D);
             verify(cb).and(any(Predicate[].class));
@@ -212,10 +231,16 @@ class ScreenSessionServiceTest {
             Specification<ScreenSession> spec = captureSpecification(null, null);
             assertThat(spec).isNotNull();
 
+            // Even with no filters, the soft-delete guard predicate is always applied.
+            Path<Object> moviePath = mock(Path.class);
+            when(root.get("movie")).thenReturn(moviePath);
+            when(moviePath.get("deletedAt")).thenReturn(pathMock);
+
             spec.toPredicate(root, query, cb);
 
-            verify(root, never()).get(anyString());
+            verify(root).get("movie"); // only the deletedAt guard; no movieId filter
             verify(root, never()).join(anyString(), any(JoinType.class));
+            verify(cb).isNull(pathMock);
             verify(cb).and(any(Predicate[].class));
         }
 
@@ -226,9 +251,15 @@ class ScreenSessionServiceTest {
             Specification<ScreenSession> spec = captureSpecification(null, "   ");
             assertThat(spec).isNotNull();
 
+            // The soft-delete guard predicate is always applied.
+            Path<Object> moviePath = mock(Path.class);
+            when(root.get("movie")).thenReturn(moviePath);
+            when(moviePath.get("deletedAt")).thenReturn(pathMock);
+
             spec.toPredicate(root, query, cb);
 
             verify(root, never()).join(anyString(), any(JoinType.class));
+            verify(cb).isNull(pathMock);
             verify(cb).and(any(Predicate[].class));
         }
 
@@ -257,7 +288,9 @@ class ScreenSessionServiceTest {
         @Test
         @DisplayName("Should pull specific matching session elements if valid record ID is found")
         void getScreenSession_ValidId_ReturnsDTO() {
-            when(screenSessionRepository.findById(1L)).thenReturn(Optional.of(sampleSession));
+            // getScreenSession now filters out soft-deleted movies via a Specification + findOne.
+            when(screenSessionRepository.findOne(any(Specification.class)))
+                    .thenReturn(Optional.of(sampleSession));
 
             ScreenSessionDTO result = screenSessionService.getScreenSession(1L);
 

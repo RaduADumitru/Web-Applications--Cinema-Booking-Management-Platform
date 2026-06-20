@@ -38,6 +38,7 @@ public class OrderServiceImpl implements OrderService {
     private final UserRepository userRepository;
     private final OfferRepository offerRepository;
     private final NotificationRepository notificationRepository;
+    private final ScreenSessionRepository screenSessionRepository;
 
     @Override
     @Transactional
@@ -47,7 +48,8 @@ public class OrderServiceImpl implements OrderService {
             @CacheEvict(value = "ticket_lists", allEntries = true),
             @CacheEvict(value = "single_ticket", allEntries = true),
             @CacheEvict(value = "user_discount_previews", key = "#userId"),
-            @CacheEvict(value = "user_notifications", key = "#userId")
+            @CacheEvict(value = "user_notifications", key = "#userId"),
+            @CacheEvict(value = "user_profile", key = "#userId")
     })
     public OrderDTO createOrder(CreateOrderDTO dto, Long userId) {
         User user = userRepository.findById(userId)
@@ -64,6 +66,13 @@ public class OrderServiceImpl implements OrderService {
             if (!ticket.isAvailable()) {
                 log.warn("User {} attempted to order ticket {} which is no longer available.", userId, item.ticketId());
                 throw new BadRequestException("Ticket " + item.ticketId() + " is no longer available.");
+            }
+
+            // Reject ordering a ticket whose movie was soft-deleted after the ticket was created;
+            // otherwise building the confirmation below (which reads the movie title) would 500.
+            if (screenSessionRepository.findActiveById(ticket.getScreenSession().getId()).isEmpty()) {
+                throw new BadRequestException("Ticket " + item.ticketId()
+                        + " is for a showing that is no longer available.");
             }
 
             TicketInfo info = ticketInfoRepository.findByType(item.type())
@@ -208,7 +217,8 @@ public class OrderServiceImpl implements OrderService {
             @CacheEvict(value = "order_lists", allEntries = true),
             @CacheEvict(value = "user_orders", allEntries = true),
             @CacheEvict(value = "user_past_orders", allEntries = true),
-            @CacheEvict(value = "user_discount_previews", key = "#result.userId()")
+            @CacheEvict(value = "user_discount_previews", key = "#result.userId()"),
+            @CacheEvict(value = "user_profile", key = "#result.userId()")
     })
     public OrderDTO payOrder(Long id) {
         Order order = orderRepository.findById(id)

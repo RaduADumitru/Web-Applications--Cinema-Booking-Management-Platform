@@ -12,7 +12,7 @@ import { ApiService } from './api.service';
 export class SeatSelectionService {
   private readonly pageSize = 1000;
 
-  constructor(private api: ApiService) {}
+  constructor(private api: ApiService) { }
 
   getSeats(params: {
     screenSessionId?: number;
@@ -37,5 +37,9 @@ export class SeatSelectionService {
     };
 
     return this.api.post<OrderResponse>('/orders', payload);
+  }
+
+  getDiscountPreview(): Observable<{ loyaltyPoints: number; potentialDiscount: number }> {
+    return this.api.get<{ loyaltyPoints: number; potentialDiscount: number }>('/orders/my/discount-preview');
   }
 }

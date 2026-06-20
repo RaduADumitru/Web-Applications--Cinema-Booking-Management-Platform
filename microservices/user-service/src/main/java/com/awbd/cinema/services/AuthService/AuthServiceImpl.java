@@ -2,7 +2,7 @@ package com.awbd.cinema.services.AuthService;
 
 import com.awbd.cinema.DTOs.AuthDTOs.*;
 import com.awbd.cinema.DTOs.NotificationDTOs.CreateNotificationDTO;
-import com.awbd.cinema.clients.NotificationServiceClient;
+import com.awbd.cinema.clients.BookingServiceClient;
 import com.awbd.cinema.entities.User;
 import com.awbd.cinema.enums.NotificationType;
 import com.awbd.cinema.enums.Role;
@@ -13,6 +13,7 @@ import com.awbd.cinema.repositories.UserRepository;
 import com.awbd.cinema.services.LoginAttemptService.LoginAttemptService;
 import com.awbd.cinema.utils.JwtUtil;
 import jakarta.transaction.Transactional;
+import org.springframework.dao.DataIntegrityViolationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,7 +31,7 @@ import org.springframework.web.util.HtmlUtils;
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
-    private final NotificationServiceClient notificationServiceClient;
+    private final BookingServiceClient bookingServiceClient;
     private final BCryptPasswordEncoder passwordEncoder;
     private final LoginAttemptService loginAttemptService;
     private final AuthenticationManager authenticationManager;
@@ -56,7 +57,7 @@ public class AuthServiceImpl implements AuthService {
                 "Welcome, " + savedUser.getFirstName() + "! Please verify your email address ("
                         + savedUser.getEmail() + ") to activate your account.",
                 savedUser.getId());
-        notificationServiceClient.createNotification(notification);
+        bookingServiceClient.createNotification(notification);
 
         return new RegisterResponseDTO("Account created successfully.", savedUser.getUsername());
     }
@@ -108,11 +109,15 @@ public class AuthServiceImpl implements AuthService {
     public void createOwner(RegisterDTO owner) {
         userRepository.findByUsernameIgnoreCaseOrEmailIgnoreCase(owner.username(), owner.email())
                 .orElseGet(() -> {
-                    User u = maptoEntity(owner);
-                    u.setRole(Role.OWNER);
-
-                    log.info("Created owner: {}", u.getUsername());
-                    return userRepository.save(u);
+                    try {
+                        User u = maptoEntity(owner);
+                        u.setRole(Role.OWNER);
+                        log.info("Created owner: {}", u.getUsername());
+                        return userRepository.save(u);
+                    } catch (DataIntegrityViolationException e) {
+                        log.info("Owner already created by another instance, skipping.");
+                        return null;
+                    }
                 });
     }
 

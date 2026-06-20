@@ -93,10 +93,10 @@ principle: smallest change that makes discovery functional and demonstrable.
 ### 4.3 Feign clients → name-based resolution
 The three existing `@FeignClient` interfaces currently hardcode the target URL:
 
-| Client (in service) | Today | Change |
-|---|---|---|
-| `CatalogServiceClient` (booking) | `name="catalog-service", url="${services.catalog.url}"` | drop `url`, add `path="/api/v1"` |
-| `UserServiceClient` (booking) | `name="user-service", url="${services.user.url}"` | drop `url`, add `path="/api/v1"` |
+| Client (in service)                | Today                                                   | Change                           |
+|------------------------------------|---------------------------------------------------------|----------------------------------|
+| `CatalogServiceClient` (booking)   | `name="catalog-service", url="${services.catalog.url}"` | drop `url`, add `path="/api/v1"` |
+| `UserServiceClient` (booking)      | `name="user-service", url="${services.user.url}"`       | drop `url`, add `path="/api/v1"` |
 | `NotificationServiceClient` (user) | `name="booking-service", url="${services.booking.url}"` | drop `url`, add `path="/api/v1"` |
 
 Removing `url` makes Feign resolve the target **by name** via Eureka + Spring
@@ -120,9 +120,9 @@ The now-unused properties are removed:
 In `gateway/.../config/RouteConfig.java`, each route's `.uri(...)` changes from the
 injected static URI to a load-balanced scheme:
 
-| Route | Today | Change |
-|---|---|---|
-| `user-service` | `.uri(userUri)` | `.uri("lb://user-service")` |
+| Route             | Today              | Change                         |
+|-------------------|--------------------|--------------------------------|
+| `user-service`    | `.uri(userUri)`    | `.uri("lb://user-service")`    |
 | `catalog-service` | `.uri(catalogUri)` | `.uri("lb://catalog-service")` |
 | `booking-service` | `.uri(bookingUri)` | `.uri("lb://booking-service")` |
 

@@ -45,14 +45,15 @@ class ScreenSessionControllerTest extends BaseControllerTest {
     private ScreenSessionDTO createSampleSessionDTO() {
         return new ScreenSessionDTO(
                 1L,
-                LocalDate.of(2026, 7, 1),
+                LocalDate.now().plusDays(1),
                 LocalTime.of(18, 0),
                 LocalTime.of(20, 30),
                 500L,
                 "Inception",
                 30L,
                 Format.THREE_D,
-                15
+                15,
+                java.util.List.of(2L)
         );
     }
 
@@ -68,7 +69,7 @@ class ScreenSessionControllerTest extends BaseControllerTest {
         void createScreenSession_StaffAndValidPayload_ReturnsCreated() throws Exception {
             loginAs(2L, "staff_user", Role.STAFF);
             SaveScreenSessionDTO dto = new SaveScreenSessionDTO(
-                    500L, LocalDate.of(2026, 7, 1),
+                    500L, LocalDate.now().plusDays(1),
                     LocalTime.of(18, 0), LocalTime.of(20, 30),
                     30L, 10L
             );
@@ -92,7 +93,24 @@ class ScreenSessionControllerTest extends BaseControllerTest {
             loginAs(2L, "staff_user", Role.STAFF);
             // Movie ID is marked @NotNull
             SaveScreenSessionDTO dto = new SaveScreenSessionDTO(
-                    null, LocalDate.of(2026, 7, 1),
+                    null, LocalDate.now().plusDays(1),
+                    LocalTime.of(18, 0), LocalTime.of(20, 30),
+                    30L, 10L
+            );
+
+            mockMvc.perform(post("/screen-sessions")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(dto)))
+                    .andExpect(status().isUnprocessableContent());
+        }
+
+        @Test
+        @DisplayName("Should return 422 Unprocessable Content when date is in the past")
+        void createScreenSession_PastDate_ReturnsUnprocessableContent() throws Exception {
+            loginAs(2L, "staff_user", Role.STAFF);
+            SaveScreenSessionDTO dto = new SaveScreenSessionDTO(
+                    500L, LocalDate.now().minusDays(1),
                     LocalTime.of(18, 0), LocalTime.of(20, 30),
                     30L, 10L
             );
@@ -109,7 +127,7 @@ class ScreenSessionControllerTest extends BaseControllerTest {
         void createScreenSession_RegularUser_ReturnsForbidden() throws Exception {
             loginAsDefaultUser();
             SaveScreenSessionDTO dto = new SaveScreenSessionDTO(
-                    500L, LocalDate.of(2026, 7, 1),
+                    500L, LocalDate.now().plusDays(1),
                     LocalTime.of(18, 0), LocalTime.of(20, 30),
                     30L, 10L
             );
@@ -186,7 +204,7 @@ class ScreenSessionControllerTest extends BaseControllerTest {
         void updateScreenSession_StaffUser_ReturnsOk() throws Exception {
             loginAs(2L, "staff_user", Role.STAFF);
             SaveScreenSessionDTO updateDto = new SaveScreenSessionDTO(
-                    500L, LocalDate.of(2026, 7, 1),
+                    500L, LocalDate.now().plusDays(1),
                     LocalTime.of(19, 0), LocalTime.of(21, 30),
                     30L, 10L
             );
@@ -208,7 +226,7 @@ class ScreenSessionControllerTest extends BaseControllerTest {
         void updateScreenSession_RegularUser_ReturnsForbidden() throws Exception {
             loginAsDefaultUser();
             SaveScreenSessionDTO updateDto = new SaveScreenSessionDTO(
-                    500L, LocalDate.of(2026, 7, 1),
+                    500L, LocalDate.now().plusDays(1),
                     LocalTime.of(19, 0), LocalTime.of(21, 30),
                     30L, 10L
             );

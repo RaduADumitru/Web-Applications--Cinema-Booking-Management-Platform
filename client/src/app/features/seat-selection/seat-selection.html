@@ -107,7 +107,8 @@
 
         <label class="block text-xs font-semibold mb-1" style="color: var(--foreground-muted);">Ticket type</label>
         <select
-          [(ngModel)]="selectedTicketType"
+          [ngModel]="selectedTicketType()"
+          (ngModelChange)="selectedTicketType.set($event)"
           class="w-full p-2.5 rounded border text-sm bg-transparent outline-none mb-5"
           [style]="'border-color: var(--border); color: var(--foreground);'"
         >
@@ -115,7 +116,7 @@
         </select>
 
         <label class="discount-toggle mb-5" style="border-color: var(--border); color: var(--foreground);">
-          <input type="checkbox" [(ngModel)]="useDiscount" />
+          <input type="checkbox" [ngModel]="useDiscount()" (ngModelChange)="useDiscount.set($event)" />
           <span>Use loyalty discount</span>
         </label>
 
@@ -125,7 +126,7 @@
               <strong style="color: var(--foreground);">Row {{ view.seat.row }}, Seat {{ view.seat.number }}</strong>
               <span style="color: var(--foreground-muted);">{{ formatZone(view.seat.zone) }}</span>
             </div>
-            <span style="color: var(--foreground);">{{ view.ticket?.price != null ? (view.ticket?.price | currency) : '-' }}</span>
+            <span style="color: var(--foreground);">{{ (view.ticket?.price ?? selectedTicketTypePrice()) | currency }}</span>
           </div>
         </div>
 

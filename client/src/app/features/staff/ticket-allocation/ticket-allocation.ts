@@ -52,6 +52,24 @@ export class TicketAllocationComponent implements OnInit {
     return session.id;
   }
 
+  // Only sessions scheduled in the selected room can be allocated tickets for that room, so the
+  // session dropdown is constrained to the chosen room — preventing room/session mismatches.
+  sessionsForRoom(): ScreenSessionResponse[] {
+    if (this.roomId == null) {
+      return [];
+    }
+    return this.screenSessions().filter((session) => (session.roomIds ?? []).includes(this.roomId as number));
+  }
+
+  onRoomChange(): void {
+    // A session belongs to a specific room; drop a now-inconsistent session selection.
+    if (this.screenSessionId != null && !this.sessionsForRoom().some((s) => s.id === this.screenSessionId)) {
+      this.screenSessionId = null;
+      this.seats.set([]);
+      this.tickets.set([]);
+    }
+  }
+
   missingSeats(): SeatResponse[] {
     const ticketSeatIds = new Set(this.tickets().map((ticket) => ticket.seatId));
     return this.seats().filter((seat) => !ticketSeatIds.has(seat.id));
@@ -90,11 +108,11 @@ export class TicketAllocationComponent implements OnInit {
     }
 
     this.generating.set(true);
-    forkJoin(missing.map((seat) => this.staffOperations.createTicket({
-      seatId: seat.id,
+    this.staffOperations.createTickets({
+      seatIds: missing.map((seat) => seat.id),
       roomId: this.roomId as number,
       screenSessionId: this.screenSessionId as number,
-    }))).subscribe({
+    }).subscribe({
       next: () => {
         Swal.fire('Tickets generated', `${missing.length} tickets are now available for booking.`, 'success');
         this.loadInventory();

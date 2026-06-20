@@ -1,0 +1,18 @@
+server:
+  port: 8082
+  servlet:
+    context-path: /api/v1
+
+spring:
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USER}
+    password: ${DATABASE_PASSWORD}
+
+tmdb:
+  api:
+    key: ${TMDB_API_KEY}
+
+logging:
+  file:
+    name: logs/catalog-service.log

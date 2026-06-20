@@ -1,0 +1,11 @@
+server:
+  port: 8080
+
+gateway:
+  rate-limit:
+    replenish-rate: ${GATEWAY_RATE_LIMIT_REPLENISH:50}
+    burst-capacity: ${GATEWAY_RATE_LIMIT_BURST:100}
+
+logging:
+  level:
+    com.awbd.cinema: INFO

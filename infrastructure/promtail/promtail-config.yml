@@ -1,0 +1,38 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: docker
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+        filters:
+          # The business services run replicas with Compose-generated container names
+          # (e.g. cinema-microservices-user-service-1/-2), so match by the service-name
+          # substring rather than the old fixed ms-* container_name. The Docker name filter
+          # is a substring match, so "user-service" picks up every replica.
+          - name: name
+            values:
+              - user-service
+              - catalog-service
+              - booking-service
+              - ms-gateway
+              - ms-discovery-server
+              - ms-prometheus
+              - ms-grafana
+              - ms-loki
+    relabel_configs:
+      - source_labels: [__meta_docker_container_name]
+        regex: '/(.+)'
+        target_label: container
+      - source_labels: [__meta_docker_container_log_stream]
+        target_label: stream
+      - source_labels: [__meta_docker_container_label_com_docker_compose_service]
+        target_label: service_name

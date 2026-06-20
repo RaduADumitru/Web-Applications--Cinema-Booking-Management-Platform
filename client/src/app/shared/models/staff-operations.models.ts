@@ -26,6 +26,7 @@ export interface ScreenSessionResponse {
   sessionInfoId: number | null;
   format: string | null;
   points: number | null;
+  roomIds: number[];
 }
 
 export interface SaveScreenSessionRequest {
@@ -70,6 +71,12 @@ export interface GenerateSeatsRequest {
 
 export interface SaveTicketRequest {
   seatId: number;
+  roomId: number;
+  screenSessionId: number;
+}
+
+export interface SaveTicketsRequest {
+  seatIds: number[];
   roomId: number;
   screenSessionId: number;
 }

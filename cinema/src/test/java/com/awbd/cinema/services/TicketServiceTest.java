@@ -1,6 +1,7 @@
 package com.awbd.cinema.services;
 
 import com.awbd.cinema.DTOs.TicketDTOs.BookTicketDTO;
+import com.awbd.cinema.DTOs.TicketDTOs.BulkSaveTicketsDTO;
 import com.awbd.cinema.DTOs.TicketDTOs.SaveTicketDTO;
 import com.awbd.cinema.DTOs.TicketDTOs.TicketDTO;
 import com.awbd.cinema.entities.*;
@@ -70,6 +71,63 @@ class TicketServiceTest {
     }
 
     @Nested
+    @DisplayName("Create Bulk Tickets Tests")
+    class CreateBulkTicketsTests {
+
+        private BulkSaveTicketsDTO bulkSaveDto;
+
+        @BeforeEach
+        void setup() {
+            bulkSaveDto = new BulkSaveTicketsDTO(java.util.List.of(1L, 5L), 2L, 3L);
+        }
+
+        @Test
+        @DisplayName("Should successfully create bulk tickets while skipping existing ones")
+        void createTickets_Success() {
+            Seat secondSeat = Seat.builder().id(5L).row(5).number(11).build();
+
+            when(roomRepository.findById(2L)).thenReturn(Optional.of(sampleRoom));
+            when(screenSessionRepository.findActiveById(3L)).thenReturn(Optional.of(sampleSession));
+            when(roomRepository.existsByIdAndScreenSessionsId(2L, 3L)).thenReturn(true);
+            when(seatRepository.findAllById(java.util.List.of(1L, 5L))).thenReturn(java.util.List.of(sampleSeat, secondSeat));
+            when(seatRepository.findByRoomIdAndSeatIds(2L, java.util.List.of(1L, 5L))).thenReturn(java.util.List.of(sampleSeat, secondSeat));
+            when(ticketRepository.findExistingSeatIds(2L, 3L, java.util.List.of(1L, 5L))).thenReturn(java.util.List.of(1L));
+            when(ticketRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+
+            java.util.List<TicketDTO> results = ticketService.createTickets(bulkSaveDto);
+
+            assertNotNull(results);
+            assertEquals(1, results.size());
+            assertEquals(5L, results.get(0).seatId());
+        }
+
+        @Test
+        @DisplayName("Should throw NotFoundException when some seats are missing in database")
+        void createTickets_SeatNotFound() {
+            when(roomRepository.findById(2L)).thenReturn(Optional.of(sampleRoom));
+            when(screenSessionRepository.findActiveById(3L)).thenReturn(Optional.of(sampleSession));
+            when(roomRepository.existsByIdAndScreenSessionsId(2L, 3L)).thenReturn(true);
+            when(seatRepository.findAllById(java.util.List.of(1L, 5L))).thenReturn(java.util.List.of(sampleSeat));
+
+            assertThrows(NotFoundException.class, () -> ticketService.createTickets(bulkSaveDto));
+        }
+
+        @Test
+        @DisplayName("Should throw BadRequestException when some seats do not belong to the room")
+        void createTickets_SeatNotInRoom() {
+            Seat secondSeat = Seat.builder().id(5L).row(5).number(11).build();
+
+            when(roomRepository.findById(2L)).thenReturn(Optional.of(sampleRoom));
+            when(screenSessionRepository.findActiveById(3L)).thenReturn(Optional.of(sampleSession));
+            when(roomRepository.existsByIdAndScreenSessionsId(2L, 3L)).thenReturn(true);
+            when(seatRepository.findAllById(java.util.List.of(1L, 5L))).thenReturn(java.util.List.of(sampleSeat, secondSeat));
+            when(seatRepository.findByRoomIdAndSeatIds(2L, java.util.List.of(1L, 5L))).thenReturn(java.util.List.of(sampleSeat));
+
+            assertThrows(BadRequestException.class, () -> ticketService.createTickets(bulkSaveDto));
+        }
+    }
+
+    @Nested
     @DisplayName("Create Ticket Tests")
     class CreateTicketTests {
 
@@ -85,7 +143,7 @@ class TicketServiceTest {
         void createTicket_Success() {
             when(seatRepository.findById(1L)).thenReturn(Optional.of(sampleSeat));
             when(roomRepository.findById(2L)).thenReturn(Optional.of(sampleRoom));
-            when(screenSessionRepository.findById(3L)).thenReturn(Optional.of(sampleSession));
+            when(screenSessionRepository.findActiveById(3L)).thenReturn(Optional.of(sampleSession));
             when(roomRepository.existsByIdAndSeatsId(2L, 1L)).thenReturn(true);
             when(roomRepository.existsByIdAndScreenSessionsId(2L, 3L)).thenReturn(true);
             when(ticketRepository.existsBySeatIdAndRoomIdAndScreenSessionId(1L, 2L, 3L)).thenReturn(false);
@@ -113,7 +171,7 @@ class TicketServiceTest {
         void createTicket_SeatNotInRoom() {
             when(seatRepository.findById(1L)).thenReturn(Optional.of(sampleSeat));
             when(roomRepository.findById(2L)).thenReturn(Optional.of(sampleRoom));
-            when(screenSessionRepository.findById(3L)).thenReturn(Optional.of(sampleSession));
+            when(screenSessionRepository.findActiveById(3L)).thenReturn(Optional.of(sampleSession));
             when(roomRepository.existsByIdAndSeatsId(2L, 1L)).thenReturn(false);
 
             assertThrows(BadRequestException.class, () -> ticketService.createTicket(saveDto));
@@ -124,12 +182,24 @@ class TicketServiceTest {
         void createTicket_AlreadyExists() {
             when(seatRepository.findById(1L)).thenReturn(Optional.of(sampleSeat));
             when(roomRepository.findById(2L)).thenReturn(Optional.of(sampleRoom));
-            when(screenSessionRepository.findById(3L)).thenReturn(Optional.of(sampleSession));
+            when(screenSessionRepository.findActiveById(3L)).thenReturn(Optional.of(sampleSession));
             when(roomRepository.existsByIdAndSeatsId(2L, 1L)).thenReturn(true);
             when(roomRepository.existsByIdAndScreenSessionsId(2L, 3L)).thenReturn(true);
             when(ticketRepository.existsBySeatIdAndRoomIdAndScreenSessionId(1L, 2L, 3L)).thenReturn(true);
 
             assertThrows(AlreadyExistsException.class, () -> ticketService.createTicket(saveDto));
+        }
+
+        @Test
+        @DisplayName("Should throw NotFoundException when the session's movie is soft-deleted")
+        void createTicket_SessionOfSoftDeletedMovie_ThrowsNotFound() {
+            when(seatRepository.findById(1L)).thenReturn(Optional.of(sampleSeat));
+            when(roomRepository.findById(2L)).thenReturn(Optional.of(sampleRoom));
+            // findActiveById returns empty for a session whose movie is soft-deleted (hidden).
+            when(screenSessionRepository.findActiveById(3L)).thenReturn(Optional.empty());
+
+            assertThrows(NotFoundException.class, () -> ticketService.createTicket(saveDto));
+            verify(ticketRepository, never()).save(any());
         }
     }
 

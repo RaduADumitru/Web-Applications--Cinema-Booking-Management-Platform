@@ -131,10 +131,10 @@ matches a path prefix and forwards to the owning service's container; since
 every service keeps `server.servlet.context-path=/api/v1` unchanged, routes
 need no path rewriting:
 
-| Path prefix | Routed to |
-|---|---|
-| `/api/v1/auth/**`, `/api/v1/user/**` | `user-service` |
-| `/api/v1/movies/**`, `/api/v1/rooms/**`, `/api/v1/seats/**`, `/api/v1/screen-sessions/**` | `catalog-service` |
+| Path prefix                                                                                                          | Routed to         |
+|----------------------------------------------------------------------------------------------------------------------|-------------------|
+| `/api/v1/auth/**`, `/api/v1/user/**`                                                                                 | `user-service`    |
+| `/api/v1/movies/**`, `/api/v1/rooms/**`, `/api/v1/seats/**`, `/api/v1/screen-sessions/**`                            | `catalog-service` |
 | `/api/v1/orders/**`, `/api/v1/tickets/**`, `/api/v1/ticket-info/**`, `/api/v1/offers/**`, `/api/v1/notifications/**` | `booking-service` |
 
 `/internal/**` paths on any service are **not** registered in the gateway —
@@ -284,17 +284,17 @@ call needed at all** — the snapshot pattern pays off here too.
 
 ### 8.1 `docker-compose.microservices.yml` — services
 
-| Container | Image/Build | Host port | Notes |
-|---|---|---|---|
-| `user-db` | `postgres:15` | — | volume `user_db_data`, db = `USER_DB_NAME` |
-| `catalog-db` | `postgres:15` | — | volume `catalog_db_data`, db = `CATALOG_DB_NAME` |
-| `booking-db` | `postgres:15` | — | volume `booking_db_data`, db = `BOOKING_DB_NAME` |
-| `redis` | `redis:7-alpine` | — | shared by catalog-service + booking-service (disjoint cache-name sets, no collisions) |
-| `user-service` | build (see 8.2) | 8081 | no Redis dependency |
-| `catalog-service` | build | 8082 | |
-| `booking-service` | build | 8083 | |
-| `gateway` | build | **8080** | matches `environment.ts` `apiUrl` |
-| `client` | existing `./client` build | 4200 | `API_URL=http://localhost:8080/api/v1` |
+| Container         | Image/Build               | Host port | Notes                                                                                 |
+|-------------------|---------------------------|-----------|---------------------------------------------------------------------------------------|
+| `user-db`         | `postgres:15`             | —         | volume `user_db_data`, db = `USER_DB_NAME`                                            |
+| `catalog-db`      | `postgres:15`             | —         | volume `catalog_db_data`, db = `CATALOG_DB_NAME`                                      |
+| `booking-db`      | `postgres:15`             | —         | volume `booking_db_data`, db = `BOOKING_DB_NAME`                                      |
+| `redis`           | `redis:7-alpine`          | —         | shared by catalog-service + booking-service (disjoint cache-name sets, no collisions) |
+| `user-service`    | build (see 8.2)           | 8081      | no Redis dependency                                                                   |
+| `catalog-service` | build                     | 8082      |                                                                                       |
+| `booking-service` | build                     | 8083      |                                                                                       |
+| `gateway`         | build                     | **8080**  | matches `environment.ts` `apiUrl`                                                     |
+| `client`          | existing `./client` build | 4200      | `API_URL=http://localhost:8080/api/v1`                                                |
 
 Each Postgres/Redis container gets the same `pg_isready`/healthcheck pattern
 as the existing `docker-compose.yml`; each Spring Boot container exposes
