@@ -2,8 +2,10 @@ package com.awbd.cinema.security;
 
 import com.awbd.cinema.services.TicketSetupService.TicketSetupService;
 import com.awbd.cinema.utils.JwtUtil;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpHeaders;
@@ -23,6 +25,11 @@ class InternalCatalogSecurityTest {
     @Autowired private JwtUtil jwtUtil;
 
     @MockitoBean private TicketSetupService ticketSetupService;
+
+    @BeforeEach
+    void clearContext() {
+        SecurityContextHolder.clearContext();
+    }
 
     @Test
     void ticketSetup_ShouldReturn401_WhenNoServiceToken() throws Exception {

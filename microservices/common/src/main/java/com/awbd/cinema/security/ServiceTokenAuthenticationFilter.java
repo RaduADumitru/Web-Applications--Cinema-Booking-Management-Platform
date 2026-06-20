@@ -33,8 +33,11 @@ public class ServiceTokenAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
 
-        if (header != null && header.startsWith(BEARER_PREFIX)
-                && SecurityContextHolder.getContext().getAuthentication() == null) {
+        // The internal chain is stateless and the service token is the sole authoritative
+        // credential — a valid token always authenticates as ROLE_SERVICE, overwriting any
+        // ambient/stale authentication (which is never present in production but can leak
+        // between tests). NOT guarding on a null context is what keeps this deterministic.
+        if (header != null && header.startsWith(BEARER_PREFIX)) {
             String token = header.substring(BEARER_PREFIX.length());
             try {
                 String serviceName = jwtUtil.validateServiceToken(token);

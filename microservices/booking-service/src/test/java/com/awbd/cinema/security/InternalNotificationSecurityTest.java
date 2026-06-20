@@ -4,8 +4,10 @@ import com.awbd.cinema.DTOs.NotificationDTOs.CreateNotificationDTO;
 import com.awbd.cinema.enums.NotificationType;
 import com.awbd.cinema.services.NotificationService.NotificationService;
 import com.awbd.cinema.utils.JwtUtil;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpHeaders;
@@ -28,6 +30,11 @@ class InternalNotificationSecurityTest {
     @Autowired private ObjectMapper objectMapper;
 
     @MockitoBean private NotificationService notificationService;
+
+    @BeforeEach
+    void clearContext() {
+        SecurityContextHolder.clearContext();
+    }
 
     @Test
     void createNotification_ShouldReturn401_WhenNoServiceToken() throws Exception {

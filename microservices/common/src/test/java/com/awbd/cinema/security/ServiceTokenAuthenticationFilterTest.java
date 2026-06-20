@@ -13,10 +13,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpHeaders;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.io.IOException;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
@@ -49,6 +52,26 @@ class ServiceTokenAuthenticationFilterTest {
         assertThat(auth).isNotNull();
         assertThat(auth.getName()).isEqualTo("booking-service");
         assertThat(auth.getAuthorities()).anyMatch(a -> a.getAuthority().equals("ROLE_SERVICE"));
+        verify(filterChain).doFilter(request, response);
+    }
+
+    @Test
+    void doFilterInternal_ShouldOverwritePreexistingAuthentication_WhenBearerTokenIsValid()
+            throws ServletException, IOException {
+        // Simulate a stale, non-SERVICE authentication already in the context (as can leak
+        // between tests). A valid service token must still win and grant ROLE_SERVICE.
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(
+                        "stale_user", null, List.of(new SimpleGrantedAuthority("ROLE_USER"))));
+        when(request.getHeader(HttpHeaders.AUTHORIZATION)).thenReturn("Bearer service_token");
+        when(jwtUtil.validateServiceToken("service_token")).thenReturn("booking-service");
+
+        filter.doFilterInternal(request, response, filterChain);
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        assertThat(auth.getName()).isEqualTo("booking-service");
+        assertThat(auth.getAuthorities()).anyMatch(a -> a.getAuthority().equals("ROLE_SERVICE"));
+        assertThat(auth.getAuthorities()).noneMatch(a -> a.getAuthority().equals("ROLE_USER"));
         verify(filterChain).doFilter(request, response);
     }
 
