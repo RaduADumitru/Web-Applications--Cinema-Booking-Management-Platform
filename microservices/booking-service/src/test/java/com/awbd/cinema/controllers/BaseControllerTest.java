@@ -5,6 +5,7 @@ import com.awbd.cinema.enums.Role;
 import com.awbd.cinema.security.CustomUserDetails;
 import com.awbd.cinema.security.JwtAuthenticationFilter;
 import com.awbd.cinema.security.SecurityConfig;
+import com.awbd.cinema.utils.JwtUtil;
 import com.awbd.cinema.utils.SecurityCorsProperties;
 import jakarta.servlet.FilterChain;
 import org.junit.jupiter.api.AfterEach;
@@ -28,6 +29,9 @@ public abstract class BaseControllerTest {
 
     @MockitoBean
     protected SecurityCorsProperties securityCorsProperties;
+
+    @MockitoBean
+    protected JwtUtil jwtUtil;
 
     @BeforeEach
     void setupMockFilters() throws Exception {
