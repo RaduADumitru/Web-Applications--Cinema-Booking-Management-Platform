@@ -275,7 +275,8 @@ lines:
 docker compose -f docker-compose.microservices.yml logs user-service | grep "served "
 
 # Feign LB: which booking-service instance served the inter-service /internal notification calls
-docker compose -f docker-compose.microservices.yml logs booking-service | grep "served /internal"
+# (the logged URI includes the /api/v1 context-path, e.g. "served POST /api/v1/internal/notifications by ...")
+docker compose -f docker-compose.microservices.yml logs booking-service | grep "/internal"
 ```
 
 Across requests the instance id (`<service>@<host>:<port>`) varies, showing round-robin
