@@ -79,6 +79,11 @@ public class ScreenSessionServiceImpl implements ScreenSessionService {
         Specification<ScreenSession> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
+            // A movie is soft-deleted via @SQLRestriction("deleted_at IS NULL"); its sessions must
+            // be hidden alongside it (and reappear if it is restored), otherwise rendering them
+            // fails when the lazy movie proxy cannot resolve the now-filtered row.
+            predicates.add(cb.isNull(root.get("movie").get("deletedAt")));
+
             if (movieId != null) {
                 predicates.add(cb.equal(root.get("movie").get("id"), movieId));
             }
@@ -109,7 +114,14 @@ public class ScreenSessionServiceImpl implements ScreenSessionService {
     @Transactional(readOnly = true)
     @Cacheable(value = "single_screen_sessions", key = "#id")
     public ScreenSessionDTO getScreenSession(Long id) {
-        return screenSessionRepository.findById(id)
+        // Exclude sessions whose movie is soft-deleted: they are hidden with their movie, so a
+        // direct lookup should 404 rather than fail resolving the filtered lazy movie proxy.
+        // root.get("movie") is an INNER join, so isNull(deletedAt) reliably drops such sessions.
+        Specification<ScreenSession> spec = (root, query, cb) -> cb.and(
+                cb.equal(root.get("id"), id),
+                cb.isNull(root.get("movie").get("deletedAt"))
+        );
+        return screenSessionRepository.findOne(spec)
                 .map(ScreenSessionDTO::from)
                 .orElseThrow(() -> new NotFoundException("Screen session not found."));
     }
