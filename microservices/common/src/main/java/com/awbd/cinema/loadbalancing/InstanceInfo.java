@@ -2,9 +2,6 @@ package com.awbd.cinema.loadbalancing;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
-import org.springframework.stereotype.Component;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -13,18 +10,18 @@ import java.net.UnknownHostException;
  * Holds a stable, human-readable identifier for this running service instance, of the form
  * {@code <app-name>@<hostname>:<port>}. Under Docker the hostname is the container id, so each
  * replica gets a distinct id — which is what makes load balancing across instances observable.
+ *
+ * <p>Registered as a bean by {@link LoadBalancingConfig} (not component-scanned), so it always
+ * loads together with {@link ServedByResponseFilter} and never leaves that filter with an
+ * unsatisfied dependency in a {@code @WebMvcTest} slice.
  */
-@Component
-@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class InstanceInfo {
 
     private static final Logger log = LoggerFactory.getLogger(InstanceInfo.class);
 
     private final String instanceId;
 
-    public InstanceInfo(
-            @Value("${spring.application.name:unknown-service}") String appName,
-            @Value("${server.port:0}") String port) {
+    public InstanceInfo(String appName, String port) {
         this.instanceId = buildInstanceId(appName, resolveHostname(), port);
         log.info("LB instance ready: {}", instanceId);
     }
