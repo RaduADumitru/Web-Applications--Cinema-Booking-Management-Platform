@@ -121,8 +121,9 @@ services:
 
   user-service:
     <<: *ms-common
-    container_name: ms-user-service
     command: sh -c "mvn -o -pl user-service spring-boot:run"
+    deploy:
+      replicas: 2
     environment:
       SERVER_PORT: 8080
       DATABASE_URL: jdbc:postgresql://user-db:5432/${USER_DB_NAME}
@@ -130,8 +131,6 @@ services:
       SECURITY_CORS_ALLOWED_ORIGINS: http://localhost:4200
       CONFIG_SERVER_URL: http://config-server:8888
       SPRING_RABBITMQ_HOST: rabbitmq
-    ports:
-      - "8081:8080"
     depends_on:
       user-db:
         condition: service_healthy
@@ -152,8 +151,9 @@ services:
 
   catalog-service:
     <<: *ms-common
-    container_name: ms-catalog-service
     command: sh -c "mvn -o -pl catalog-service spring-boot:run"
+    deploy:
+      replicas: 2
     environment:
       SERVER_PORT: 8080
       DATABASE_URL: jdbc:postgresql://catalog-db:5432/${CATALOG_DB_NAME}
@@ -162,8 +162,6 @@ services:
       SECURITY_CORS_ALLOWED_ORIGINS: http://localhost:4200
       CONFIG_SERVER_URL: http://config-server:8888
       SPRING_RABBITMQ_HOST: rabbitmq
-    ports:
-      - "8082:8080"
     depends_on:
       catalog-db:
         condition: service_healthy
@@ -186,8 +184,9 @@ services:
 
   booking-service:
     <<: *ms-common
-    container_name: ms-booking-service
     command: sh -c "mvn -o -pl booking-service spring-boot:run"
+    deploy:
+      replicas: 2
     environment:
       SERVER_PORT: 8080
       DATABASE_URL: jdbc:postgresql://booking-db:5432/${BOOKING_DB_NAME}
@@ -196,8 +195,6 @@ services:
       SECURITY_CORS_ALLOWED_ORIGINS: http://localhost:4200
       CONFIG_SERVER_URL: http://config-server:8888
       SPRING_RABBITMQ_HOST: rabbitmq
-    ports:
-      - "8083:8080"
     depends_on:
       booking-db:
         condition: service_healthy
