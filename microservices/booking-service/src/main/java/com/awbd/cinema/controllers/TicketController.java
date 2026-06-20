@@ -1,6 +1,7 @@
 package com.awbd.cinema.controllers;
 
 import com.awbd.cinema.DTOs.TicketDTOs.BookTicketDTO;
+import com.awbd.cinema.DTOs.TicketDTOs.BulkSaveTicketsDTO;
 import com.awbd.cinema.DTOs.TicketDTOs.SaveTicketDTO;
 import com.awbd.cinema.DTOs.TicketDTOs.TicketDTO;
 import com.awbd.cinema.services.TicketService.TicketService;
@@ -14,6 +15,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/tickets")
 @RequiredArgsConstructor
@@ -26,6 +29,13 @@ public class TicketController {
     public ResponseEntity<TicketDTO> createTicket(@Valid @RequestBody SaveTicketDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ticketService.createTicket(dto));
     }
+
+    @PostMapping("/bulk")
+    @PreAuthorize("hasRole('STAFF')")
+    public ResponseEntity<List<TicketDTO>> createTickets(@Valid @RequestBody BulkSaveTicketsDTO dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(ticketService.createTickets(dto));
+    }
+
 
     @GetMapping
     public ResponseEntity<RestPage<TicketDTO>> getTickets(

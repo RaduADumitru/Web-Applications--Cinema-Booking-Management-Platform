@@ -23,4 +23,7 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT t FROM Ticket t WHERE t.id = :id")
     Optional<Ticket> findByIdForBooking(@Param("id") Long id);
+
+    @Query("SELECT t.seat.id FROM Ticket t WHERE t.room.id = :roomId AND t.screenSession.id = :sessionId AND t.seat.id IN :seatIds")
+    List<Long> findExistingSeatIds(@Param("roomId") Long roomId, @Param("sessionId") Long sessionId, @Param("seatIds") List<Long> seatIds);
 }

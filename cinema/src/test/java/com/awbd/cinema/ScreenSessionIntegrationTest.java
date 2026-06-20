@@ -69,7 +69,7 @@ class ScreenSessionIntegrationTest {
                 .build());
 
         ScreenSession session = screenSessionRepository.save(ScreenSession.builder()
-                .date(LocalDate.of(2026, 8, 1))
+                .date(LocalDate.now().plusDays(40))
                 .startTime(LocalTime.of(18, 0))
                 .endTime(LocalTime.of(20, 0))
                 .movie(movie)
@@ -106,13 +106,13 @@ class ScreenSessionIntegrationTest {
         Long hiddenSessionId = seedSessionForSoftDeletedMovie();
         assertThat(screenSessionRepository.findActiveById(hiddenSessionId)).isEmpty();
 
-        ScreenSession active = seedActiveSession(112233L, LocalDate.of(2026, 9, 1));
+        ScreenSession active = seedActiveSession(112233L, LocalDate.now().plusDays(60));
         assertThat(screenSessionRepository.findActiveById(active.getId())).isPresent();
     }
 
     @Test
     void findByDate_excludesSessionsWhoseMovieIsSoftDeleted() {
-        LocalDate date = LocalDate.of(2026, 8, 1); // the date used by the soft-deleted fixture
+        LocalDate date = LocalDate.now().plusDays(40); // the date used by the soft-deleted fixture
         Long hiddenSessionId = seedSessionForSoftDeletedMovie();
         ScreenSession active = seedActiveSession(223344L, date);
 

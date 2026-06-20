@@ -20,6 +20,7 @@ public class ScreenSession {
 
     @Column(name = "session_date", nullable = false)
     @NotNull(message = "The date is required.")
+    @jakarta.validation.constraints.FutureOrPresent(message = "The date must be today or in the future.")
     private LocalDate date;
 
     @Column(name = "start_time", nullable = false)
