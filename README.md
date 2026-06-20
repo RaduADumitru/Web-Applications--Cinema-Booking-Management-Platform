@@ -183,14 +183,15 @@ gateway only starts routing once `user-service`, `catalog-service`, and
 |---|---|
 | http://localhost:8080/api/v1 | **API gateway** (what the frontend uses) |
 | http://localhost:4200 | Angular client |
-| http://localhost:8081/api/v1 | user-service (direct, debugging) |
-| http://localhost:8082/api/v1 | catalog-service (direct) |
-| http://localhost:8083/api/v1 | booking-service (direct) |
 | http://localhost:8888 | config-server (Spring Cloud Config; `/encrypt`, `/<service>/default`) |
 | http://localhost:15672 | RabbitMQ management UI (Spring Cloud Bus; `guest`/`guest`) |
 
 Internal `/internal/**` endpoints are **not** routed by the gateway — they are reachable
 only over the Docker network (service-to-service Feign calls).
+
+The three business services (`user-service`, `catalog-service`, `booking-service`) run **2
+instances each** and are reachable only through the gateway on `http://localhost:8080` — they no
+longer publish direct host ports. See **Load Balancing** below.
 
 ## Smoke test (through the gateway)
 
@@ -210,6 +211,83 @@ curl -i -X POST http://localhost:8080/api/v1/auth/login \
 Expect `201` then `200` with `Set-Cookie` headers — proving the gateway routes to
 user-service and the cross-service calls work. The gateway logs every request
 (`Gateway POST /api/v1/auth/login -> 200 OK (… ms)`).
+
+## Load Balancing (multiple instances)
+
+The stack runs **2 instances of each business service** (`user-service`, `catalog-service`,
+`booking-service`) via Docker Compose `deploy.replicas`. Client-side load balancing is provided by
+**Spring Cloud LoadBalancer** (default round-robin) in two places:
+
+- the **gateway** routes (`lb://user-service`, …) distribute external requests across instances;
+- **Feign** clients distribute inter-service (`/internal/**`) calls across instances by service name.
+
+Each instance stamps an `X-Served-By: <service>@<host>:<port>` response header and logs
+`served <method> <uri> by <id>` for every non-actuator request.
+
+### Run with 2 instances per service
+
+```bash
+docker compose -f docker-compose.microservices.yml up -d --build
+```
+
+(equivalently: `... up -d --build --scale user-service=2 --scale catalog-service=2 --scale booking-service=2`)
+
+The first build is slower because every replica builds and starts its own JVM.
+
+### Confirm both instances registered
+
+Open the Eureka dashboard at http://localhost:8761 — each service should list **2** instances.
+
+### See gateway load balancing (no auth needed)
+
+Register the `demo` user first (see **Smoke test** above), then loop the public login endpoint and
+watch the `X-Served-By` header alternate across the two user-service instances:
+
+```bash
+for i in $(seq 1 10); do
+  curl -s -o /dev/null -D - -X POST http://localhost:8080/api/v1/auth/login \
+    -H 'Content-Type: application/json' \
+    -d '{"username":"demo","password":"Password123!"}' \
+  | grep -i '^X-Served-By'
+done
+```
+
+PowerShell:
+
+```powershell
+1..10 | ForEach-Object {
+  (Invoke-WebRequest -Uri http://localhost:8080/api/v1/auth/login -Method Post `
+    -ContentType 'application/json' `
+    -Body '{"username":"demo","password":"Password123!"}').Headers['X-Served-By']
+}
+```
+
+You should see two distinct `user-service@<host>:8080` ids appear across the 10 requests.
+
+### See gateway + Feign load balancing (logs)
+
+Run the register/login smoke test a few times. Registration also triggers the user→booking Feign
+**welcome notification**, exercising inter-service load balancing. Then read the per-instance log
+lines:
+
+```bash
+# Gateway LB: which user-service instance served the external login requests
+docker compose -f docker-compose.microservices.yml logs user-service | grep "served "
+
+# Feign LB: which booking-service instance served the inter-service /internal notification calls
+docker compose -f docker-compose.microservices.yml logs booking-service | grep "served /internal"
+```
+
+Across requests the instance id (`<service>@<host>:<port>`) varies, showing round-robin
+distribution.
+
+### How it works
+
+Each instance registers with Eureka (`prefer-ip-address: true`, so replicas get distinct ids).
+The gateway resolves `lb://<service>` routes and Feign resolves `@FeignClient(name = "<service>")`
+through Eureka, and **Spring Cloud LoadBalancer** picks an instance per call using its default
+round-robin strategy. No load-balancer configuration is added — multiplicity plus the
+`X-Served-By` header and request logging are all that's needed to demonstrate it.
 
 ## Stop
 
