@@ -123,6 +123,9 @@ export class SeatSelectionComponent implements OnInit, OnChanges {
 
   selectedTotal = computed(() => {
     const baseTotal = this.selectedViews().length * this.selectedTicketTypePrice();
+    // console.log(baseTotal - this.discountAmount());
+    // console.log(this.discountAmount());
+    // console.log(this.useDiscount());
     if (this.useDiscount()) {
       return Math.max(0, baseTotal - this.discountAmount());
     }
@@ -143,7 +146,7 @@ export class SeatSelectionComponent implements OnInit, OnChanges {
     private movieService: MovieService,
     private staffOperationsService: StaffOperationsService,
     private ordersService: OrdersService,
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.applyRouteFallbacks();
@@ -168,7 +171,7 @@ export class SeatSelectionComponent implements OnInit, OnChanges {
     });
 
     this.seatSelectionService.getDiscountPreview().subscribe({
-      next: (preview) => this.discountAmount.set(preview.discount),
+      next: (preview) => this.discountAmount.set(preview.potentialDiscount),
       error: (err) => console.error('Error loading discount preview:', err)
     });
   }
@@ -316,7 +319,7 @@ export class SeatSelectionComponent implements OnInit, OnChanges {
           this.ordersService.refreshOrders();
           this.loadLayout();
           this.seatSelectionService.getDiscountPreview().subscribe({
-            next: (preview) => this.discountAmount.set(preview.discount),
+            next: (preview) => this.discountAmount.set(preview.potentialDiscount),
             error: (err) => console.error('Error reloading discount preview:', err)
           });
         },
