@@ -55,6 +55,10 @@ public class ScreenSessionServiceImpl implements ScreenSessionService {
             throw new BadRequestException("End time must be after start time.");
         }
 
+        if (java.time.LocalDateTime.of(dto.date(), dto.startTime()).isBefore(java.time.LocalDateTime.now())) {
+            throw new BadRequestException("Screen session start time must be in the future or present.");
+        }
+
         SessionInfo sessionInfo = resolveSessionInfo(dto.sessionInfoId());
 
         ScreenSession session = ScreenSession.builder()
@@ -142,6 +146,10 @@ public class ScreenSessionServiceImpl implements ScreenSessionService {
 
         if (dto.endTime().isBefore(dto.startTime()) || dto.endTime().equals(dto.startTime())) {
             throw new BadRequestException("End time must be after start time.");
+        }
+
+        if (java.time.LocalDateTime.of(dto.date(), dto.startTime()).isBefore(java.time.LocalDateTime.now())) {
+            throw new BadRequestException("Screen session start time must be in the future or present.");
         }
 
         session.setMovie(movie);

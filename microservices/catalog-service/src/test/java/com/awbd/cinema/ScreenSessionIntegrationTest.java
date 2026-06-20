@@ -69,7 +69,7 @@ class ScreenSessionIntegrationTest {
                 .build());
 
         ScreenSession session = screenSessionRepository.save(ScreenSession.builder()
-                .date(LocalDate.of(2026, 8, 1))
+                .date(LocalDate.now().plusDays(40))
                 .startTime(LocalTime.of(18, 0))
                 .endTime(LocalTime.of(20, 0))
                 .movie(movie)
@@ -117,7 +117,7 @@ class ScreenSessionIntegrationTest {
                 .genres(List.of())
                 .build());
         ScreenSession activeSession = screenSessionRepository.save(ScreenSession.builder()
-                .date(LocalDate.of(2026, 9, 1))
+                .date(LocalDate.now().plusDays(60))
                 .startTime(LocalTime.of(10, 0))
                 .endTime(LocalTime.of(12, 0))
                 .movie(active)
