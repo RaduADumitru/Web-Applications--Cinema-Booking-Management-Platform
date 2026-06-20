@@ -443,7 +443,10 @@ git commit -m "Replace FeignAuthInterceptor with service-token-minting ServiceTo
 
 **Files:**
 - Modify: `microservices/catalog-service/src/main/java/com/awbd/cinema/security/SecurityConfig.java`
+- Modify: `microservices/catalog-service/src/test/java/com/awbd/cinema/controllers/BaseControllerTest.java` (add `@MockitoBean protected JwtUtil jwtUtil;` — see note below)
 - Test: `microservices/catalog-service/src/test/java/com/awbd/cinema/security/InternalCatalogSecurityTest.java`
+
+> **`@WebMvcTest` slice fix (required):** adding `JwtUtil` as a `SecurityConfig` constructor dependency makes every `@WebMvcTest` that `@Import`s `SecurityConfig` fail to load its context unless `JwtUtil` is supplied to the slice. The existing `BaseControllerTest` already mocks `SecurityConfig`'s other `common` deps (`JwtAuthenticationFilter`, `SecurityCorsProperties`) via `@MockitoBean`; add `@MockitoBean protected JwtUtil jwtUtil;` alongside them (import `com.awbd.cinema.utils.JwtUtil`). This is the same project-memory lesson about `common` web beans in `@WebMvcTest` slices. (user-service's `BaseControllerTest` already mocks `JwtUtil`, so Task 5 needs no such change; booking-service does, so Task 6 repeats this step.)
 
 - [ ] **Step 1: Write the failing test**
 
@@ -736,6 +739,7 @@ booking-service's internal endpoint is `POST /internal/notifications` (validated
 
 **Files:**
 - Modify: `microservices/booking-service/src/main/java/com/awbd/cinema/security/SecurityConfig.java`
+- Modify: `microservices/booking-service/src/test/java/com/awbd/cinema/controllers/BaseControllerTest.java` (add `@MockitoBean protected JwtUtil jwtUtil;` — same `@WebMvcTest` slice fix as Task 4)
 - Test: `microservices/booking-service/src/test/java/com/awbd/cinema/security/InternalNotificationSecurityTest.java`
 
 - [ ] **Step 1: Write the failing test**
