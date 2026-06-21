@@ -6,7 +6,9 @@ spring:
   cloud:
     openfeign:
       circuitbreaker:
-        enabled: true
+        # Disabled: resilience is now owned explicitly by the @Retry + @CircuitBreaker
+        # gateway wrappers, not OpenFeign's implicit integration.
+        enabled: false
     # Spring Cloud Bus refresh transport. By default the bus binds an anonymous,
     # exclusive, auto-delete queue per instance; that queue trips a binder bug
     # where, after any consumer reset, it can only re-declare the queue
@@ -96,3 +98,52 @@ logging:
     com.awbd.cinema: INFO
     com.netflix.discovery: INFO
     org.springframework.cloud.loadbalancer: DEBUG
+
+# Inter-service resilience. One retry + circuitbreaker instance per downstream service,
+# named to match the @FeignClient name used in @Retry(name=...) / @CircuitBreaker(name=...).
+resilience4j:
+  retry:
+    configs:
+      default:
+        max-attempts: 3
+        wait-duration: 1s
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        # Retry ONLY transient faults. 4xx business errors and an open circuit
+        # (CallNotPermittedException) are deliberately excluded.
+        retry-exceptions:
+          - feign.RetryableException
+          - feign.FeignException$FeignServerException
+          - java.io.IOException
+    instances:
+      catalog-service:
+        base-config: default
+      user-service:
+        base-config: default
+      booking-service:
+        base-config: default
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        register-health-indicator: true
+        # Benign 4xx mean the downstream is healthy and correctly rejecting a request,
+        # so they must not trip the breaker (mirrors the old CircuitBreakerConfiguration).
+        ignore-exceptions:
+          - feign.FeignException$NotFound
+          - feign.FeignException$BadRequest
+          - feign.FeignException$Conflict
+          - feign.FeignException$UnprocessableEntity
+    instances:
+      catalog-service:
+        base-config: default
+      user-service:
+        base-config: default
+      booking-service:
+        base-config: default
