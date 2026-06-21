@@ -1,6 +1,6 @@
 import { TicketType } from './ticket.models';
 
-export type RoomType = 'NORMAL' | 'IMAX' | 'THREE_D' | 'VIP' | string;
+export type RoomType = 'NORMAL' | 'IMAX' | string;
 export type SeatZoneOption = 'VIP' | 'A' | 'B' | 'C' | 'D';
 
 export interface RoomResponse {
@@ -85,6 +85,18 @@ export interface TicketInfoResponse {
   id: number;
   type: TicketType;
   price: number;
+}
+
+export interface SeatCategoryResponse {
+  id: number;
+  type: string;
+  extraFee: number;
+  extraPoints: number;
+}
+
+export interface UpdateSeatCategoryRequest {
+  extraFee: number;
+  extraPoints: number;
 }
 
 export interface SaveTicketInfoRequest {

@@ -3,7 +3,7 @@ import { Component, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import Swal from 'sweetalert2';
 import { StaffOperationsService } from '@app/core/services/staff-operations.service';
-import { SeatZoneOption, RoomResponse, TicketInfoResponse } from '@app/shared/models/staff-operations.models';
+import { SeatZoneOption, RoomResponse, SeatCategoryResponse } from '@app/shared/models/staff-operations.models';
 
 @Component({
   selector: 'app-seat-blueprint',
@@ -16,7 +16,7 @@ export class SeatBlueprintComponent implements OnInit {
   readonly zones: SeatZoneOption[] = ['VIP', 'A', 'B', 'C', 'D'];
 
   rooms = signal<RoomResponse[]>([]);
-  categories = signal<TicketInfoResponse[]>([]);
+  seatCategories = signal<SeatCategoryResponse[]>([]);
 
   roomId: number | null = null;
   rows = 6;
@@ -24,7 +24,6 @@ export class SeatBlueprintComponent implements OnInit {
   startRow = 1;
   startSeatNumber = 1;
   zone: SeatZoneOption = 'A';
-  categoryId: number | null = null;
   creating = signal(false);
 
   constructor(private staffOperations: StaffOperationsService) {}
@@ -39,9 +38,9 @@ export class SeatBlueprintComponent implements OnInit {
       error: (error) => console.error('Unable to load rooms:', error),
     });
 
-    this.staffOperations.getTicketInfos().subscribe({
-      next: (response) => this.categories.set(response.content),
-      error: (error) => console.error('Unable to load ticket categories:', error),
+    this.staffOperations.getSeatCategories().subscribe({
+      next: (response) => this.seatCategories.set(response),
+      error: (error) => console.error('Unable to load seat categories:', error),
     });
   }
 
@@ -49,31 +48,30 @@ export class SeatBlueprintComponent implements OnInit {
     return room.id;
   }
 
-  trackByCategory(_: number, category: TicketInfoResponse): number {
-    return category.id;
-  }
-
   rowPreview(): number[] {
-    return Array.from({ length: Math.max(this.rows, 0) }, (_, index) => this.startRow + index);
+    return Array.from({ length: Math.max(this.rows, 0) }, (_, i) => this.startRow + i);
   }
 
   seatPreview(): number[] {
-    return Array.from({ length: Math.max(this.seatsPerRow, 0) }, (_, index) => this.startSeatNumber + index);
+    return Array.from({ length: Math.max(this.seatsPerRow, 0) }, (_, i) => this.startSeatNumber + i);
+  }
+
+  private resolveCategoryId(): number | null {
+    const targetType = this.zone === 'VIP' ? 'VIP' : 'STANDARD';
+    return this.seatCategories().find(c => c.type === targetType)?.id ?? null;
   }
 
   createBlueprint(): void {
-    if (this.roomId == null || this.rows < 1 || this.seatsPerRow < 1) {
-      return;
-    }
+    if (this.roomId == null || this.rows < 1 || this.seatsPerRow < 1) return;
 
     const payload = {
-      roomId: this.roomId as number,
+      roomId: this.roomId,
       rows: this.rows,
       seatsPerRow: this.seatsPerRow,
       startRow: this.startRow,
       startSeatNumber: this.startSeatNumber,
       zone: this.zone,
-      categoryId: this.categoryId,
+      categoryId: this.resolveCategoryId(),
     };
 
     this.creating.set(true);
