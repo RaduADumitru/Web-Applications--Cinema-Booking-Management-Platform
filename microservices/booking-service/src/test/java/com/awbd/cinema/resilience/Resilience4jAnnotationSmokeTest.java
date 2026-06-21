@@ -1,6 +1,7 @@
 package com.awbd.cinema.resilience;
 
 import io.github.resilience4j.retry.annotation.Retry;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -19,9 +20,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * artifact, pulled in transitively by spring-cloud-starter-circuitbreaker-resilience4j).
  */
 @SpringBootTest(properties = {
-        "resilience4j.retry.instances.smokeTest.max-attempts=3",
-        "resilience4j.retry.instances.smokeTest.wait-duration=10ms",
-        "resilience4j.retry.instances.smokeTest.retry-exceptions=java.lang.IllegalStateException"
+        "resilience4j.retry.instances.r4jWiringCheck.max-attempts=3",
+        "resilience4j.retry.instances.r4jWiringCheck.wait-duration=10ms",
+        "resilience4j.retry.instances.r4jWiringCheck.retry-exceptions=java.lang.IllegalStateException"
 })
 @ActiveProfiles("test")
 class Resilience4jAnnotationSmokeTest {
@@ -30,6 +31,7 @@ class Resilience4jAnnotationSmokeTest {
     private FlakyBean flakyBean;
 
     @Test
+    @DisplayName("@Retry aspect retries the configured number of times under Spring Boot 4")
     void retryAnnotation_invokesMethodMaxAttemptsTimes_onBoot4() {
         assertThatThrownBy(() -> flakyBean.alwaysFails())
                 .isInstanceOf(IllegalStateException.class);
@@ -40,6 +42,8 @@ class Resilience4jAnnotationSmokeTest {
 
     @TestConfiguration
     static class TestBeans {
+        // Spring's auto-proxy BeanPostProcessor wraps this @Bean-returned concrete class in a CGLIB
+        // proxy because it has a @Retry-advised method, so the aspect fires on the injected instance.
         @Bean
         FlakyBean flakyBean() {
             return new FlakyBean();
@@ -49,7 +53,7 @@ class Resilience4jAnnotationSmokeTest {
     static class FlakyBean {
         private final AtomicInteger invocations = new AtomicInteger();
 
-        @Retry(name = "smokeTest")
+        @Retry(name = "r4jWiringCheck")
         public void alwaysFails() {
             invocations.incrementAndGet();
             throw new IllegalStateException("boom");
