@@ -16,6 +16,8 @@ import {
   SessionInfoResponse,
   TicketInfoResponse,
   SaveTicketInfoRequest,
+  SeatCategoryResponse,
+  UpdateSeatCategoryRequest,
 } from '@app/shared/models/staff-operations.models';
 import { MovieResponse } from '@app/shared/models/movie.models';
 import { ApiService } from './api.service';
@@ -107,6 +109,14 @@ export class StaffOperationsService {
 
   getMovies(): Observable<PagedResponse<MovieResponse>> {
     return this.api.getPaged<MovieResponse>('/movies', 1, this.pageSize);
+  }
+
+  getSeatCategories(): Observable<SeatCategoryResponse[]> {
+    return this.api.get<SeatCategoryResponse[]>('/seat-categories');
+  }
+
+  updateSeatCategory(id: number, payload: UpdateSeatCategoryRequest): Observable<SeatCategoryResponse> {
+    return this.api.put<SeatCategoryResponse>(`/seat-categories/${id}`, payload);
   }
 
   getTicketInfos(): Observable<PagedResponse<TicketInfoResponse>> {

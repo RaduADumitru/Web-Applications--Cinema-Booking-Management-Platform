@@ -43,23 +43,12 @@
         </label>
       </div>
 
-      <div class="two-column">
-        <label>
-          <span>Zone</span>
-          <select [(ngModel)]="zone" name="zone">
-            <option *ngFor="let item of zones" [ngValue]="item">{{ item }}</option>
-          </select>
-        </label>
-        <label>
-          <span>Ticket Category</span>
-          <select [(ngModel)]="categoryId" name="categoryId">
-            <option [ngValue]="null">No category (Standard)</option>
-            <option *ngFor="let cat of categories(); trackBy: trackByCategory" [ngValue]="cat.id">
-              {{ cat.type }} (${{ cat.price.toFixed(2) }})
-            </option>
-          </select>
-        </label>
-      </div>
+      <label>
+        <span>Zone</span>
+        <select [(ngModel)]="zone" name="zone">
+          <option *ngFor="let item of zones" [ngValue]="item">{{ item }}</option>
+        </select>
+      </label>
 
       <button type="submit" [disabled]="creating() || roomId == null">{{ creating() ? 'Creating seats...' : 'Create blueprint' }}</button>
     </form>

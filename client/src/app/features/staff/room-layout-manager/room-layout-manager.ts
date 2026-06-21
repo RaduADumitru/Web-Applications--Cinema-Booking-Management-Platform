@@ -13,7 +13,7 @@ import { RoomResponse, RoomType, SaveRoomRequest, ScreenSessionResponse } from '
   styleUrl: '../staff-panel.css',
 })
 export class RoomLayoutManagerComponent implements OnInit {
-  readonly roomTypes: RoomType[] = ['NORMAL', 'IMAX', 'THREE_D', 'VIP'];
+  readonly roomTypes: RoomType[] = ['NORMAL', 'IMAX'];
 
   rooms = signal<RoomResponse[]>([]);
   sessions = signal<ScreenSessionResponse[]>([]);
