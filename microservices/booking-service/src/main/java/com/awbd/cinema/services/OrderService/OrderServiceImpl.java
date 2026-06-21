@@ -6,7 +6,7 @@ import com.awbd.cinema.DTOs.OrderDTOs.OrderDTO;
 import com.awbd.cinema.DTOs.OrderDTOs.OrderItemDTO;
 import com.awbd.cinema.DTOs.UserDTOs.AdjustLoyaltyPointsDTO;
 import com.awbd.cinema.DTOs.UserDTOs.LoyaltyPointsDTO;
-import com.awbd.cinema.clients.UserServiceClient;
+import com.awbd.cinema.clients.UserServiceGateway;
 import com.awbd.cinema.entities.*;
 import com.awbd.cinema.enums.NotificationType;
 import com.awbd.cinema.enums.OrderStatus;
@@ -38,7 +38,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final TicketRepository ticketRepository;
     private final TicketInfoRepository ticketInfoRepository;
-    private final UserServiceClient userServiceClient;
+    private final UserServiceGateway userServiceGateway;
     private final OfferRepository offerRepository;
     private final NotificationRepository notificationRepository;
 
@@ -83,7 +83,7 @@ public class OrderServiceImpl implements OrderService {
 
         PointsSpend pointsSpend = null;
         if (dto.useDiscount()) {
-            int currentLoyalty = userServiceClient.getLoyaltyPoints(userId).loyaltyPoints();
+            int currentLoyalty = userServiceGateway.getLoyaltyPoints(userId).loyaltyPoints();
             if (currentLoyalty > 0) {
                 int pointsToSpend = currentLoyalty;
                 BigDecimal discount = PointsSpend.calculateDiscount(pointsToSpend);
@@ -92,7 +92,7 @@ public class OrderServiceImpl implements OrderService {
                         .discount(discount)
                         .build();
                 totalPrice = totalPrice.subtract(discount).max(BigDecimal.ZERO);
-                userServiceClient.updateLoyaltyPoints(userId, new AdjustLoyaltyPointsDTO(0));
+                userServiceGateway.updateLoyaltyPoints(userId, new AdjustLoyaltyPointsDTO(0));
             }
         }
 
@@ -169,7 +169,7 @@ public class OrderServiceImpl implements OrderService {
     @Transactional(readOnly = true)
     @Cacheable(value = "user_discount_previews", key = "#userId")
     public DiscountPreviewDTO getDiscountPreview(Long userId) {
-        LoyaltyPointsDTO loyalty = userServiceClient.getLoyaltyPoints(userId);
+        LoyaltyPointsDTO loyalty = userServiceGateway.getLoyaltyPoints(userId);
         int points = loyalty.loyaltyPoints();
         BigDecimal discount = PointsSpend.calculateDiscount(points);
         return new DiscountPreviewDTO(points, discount);
@@ -213,8 +213,8 @@ public class OrderServiceImpl implements OrderService {
         order.setPaymentAt(LocalDateTime.now());
         Order saved = orderRepository.save(order);
 
-        LoyaltyPointsDTO loyalty = userServiceClient.getLoyaltyPoints(saved.getUserId());
-        userServiceClient.updateLoyaltyPoints(saved.getUserId(),
+        LoyaltyPointsDTO loyalty = userServiceGateway.getLoyaltyPoints(saved.getUserId());
+        userServiceGateway.updateLoyaltyPoints(saved.getUserId(),
                 new AdjustLoyaltyPointsDTO(loyalty.loyaltyPoints() + saved.getLoyaltyPoints()));
 
         return OrderDTO.from(saved);
