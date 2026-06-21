@@ -4,11 +4,6 @@ spring:
     hibernate:
       ddl-auto: update
   cloud:
-    openfeign:
-      circuitbreaker:
-        # Disabled: resilience is now owned explicitly by the @Retry + @CircuitBreaker
-        # gateway wrappers, not OpenFeign's implicit integration.
-        enabled: false
     # Spring Cloud Bus refresh transport. By default the bus binds an anonymous,
     # exclusive, auto-delete queue per instance; that queue trips a binder bug
     # where, after any consumer reset, it can only re-declare the queue
