@@ -72,7 +72,7 @@ public class CircuitBreakerLoggingConfig {
                         event.getNumberOfRetryAttempts(),
                         event.getLastThrowable() == null ? "unknown" : event.getLastThrowable().toString(),
                         event.getWaitInterval().toMillis()))
-                .onError(event -> log.warn("Retry '{}' exhausted after {} attempts: {}",
+                .onError(event -> log.warn("Retry '{}' exhausted after {} retries: {}",
                         name,
                         event.getNumberOfRetryAttempts(),
                         event.getLastThrowable() == null ? "unknown" : event.getLastThrowable().toString()));
