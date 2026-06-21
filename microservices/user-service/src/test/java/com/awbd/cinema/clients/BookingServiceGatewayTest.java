@@ -15,13 +15,13 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-class NotificationGatewayTest {
+class BookingServiceGatewayTest {
 
-    private NotificationGateway gateway;
+    private BookingServiceGateway gateway;
 
     @BeforeEach
     void setUp() {
-        gateway = new NotificationGateway(
+        gateway = new BookingServiceGateway(
                 mock(BookingServiceClient.class),
                 new FeignClientErrorTranslator(new ObjectMapper()));
     }

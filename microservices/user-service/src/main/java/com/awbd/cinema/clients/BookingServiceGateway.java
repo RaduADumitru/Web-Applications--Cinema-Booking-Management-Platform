@@ -22,7 +22,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class NotificationGateway {
+public class BookingServiceGateway {
 
     private static final String NAME = "booking-service";
 
