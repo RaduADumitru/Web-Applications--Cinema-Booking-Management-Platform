@@ -12,7 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 /**
- * Shared by every Feign fallback factory so they handle downstream failures consistently:
+ * Shared by every Feign client gateway's fallback method so they handle downstream failures consistently:
  *
  * <ul>
  *   <li>A genuine 4xx from the downstream (e.g. "not found", "bad request") is a <em>business</em>
