@@ -14,6 +14,10 @@ import org.springframework.stereotype.Component;
  * only) + circuit breaker. A real 4xx is surfaced via the translator; on a genuine outage the
  * fallback degrades gracefully so the booking flow can still proceed (treat balance as 0 / skip the
  * update). Callers inject this instead of {@link UserServiceClient}.
+ *
+ * <p>{@code @Retry} is the outermost aspect, so {@code fallbackMethod} lives on it and fires once
+ * after all retry attempts are exhausted, or immediately for a non-retryable cause such as a 4xx
+ * or an open circuit.
  */
 @Slf4j
 @Component
@@ -50,6 +54,7 @@ public class UserServiceGateway {
     }
 
     LoyaltyPointsDTO updateLoyaltyPointsFallback(Long id, AdjustLoyaltyPointsDTO dto, Throwable cause) {
+        // A real 4xx is surfaced; only a genuine outage skips the update and echoes the requested value.
         RuntimeException clientError = errorTranslator.clientErrorOrNull(cause);
         if (clientError != null) {
             throw clientError;
