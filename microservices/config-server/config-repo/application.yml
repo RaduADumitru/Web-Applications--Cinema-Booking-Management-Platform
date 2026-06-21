@@ -109,6 +109,7 @@ resilience4j:
         wait-duration: 1s
         enable-exponential-backoff: true
         exponential-backoff-multiplier: 2
+        exponential-max-wait-duration: 5s
         # Retry ONLY transient faults. 4xx business errors and an open circuit
         # (CallNotPermittedException) are deliberately excluded.
         retry-exceptions:
