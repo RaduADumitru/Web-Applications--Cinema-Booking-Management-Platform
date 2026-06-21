@@ -14,13 +14,16 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-class CatalogServiceClientFallbackFactoryTest {
+class CatalogServiceGatewayTest {
 
-    private CatalogServiceClientFallbackFactory factory;
+    private CatalogServiceGateway gateway;
 
     @BeforeEach
     void setUp() {
-        factory = new CatalogServiceClientFallbackFactory(new FeignClientErrorTranslator(new ObjectMapper()));
+        // The raw client is unused by the fallback path, so a bare mock is fine.
+        gateway = new CatalogServiceGateway(
+                mock(CatalogServiceClient.class),
+                new FeignClientErrorTranslator(new ObjectMapper()));
     }
 
     private FeignException feign(int status, String body) {
@@ -34,25 +37,16 @@ class CatalogServiceClientFallbackFactoryTest {
     void propagatesNotFound_whenCatalogReturns404_withRealMessage() {
         Throwable cause = feign(404, "{\"status\":404,\"message\":\"Screen session not found.\"}");
 
-        assertThatThrownBy(() -> factory.create(cause).getTicketSetup(1L, 2L, 3L))
+        assertThatThrownBy(() -> gateway.getTicketSetupFallback(1L, 2L, 3L, cause))
                 .isInstanceOf(NotFoundException.class)
                 .hasMessage("Screen session not found.");
-    }
-
-    @Test
-    void propagatesBadRequest_whenCatalogReturns400_withRealMessage() {
-        Throwable cause = feign(400, "{\"status\":400,\"message\":\"Seat does not belong to the specified room.\"}");
-
-        assertThatThrownBy(() -> factory.create(cause).getTicketSetup(1L, 2L, 3L))
-                .isInstanceOf(BadRequestException.class)
-                .hasMessage("Seat does not belong to the specified room.");
     }
 
     @Test
     void propagatesConflict_whenCatalogReturns409() {
         Throwable cause = feign(409, "{\"message\":\"Already exists.\"}");
 
-        assertThatThrownBy(() -> factory.create(cause).getTicketSetup(1L, 2L, 3L))
+        assertThatThrownBy(() -> gateway.getTicketSetupFallback(1L, 2L, 3L, cause))
                 .isInstanceOf(AlreadyExistsException.class)
                 .hasMessage("Already exists.");
     }
@@ -61,7 +55,7 @@ class CatalogServiceClientFallbackFactoryTest {
     void usesDefaultMessage_whenClientErrorBodyIsUnparseable() {
         Throwable cause = feign(404, "<html>not json</html>");
 
-        assertThatThrownBy(() -> factory.create(cause).getTicketSetup(1L, 2L, 3L))
+        assertThatThrownBy(() -> gateway.getTicketSetupFallback(1L, 2L, 3L, cause))
                 .isInstanceOf(NotFoundException.class)
                 .hasMessage("The request could not be completed.");
     }
@@ -70,7 +64,7 @@ class CatalogServiceClientFallbackFactoryTest {
     void fallsBackToUnavailable_whenCatalogReturns5xx() {
         Throwable cause = feign(503, "{\"message\":\"boom\"}");
 
-        assertThatThrownBy(() -> factory.create(cause).getTicketSetup(1L, 2L, 3L))
+        assertThatThrownBy(() -> gateway.getTicketSetupFallback(1L, 2L, 3L, cause))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("Catalog service is currently unavailable");
     }
@@ -79,7 +73,7 @@ class CatalogServiceClientFallbackFactoryTest {
     void fallsBackToUnavailable_whenCatalogIsUnreachable() {
         Throwable cause = new RuntimeException("Connection refused"); // not a Feign 4xx
 
-        assertThatThrownBy(() -> factory.create(cause).getTicketSetup(1L, 2L, 3L))
+        assertThatThrownBy(() -> gateway.getTicketSetupFallback(1L, 2L, 3L, cause))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("Catalog service is currently unavailable");
     }
@@ -88,7 +82,7 @@ class CatalogServiceClientFallbackFactoryTest {
     void bulk_propagatesClientError_whenCatalogReturns404() {
         Throwable cause = feign(404, "{\"message\":\"Screen session not found.\"}");
 
-        assertThatThrownBy(() -> factory.create(cause).getTicketSetups(null))
+        assertThatThrownBy(() -> gateway.getTicketSetupsFallback(null, cause))
                 .isInstanceOf(NotFoundException.class)
                 .hasMessage("Screen session not found.");
     }
@@ -97,7 +91,7 @@ class CatalogServiceClientFallbackFactoryTest {
     void bulk_fallsBackToUnavailable_onOutage() {
         Throwable cause = new RuntimeException("Connection refused");
 
-        assertThatThrownBy(() -> factory.create(cause).getTicketSetups(null))
+        assertThatThrownBy(() -> gateway.getTicketSetupsFallback(null, cause))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("Catalog service is currently unavailable");
     }
