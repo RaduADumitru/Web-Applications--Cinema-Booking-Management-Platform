@@ -1,10 +1,13 @@
 package com.awbd.cinema.config;
 
 import com.awbd.cinema.utils.CacheProperties;
+import com.awbd.cinema.utils.LoggingCacheErrorHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CachingConfigurer;
 import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.cache.interceptor.CacheErrorHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -27,9 +30,18 @@ import java.util.Map;
 @EnableCaching
 @Profile("!test")
 @RequiredArgsConstructor
-public class RedisConfig {
+public class RedisConfig implements CachingConfigurer {
 
     private final CacheProperties cacheProperties;
+
+    /**
+     * Makes cache operations best-effort: when Redis is unreachable, failures are
+     * logged and swallowed so reads fall through to the database instead of 500ing.
+     */
+    @Override
+    public CacheErrorHandler errorHandler() {
+        return new LoggingCacheErrorHandler();
+    }
 
     @Value("${spring.data.redis.host:localhost}")
     private String host;

@@ -75,6 +75,14 @@ management:
     web:
       exposure:
         include: health,info,metrics,prometheus,busrefresh
+  # Redis is a non-critical dependency: a cache (catalog/booking) and the gateway
+  # rate limiter. Its outage must NOT flip /actuator/health to DOWN, otherwise the
+  # Docker healthcheck marks the service unhealthy and the gateway-gated `client`
+  # container refuses connections. Excluding it keeps services healthy while Redis
+  # is down; the cache (CacheErrorHandler) and limiter (fail-open) degrade gracefully.
+  health:
+    redis:
+      enabled: false
   tracing:
     sampling:
       probability: 1.0
