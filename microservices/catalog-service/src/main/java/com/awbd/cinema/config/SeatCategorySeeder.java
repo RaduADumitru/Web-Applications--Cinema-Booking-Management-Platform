@@ -5,11 +5,13 @@ import com.awbd.cinema.enums.SeatCategoryType;
 import com.awbd.cinema.repositories.SeatCategoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 
 @Component
+@Profile("!test")
 @RequiredArgsConstructor
 public class SeatCategorySeeder implements CommandLineRunner {
 
