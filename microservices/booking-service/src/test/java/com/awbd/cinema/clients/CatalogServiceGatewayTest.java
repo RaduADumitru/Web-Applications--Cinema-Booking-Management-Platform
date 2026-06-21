@@ -4,6 +4,7 @@ import com.awbd.cinema.config.FeignClientErrorTranslator;
 import com.awbd.cinema.exceptions.AlreadyExistsException;
 import com.awbd.cinema.exceptions.BadRequestException;
 import com.awbd.cinema.exceptions.NotFoundException;
+import com.awbd.cinema.exceptions.TooManyRequestsException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import feign.FeignException;
 import org.junit.jupiter.api.BeforeEach;
@@ -58,6 +59,24 @@ class CatalogServiceGatewayTest {
         assertThatThrownBy(() -> gateway.getTicketSetupFallback(1L, 2L, 3L, cause))
                 .isInstanceOf(NotFoundException.class)
                 .hasMessage("The request could not be completed.");
+    }
+
+    @Test
+    void propagatesBadRequest_whenCatalogReturns400_withRealMessage() {
+        Throwable cause = feign(400, "{\"status\":400,\"message\":\"Seat does not belong to the specified room.\"}");
+
+        assertThatThrownBy(() -> gateway.getTicketSetupFallback(1L, 2L, 3L, cause))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("Seat does not belong to the specified room.");
+    }
+
+    @Test
+    void propagatesTooManyRequests_whenCatalogReturns429() {
+        Throwable cause = feign(429, "{\"message\":\"Rate limit exceeded.\"}");
+
+        assertThatThrownBy(() -> gateway.getTicketSetupFallback(1L, 2L, 3L, cause))
+                .isInstanceOf(TooManyRequestsException.class)
+                .hasMessage("Rate limit exceeded.");
     }
 
     @Test
