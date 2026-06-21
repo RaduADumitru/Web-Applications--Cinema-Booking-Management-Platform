@@ -5,7 +5,7 @@ import com.awbd.cinema.DTOs.OrderDTOs.DiscountPreviewDTO;
 import com.awbd.cinema.DTOs.OrderDTOs.OrderDTO;
 import com.awbd.cinema.DTOs.OrderDTOs.OrderItemDTO;
 import com.awbd.cinema.DTOs.UserDTOs.LoyaltyPointsDTO;
-import com.awbd.cinema.clients.UserServiceClient;
+import com.awbd.cinema.clients.UserServiceGateway;
 import com.awbd.cinema.entities.*;
 import com.awbd.cinema.enums.OrderStatus;
 import com.awbd.cinema.enums.TicketType;
@@ -48,7 +48,7 @@ class OrderServiceTest {
     @Mock private OrderRepository orderRepository;
     @Mock private TicketRepository ticketRepository;
     @Mock private TicketInfoRepository ticketInfoRepository;
-    @Mock private UserServiceClient userServiceClient;
+    @Mock private UserServiceGateway userServiceGateway;
     @Mock private OfferRepository offerRepository;
     @Mock private NotificationRepository notificationRepository;
 
@@ -117,7 +117,7 @@ class OrderServiceTest {
             assertThat(result.id()).isEqualTo(10L);
             assertThat(result.price()).isEqualByComparingTo("50.00");
             verify(notificationRepository, times(1)).save(any(Notification.class));
-            verify(userServiceClient, never()).getLoyaltyPoints(any());
+            verify(userServiceGateway, never()).getLoyaltyPoints(any());
         }
 
         @Test
@@ -132,12 +132,12 @@ class OrderServiceTest {
             when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
             when(ticketInfoRepository.findByType(TicketType.ADULT)).thenReturn(Optional.of(ticketInfo));
             when(offerRepository.findByDay(any(DayOfWeek.class))).thenReturn(Optional.empty());
-            when(userServiceClient.getLoyaltyPoints(USER_ID)).thenReturn(new LoyaltyPointsDTO(USER_ID, 100));
+            when(userServiceGateway.getLoyaltyPoints(USER_ID)).thenReturn(new LoyaltyPointsDTO(USER_ID, 100));
             when(orderRepository.save(any(Order.class))).thenReturn(savedOrder);
 
             orderService.createOrder(dto, USER_ID);
 
-            verify(userServiceClient).updateLoyaltyPoints(eq(USER_ID), argThat(d -> d.loyaltyPoints() == 0));
+            verify(userServiceGateway).updateLoyaltyPoints(eq(USER_ID), argThat(d -> d.loyaltyPoints() == 0));
         }
     }
 
@@ -169,7 +169,7 @@ class OrderServiceTest {
 
         @Test
         void getDiscountPreview_ValidUser_ReturnsCorrectPreview() {
-            when(userServiceClient.getLoyaltyPoints(USER_ID)).thenReturn(new LoyaltyPointsDTO(USER_ID, 50));
+            when(userServiceGateway.getLoyaltyPoints(USER_ID)).thenReturn(new LoyaltyPointsDTO(USER_ID, 50));
 
             DiscountPreviewDTO preview = orderService.getDiscountPreview(USER_ID);
 
@@ -189,12 +189,12 @@ class OrderServiceTest {
 
             when(orderRepository.findById(5L)).thenReturn(Optional.of(pendingOrder));
             when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
-            when(userServiceClient.getLoyaltyPoints(USER_ID)).thenReturn(new LoyaltyPointsDTO(USER_ID, 10));
+            when(userServiceGateway.getLoyaltyPoints(USER_ID)).thenReturn(new LoyaltyPointsDTO(USER_ID, 10));
 
             OrderDTO result = orderService.payOrder(5L);
 
             assertThat(result.status()).isEqualTo(OrderStatus.PAID);
-            verify(userServiceClient).updateLoyaltyPoints(eq(USER_ID), argThat(d -> d.loyaltyPoints() == 25));
+            verify(userServiceGateway).updateLoyaltyPoints(eq(USER_ID), argThat(d -> d.loyaltyPoints() == 25));
         }
 
         @Test

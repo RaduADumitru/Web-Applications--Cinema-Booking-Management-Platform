@@ -7,8 +7,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 @FeignClient(
         name = "booking-service",
-        path = "/api/v1",
-        fallbackFactory = BookingServiceClientFallbackFactory.class
+        path = "/api/v1"
 )
 public interface BookingServiceClient {
 

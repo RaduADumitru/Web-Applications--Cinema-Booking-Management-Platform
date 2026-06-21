@@ -5,7 +5,7 @@ import com.awbd.cinema.DTOs.TicketDTOs.BulkSaveTicketsDTO;
 import com.awbd.cinema.DTOs.TicketDTOs.SaveTicketDTO;
 import com.awbd.cinema.DTOs.TicketDTOs.TicketDTO;
 import com.awbd.cinema.DTOs.TicketDTOs.TicketSetupDTO;
-import com.awbd.cinema.clients.CatalogServiceClient;
+import com.awbd.cinema.clients.CatalogServiceGateway;
 import com.awbd.cinema.entities.Ticket;
 import com.awbd.cinema.entities.TicketInfo;
 import com.awbd.cinema.exceptions.AlreadyExistsException;
@@ -35,7 +35,7 @@ public class TicketServiceImpl implements TicketService {
 
     private final TicketRepository ticketRepository;
     private final TicketInfoRepository ticketInfoRepository;
-    private final CatalogServiceClient catalogServiceClient;
+    private final CatalogServiceGateway catalogServiceGateway;
 
     @Override
     @Transactional
@@ -46,7 +46,7 @@ public class TicketServiceImpl implements TicketService {
         }
 
         // Validate (seat-in-room, session-in-room) and fetch the pricing/display snapshot from catalog-service.
-        TicketSetupDTO setup = catalogServiceClient.getTicketSetup(dto.seatId(), dto.roomId(), dto.screenSessionId());
+        TicketSetupDTO setup = catalogServiceGateway.getTicketSetup(dto.seatId(), dto.roomId(), dto.screenSessionId());
 
         Ticket ticket = Ticket.builder()
                 .isAvailable(true)
@@ -86,7 +86,7 @@ public class TicketServiceImpl implements TicketService {
         }
 
         BulkSaveTicketsDTO filteredDto = new BulkSaveTicketsDTO(missingSeatIds, dto.roomId(), dto.screenSessionId());
-        List<TicketSetupDTO> setups = catalogServiceClient.getTicketSetups(filteredDto);
+        List<TicketSetupDTO> setups = catalogServiceGateway.getTicketSetups(filteredDto);
 
         List<Ticket> tickets = new ArrayList<>();
         for (int i = 0; i < missingSeatIds.size(); i++) {
