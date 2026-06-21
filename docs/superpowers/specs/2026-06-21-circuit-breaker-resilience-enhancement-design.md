@@ -56,11 +56,11 @@ OpenFeign:
 - Introduce **one resilience wrapper `@Component` per Feign client** — the single
   place where retry, circuit breaker, and fallback live:
 
-  | Wrapper (new) | wraps | lives in |
-  |---|---|---|
+  | Wrapper (new)           | wraps                  | lives in        |
+  |-------------------------|------------------------|-----------------|
   | `CatalogServiceGateway` | `CatalogServiceClient` | booking-service |
-  | `UserServiceGateway` | `UserServiceClient` | booking-service |
-  | `NotificationGateway` | `BookingServiceClient` | user-service |
+  | `UserServiceGateway`    | `UserServiceClient`    | booking-service |
+  | `NotificationGateway`   | `BookingServiceClient` | user-service    |
 
   Each public method carries
   `@Retry(name="<service>")` + `@CircuitBreaker(name="<service>", fallbackMethod="…")`
@@ -105,10 +105,14 @@ Because nothing uses the OpenFeign/Spring Cloud circuit-breaker factory anymore,
 
 ### 3. Fallback semantics (preserved per client)
 
-Relocated into wrapper `fallbackMethod`s, behaviour unchanged:
-- **catalog / user gateways** (data the booking needs): surface real 4xx via the
+Relocated into wrapper `fallbackMethod`s, behaviour unchanged per client:
+- **catalog gateway** (data the booking strictly needs): surface real 4xx via the
   translator; on genuine outage / open circuit, throw
-  `BadRequestException("… currently unavailable …")`.
+  `BadRequestException("Catalog service is currently unavailable …")`.
+- **user gateway** (loyalty points): surface real 4xx; on outage / open circuit,
+  **degrade gracefully** — `getLoyaltyPoints` returns `LoyaltyPointsDTO(id, 0)`
+  (treat as 0 points so the order can proceed) and `updateLoyaltyPoints` returns
+  `LoyaltyPointsDTO(id, dto.loyaltyPoints())` (skip the update, echo the value).
 - **notification gateway** (non-critical): surface real 4xx; on outage / open
   circuit, **log a WARN and skip silently** (notifications are best-effort).
 
