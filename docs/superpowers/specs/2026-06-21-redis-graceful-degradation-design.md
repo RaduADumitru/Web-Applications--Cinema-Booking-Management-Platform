@@ -64,11 +64,43 @@ guard is retained, so test slices are unaffected.
   `LoggingCacheErrorHandler`. catalog-service already has this test (extend it);
   booking-service has none, so a minimal one is added for parity.
 
+## Update (2026-06-21): gateway health & rate-limiter degradation
+
+Manual testing (stop Redis on the running Docker stack) showed the cache-layer fix
+was necessary but not sufficient: the app still went down, with the failure surfacing
+in the **gateway**. The original "gateway already fails open, out of scope" assumption
+was wrong. Two non-degrading gateway dependencies on Redis:
+
+1. **Redis health indicator gates liveness.** `DataRedisReactiveHealthIndicator` is
+   folded into `/actuator/health`. Redis down -> the indicator's command times out
+   (Lettuce default 60s) -> health reports DOWN (503). The gateway's Docker healthcheck
+   (`curl -f .../actuator/health`) then fails and the container is marked unhealthy.
+   The `client` container is gated by `depends_on: gateway: condition: service_healthy`,
+   so on any restart/recreate with Redis down it never starts -> browser gets connection
+   refused. catalog/booking hit the same indicator (imperative Jedis variant) and also go
+   Docker-unhealthy (routing survives only because `eureka.client.healthcheck.enabled` is off).
+
+2. **Rate limiter stalls every request.** Every route applies `requestRateLimiter`
+   backed by `RedisRateLimiter` (reactive Lettuce). With Redis down each `isAllowed`
+   waits the 60s command timeout before failing open -> effective outage.
+
+### Fix
+
+- **`config-repo/application.yml`** (shared): `management.health.redis.enabled: false`.
+  Redis is non-critical everywhere here (cache + rate limit), so its outage must not
+  flip `/actuator/health`. Keeps all services Docker-healthy and lets the gateway-gated
+  `client` start.
+- **`config-repo/gateway.yml`**: `spring.data.redis.timeout: 250ms` +
+  `connect-timeout: 250ms`, so the limiter fails open in ~250ms instead of 60s.
+  catalog/booking are unaffected (Jedis, own 2s timeouts + `CacheErrorHandler`).
+
 ## Out of scope
 
-- Gateway rate limiter (already fails open).
-- Startup resilience when Redis is unreachable at boot.
-- Connect/read timeout tuning (currently 2s).
+- Startup resilience when Redis is unreachable at boot (no longer a hard failure once
+  the health indicator is excluded).
+- catalog/booking connect/read timeout tuning (currently 2s; acceptable with the
+  `CacheErrorHandler` fallthrough).
+- Reducing Lettuce reconnect-attempt log noise while Redis is down (cosmetic).
 
 ## Affected files
 

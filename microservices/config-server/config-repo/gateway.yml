@@ -1,6 +1,15 @@
 server:
   port: 8080
 
+spring:
+  data:
+    redis:
+      # Redis here backs ONLY the rate limiter. Bound the Lettuce command/connect
+      # timeout (default 60s/10s) so that when Redis is unreachable the RedisRateLimiter
+      # fails open within ~250ms instead of stalling every request for a minute.
+      timeout: 250ms
+      connect-timeout: 250ms
+
 gateway:
   rate-limit:
     replenish-rate: ${GATEWAY_RATE_LIMIT_REPLENISH:50}
