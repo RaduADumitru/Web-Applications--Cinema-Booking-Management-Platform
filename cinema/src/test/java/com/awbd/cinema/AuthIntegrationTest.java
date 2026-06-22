@@ -57,23 +57,46 @@ public class AuthIntegrationTest {
         // 3. Log in with the newly registered user
         LoginDTO loginDTO = new LoginDTO("testuser_e2e", "Password123!");
 
-        mockMvc.perform(post("/auth/login")
+        var loginResult = mockMvc.perform(post("/auth/login")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginDTO)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username").value("testuser_e2e"))
                 .andExpect(cookie().exists("jwt"))
-                .andExpect(cookie().exists("refresh"));
+                .andExpect(cookie().exists("refresh"))
+                .andReturn();
 
-        // 4. Attempt to log in with incorrect password (should fail)
+        // 4. Refresh the token using the refresh cookie from login
+        jakarta.servlet.http.Cookie refreshCookie = loginResult.getResponse().getCookie("refresh");
+
+        mockMvc.perform(post("/auth/refresh")
+                        .with(csrf())
+                        .cookie(refreshCookie))
+                .andExpect(status().isOk())
+                .andExpect(cookie().exists("jwt"))
+                .andExpect(cookie().exists("refresh"))
+                .andExpect(jsonPath("$.message").value("Token refreshed successfully."));
+
+        // 5. Logout — cookies should be cleared
+        mockMvc.perform(post("/auth/logout")
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(cookie().value("jwt", ""))
+                .andExpect(cookie().maxAge("jwt", 0))
+                .andExpect(cookie().value("refresh", ""))
+                .andExpect(cookie().maxAge("refresh", 0))
+                .andExpect(jsonPath("$.message").value("Logged out successfully."));
+
+        // 6. Attempt to log in with incorrect password (should fail)
         LoginDTO incorrectLoginDTO = new LoginDTO("testuser_e2e", "WrongPassword!");
 
         mockMvc.perform(post("/auth/login")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(incorrectLoginDTO)))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.message").value("Invalid account details."));
     }
 }
+

@@ -158,4 +158,62 @@ class AuthControllerTest {
             verify(authService, never()).login(any());
         }
     }
-}
+
+    @Nested
+    class RefreshEndpointTests {
+
+        @Test
+        void refresh_WithValidCookie_ReturnsOkWithNewCookies() throws Exception {
+            // Arrange
+            ResponseCookie jwtCookie = ResponseCookie.from("jwt", "new-jwt-token").path("/").build();
+            ResponseCookie refreshCookie = ResponseCookie.from("refresh", "new-refresh-token").path("/").build();
+            LoginCookiesDTO cookiesDTO = new LoginCookiesDTO(jwtCookie, refreshCookie);
+
+            when(authService.refreshTokens("mock-refresh-token")).thenReturn(cookiesDTO);
+
+            // Act & Assert
+            mockMvc.perform(post("/auth/refresh")
+                            .cookie(new jakarta.servlet.http.Cookie("refresh", "mock-refresh-token")))
+                    .andExpect(status().isOk())
+                    .andExpect(cookie().value("jwt", "new-jwt-token"))
+                    .andExpect(cookie().value("refresh", "new-refresh-token"))
+                    .andExpect(jsonPath("$.message").value("Token refreshed successfully."));
+
+            verify(authService, times(1)).refreshTokens("mock-refresh-token");
+        }
+
+        @Test
+        void refresh_WithoutCookie_ReturnsBadRequest() throws Exception {
+            // Act & Assert — no refresh cookie sent
+            mockMvc.perform(post("/auth/refresh"))
+                    .andExpect(status().isBadRequest());
+
+            verify(authService, never()).refreshTokens(any());
+        }
+    }
+
+    @Nested
+    class LogoutEndpointTests {
+
+        @Test
+        void logout_ReturnsOkWithExpiredCookies() throws Exception {
+            // Arrange
+            ResponseCookie expiredJwt = ResponseCookie.from("jwt", "").path("/").maxAge(0).build();
+            ResponseCookie expiredRefresh = ResponseCookie.from("refresh", "").path("/").maxAge(0).build();
+            LoginCookiesDTO cookiesDTO = new LoginCookiesDTO(expiredJwt, expiredRefresh);
+
+            when(authService.logoutCookies()).thenReturn(cookiesDTO);
+
+            // Act & Assert
+            mockMvc.perform(post("/auth/logout"))
+                    .andExpect(status().isOk())
+                    .andExpect(cookie().value("jwt", ""))
+                    .andExpect(cookie().maxAge("jwt", 0))
+                    .andExpect(cookie().value("refresh", ""))
+                    .andExpect(cookie().maxAge("refresh", 0))
+                    .andExpect(jsonPath("$.message").value("Logged out successfully."));
+
+            verify(authService, times(1)).logoutCookies();
+        }
+    }
+}

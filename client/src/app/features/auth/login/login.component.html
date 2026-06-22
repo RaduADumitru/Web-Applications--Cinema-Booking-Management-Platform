@@ -1,26 +1,24 @@
 <div class="min-h-screen flex items-center justify-center p-4" style="background-color: var(--background);">
-  <div class="w-full max-w-md p-8 rounded-xl shadow-2xl" style="background-color: var(--surface); border: 1px solid var(--border);">
+  <div class="w-full max-w-md p-8 rounded-xl shadow-2xl"
+    style="background-color: var(--surface); border: 1px solid var(--border);">
     <div class="mb-8">
       <h1 class="text-4xl font-bold text-center mb-2" style="color: var(--primary);">Cinema Booking</h1>
       <p class="text-center text-sm" style="color: var(--foreground-muted);">Sign in to your account</p>
     </div>
 
-    <div *ngIf="error" class="mb-6 p-4 rounded-lg border-l-4" style="background-color: rgba(220, 38, 38, 0.1); border-color: var(--error); color: var(--error);">
+    <div *ngIf="error" class="mb-6 p-4 rounded-lg border-l-4"
+      style="background-color: rgba(220, 38, 38, 0.1); border-color: var(--error); color: var(--error);">
       <p class="font-semibold text-sm">{{ error }}</p>
     </div>
 
     <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-5">
       <div>
-        <label for="username" class="block text-sm font-semibold mb-3" style="color: var(--foreground);">Username</label>
-        <input
-          id="username"
-          type="text"
-          formControlName="username"
+        <label for="username" class="block text-sm font-semibold mb-3"
+          style="color: var(--foreground);">Username</label>
+        <input id="username" type="text" formControlName="username"
           class="w-full px-4 py-3 rounded-lg border-2 transition focus:outline-none"
           [style]="submitted && f['username'].errors ? 'border-color: var(--error); background-color: var(--surface);' : 'border-color: var(--border); background-color: var(--surface-secondary);'"
-          [style.color]="'var(--foreground)'"
-          placeholder="your username"
-        />
+          [style.color]="'var(--foreground)'" placeholder="your username" />
         <div *ngIf="submitted && f['username'].errors" class="mt-2 text-sm font-medium" style="color: var(--error);">
           <div *ngIf="f['username'].hasError('required')">Username is required</div>
           <div *ngIf="f['username'].hasError('minlength')">Username must be at least 3 characters</div>
@@ -28,35 +26,36 @@
       </div>
 
       <div>
-        <label for="password" class="block text-sm font-semibold mb-3" style="color: var(--foreground);">Password</label>
-        <input
-          id="password"
-          type="password"
-          formControlName="password"
+        <label for="password" class="block text-sm font-semibold mb-3"
+          style="color: var(--foreground);">Password</label>
+        <input id="password" type="password" formControlName="password"
           class="w-full px-4 py-3 rounded-lg border-2 transition focus:outline-none"
           [style]="submitted && f['password'].errors ? 'border-color: var(--error); background-color: var(--surface);' : 'border-color: var(--border); background-color: var(--surface-secondary);'"
-          [style.color]="'var(--foreground)'"
-          placeholder="your password"
-        />
+          [style.color]="'var(--foreground)'" placeholder="your password" />
         <div *ngIf="submitted && f['password'].errors" class="mt-2 text-sm font-medium" style="color: var(--error);">
           <div *ngIf="f['password'].hasError('required')">Password is required</div>
           <div *ngIf="f['password'].hasError('minlength')">Password must be at least 6 characters</div>
         </div>
       </div>
+      <div class="flex items-center justify-between">
+        <label for="rememberMe" class="flex items-center cursor-pointer">
+          <input id="rememberMe" type="checkbox" formControlName="rememberMe"
+            class="h-4 w-4 rounded border-gray-300 focus:ring-indigo-500" style="accent-color: var(--primary);" />
+          <span class="ml-2 text-sm" style="color: var(--foreground);">Remember me</span>
+        </label>
+      </div>
 
-        <button
-          type="submit"
-          [disabled]="loading"
-          class="w-full py-3 px-4 font-semibold rounded-lg transition-all duration-200 text-black font-bold text-lg hover:opacity-90 disabled:opacity-50"
-          [style]="!loading ? 'background-color: var(--primary); color: white;' : ''"
-        >
+      <button type="submit" [disabled]="loading"
+        class="w-full py-3 px-4 font-semibold rounded-lg transition-all duration-200 text-black font-bold text-lg hover:opacity-90 disabled:opacity-50"
+        [style]="!loading ? 'background-color: var(--primary); color: white;' : ''">
         {{ loading ? 'Signing in...' : 'Sign In' }}
       </button>
     </form>
 
     <p class="text-center mt-8 text-sm" style="color: var(--foreground-muted);">
       Don&apos;t have an account?
-      <a routerLink="/register" class="font-semibold transition-colors" style="color: var(--primary); text-decoration: none;">Create one here</a>
+      <a routerLink="/register" class="font-semibold transition-colors"
+        style="color: var(--primary); text-decoration: none;">Create one here</a>
     </p>
   </div>
 </div>
