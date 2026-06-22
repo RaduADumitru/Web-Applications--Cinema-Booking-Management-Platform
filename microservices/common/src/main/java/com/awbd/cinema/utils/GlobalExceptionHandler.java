@@ -50,6 +50,12 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.UNAUTHORIZED, e.getMessage(), null);
     }
 
+
+    @ExceptionHandler(MissingRequestCookieException.class)
+    public ResponseEntity<Map<String, Object>> handleMissingRequestCookie(MissingRequestCookieException e) {
+        return buildResponse(HttpStatus.BAD_REQUEST, e.getMessage(), null);
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<Map<String, String>> handleAccessDeniedException(AccessDeniedException ex) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
