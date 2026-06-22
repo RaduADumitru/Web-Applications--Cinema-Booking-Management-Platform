@@ -9,7 +9,7 @@ import { AuthUser, LoginRequest, RegisterRequest, RegisterResponse } from '@mode
 })
 export class AuthService {
 
-	constructor(private api: ApiService) {}
+	constructor(private api: ApiService) { }
 
 	login(credentials: LoginRequest): Observable<AuthUser> {
 		return this.api.post<AuthUser>('/auth/login', credentials, { withCredentials: true });
@@ -19,5 +19,11 @@ export class AuthService {
 		return this.api.post<RegisterResponse>('/auth/register', payload, { withCredentials: true });
 	}
 
+	refresh(): Observable<{ message: string }> {
+		return this.api.post<{ message: string }>('/auth/refresh', {}, { withCredentials: true });
+	}
 
+	logout(): Observable<{ message: string }> {
+		return this.api.post<{ message: string }>('/auth/logout', {}, { withCredentials: true });
+	}
 }
