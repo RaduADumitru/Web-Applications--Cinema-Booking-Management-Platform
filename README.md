@@ -132,8 +132,8 @@ The full REST API is described by an **OpenAPI 3.0.3** specification at
 for the monolith and the microservices stack**. Service-to-service `/internal/**` endpoints are intentionally excluded, as
 they are not part of the public API.
 
-The rendered, browsable documentation is deployed at
-**https://raduadumitru.github.io/Web-Applications--Cinema-Booking-Management-Platform/#/**.
+The rendered, browsable documentation is deployed on
+[GitHub Pages](https://raduadumitru.github.io/Web-Applications--Cinema-Booking-Management-Platform/#/).
 
 # Running the Application
 
