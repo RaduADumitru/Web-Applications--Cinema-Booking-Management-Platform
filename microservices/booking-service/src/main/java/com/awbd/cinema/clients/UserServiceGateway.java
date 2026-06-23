@@ -63,4 +63,24 @@ public class UserServiceGateway {
                 id, cause.toString());
         return new LoyaltyPointsDTO(id, dto.loyaltyPoints());
     }
+
+    /**
+     * Like {@link #updateLoyaltyPoints} but never silently degrades — throws on any outage.
+     * Used by saga steps where a silent skip would leave loyalty state inconsistent.
+     */
+    @CircuitBreaker(name = NAME)
+    @Retry(name = NAME, fallbackMethod = "updateLoyaltyPointsStrictFallback")
+    public LoyaltyPointsDTO updateLoyaltyPointsStrict(Long id, AdjustLoyaltyPointsDTO dto) {
+        return userServiceClient.updateLoyaltyPoints(id, dto);
+    }
+
+    LoyaltyPointsDTO updateLoyaltyPointsStrictFallback(Long id, AdjustLoyaltyPointsDTO dto, Throwable cause) {
+        RuntimeException clientError = errorTranslator.clientErrorOrNull(cause);
+        if (clientError != null) {
+            throw clientError;
+        }
+        throw new RuntimeException(
+                "user-service unavailable; cannot update loyalty points for user " + id + " — saga will compensate",
+                cause);
+    }
 }

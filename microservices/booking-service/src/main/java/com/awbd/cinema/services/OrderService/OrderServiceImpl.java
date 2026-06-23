@@ -3,16 +3,18 @@ package com.awbd.cinema.services.OrderService;
 import com.awbd.cinema.DTOs.OrderDTOs.CreateOrderDTO;
 import com.awbd.cinema.DTOs.OrderDTOs.DiscountPreviewDTO;
 import com.awbd.cinema.DTOs.OrderDTOs.OrderDTO;
-import com.awbd.cinema.DTOs.OrderDTOs.OrderItemDTO;
-import com.awbd.cinema.DTOs.UserDTOs.AdjustLoyaltyPointsDTO;
 import com.awbd.cinema.DTOs.UserDTOs.LoyaltyPointsDTO;
 import com.awbd.cinema.clients.UserServiceGateway;
-import com.awbd.cinema.entities.*;
-import com.awbd.cinema.enums.NotificationType;
+import com.awbd.cinema.entities.Order;
+import com.awbd.cinema.entities.PointsSpend;
+import com.awbd.cinema.entities.Ticket;
 import com.awbd.cinema.enums.OrderStatus;
 import com.awbd.cinema.exceptions.BadRequestException;
 import com.awbd.cinema.exceptions.NotFoundException;
-import com.awbd.cinema.repositories.*;
+import com.awbd.cinema.repositories.OrderRepository;
+import com.awbd.cinema.repositories.TicketRepository;
+import com.awbd.cinema.sagas.createorder.CreateOrderSagaOrchestrator;
+import com.awbd.cinema.sagas.payorder.PayOrderSagaOrchestrator;
 import com.awbd.cinema.utils.RestPage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,11 +26,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -37,13 +36,11 @@ public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
     private final TicketRepository ticketRepository;
-    private final TicketInfoRepository ticketInfoRepository;
     private final UserServiceGateway userServiceGateway;
-    private final OfferRepository offerRepository;
-    private final NotificationRepository notificationRepository;
+    private final CreateOrderSagaOrchestrator createOrderSagaOrchestrator;
+    private final PayOrderSagaOrchestrator payOrderSagaOrchestrator;
 
     @Override
-    @Transactional
     @Caching(evict = {
             @CacheEvict(value = "order_lists", allEntries = true),
             @CacheEvict(value = "user_orders", allEntries = true),
@@ -53,98 +50,7 @@ public class OrderServiceImpl implements OrderService {
             @CacheEvict(value = "user_notifications", key = "#userId")
     })
     public OrderDTO createOrder(CreateOrderDTO dto, Long userId) {
-        List<Ticket> tickets = new ArrayList<>();
-        BigDecimal totalPrice = BigDecimal.ZERO;
-        int totalPoints = 0;
-
-        for (OrderItemDTO item : dto.items()) {
-            Ticket ticket = ticketRepository.findById(item.ticketId())
-                    .orElseThrow(() -> new NotFoundException("Ticket " + item.ticketId() + " not found."));
-
-            if (!ticket.isAvailable()) {
-                log.warn("User {} attempted to order ticket {} which is no longer available.", userId, item.ticketId());
-                throw new BadRequestException("Ticket " + item.ticketId() + " is no longer available.");
-            }
-
-            TicketInfo info = ticketInfoRepository.findByType(item.type())
-                    .orElseThrow(() -> new NotFoundException(
-                            "No price configured for type '" + item.type() + "'."));
-
-            BigDecimal ticketPrice = info.getPrice().add(ticket.getExtraFee());
-            int ticketPoints = ticket.getExtraPoints() + ticket.getSessionPoints();
-
-            ticket.setType(item.type());
-            ticket.setTicketInfo(info);
-            ticket.setAvailable(false);
-            totalPrice = totalPrice.add(ticketPrice);
-            totalPoints += ticketPoints;
-            tickets.add(ticket);
-        }
-
-        PointsSpend pointsSpend = null;
-        if (dto.useDiscount()) {
-            int currentLoyalty = userServiceGateway.getLoyaltyPoints(userId).loyaltyPoints();
-            if (currentLoyalty > 0) {
-                int pointsToSpend = currentLoyalty;
-                BigDecimal discount = PointsSpend.calculateDiscount(pointsToSpend);
-                pointsSpend = PointsSpend.builder()
-                        .pointsUsed(pointsToSpend)
-                        .discount(discount)
-                        .build();
-                totalPrice = totalPrice.subtract(discount).max(BigDecimal.ZERO);
-                userServiceGateway.updateLoyaltyPoints(userId, new AdjustLoyaltyPointsDTO(0));
-            }
-        }
-
-        Offer offer = offerRepository.findByDay(LocalDateTime.now().getDayOfWeek()).orElse(null);
-        if (offer != null) {
-            BigDecimal offerDiscount = totalPrice
-                    .multiply(BigDecimal.valueOf(offer.getPercent()))
-                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-            totalPrice = totalPrice.subtract(offerDiscount).max(BigDecimal.ZERO);
-        }
-
-        Order order = Order.builder()
-                .createdAt(LocalDateTime.now())
-                .status(OrderStatus.PENDING)
-                .price(totalPrice)
-                .loyaltyPoints(totalPoints)
-                .pointsSpend(pointsSpend)
-                .offer(offer)
-                .userId(userId)
-                .build();
-
-        Order savedOrder = orderRepository.save(order);
-
-        for (Ticket ticket : tickets) {
-            ticket.setOrder(savedOrder);
-            ticketRepository.save(ticket);
-        }
-
-        savedOrder.setTickets(tickets);
-
-        String ticketDetails = tickets.stream()
-                .map(t -> "\"" + t.getMovieTitle() + "\""
-                        + " on " + t.getSessionDate()
-                        + " at " + t.getSessionStartTime()
-                        + ", Row " + t.getSeatRow()
-                        + " Seat " + t.getSeatNumber()
-                        + " (" + t.getSeatZone() + ")"
-                        + " [" + t.getType() + "]")
-                .collect(Collectors.joining("\n- ", "- ", ""));
-
-        Notification ticketBoughtNotification = Notification.builder()
-                .type(NotificationType.TICKET_BOUGHT)
-                .content("Your order has been confirmed! You purchased " + tickets.size()
-                        + " ticket(s):\n" + ticketDetails)
-                .createdDate(LocalDateTime.now())
-                .sentDate(LocalDateTime.now())
-                .userId(userId)
-                .order(savedOrder)
-                .build();
-        notificationRepository.save(ticketBoughtNotification);
-
-        return OrderDTO.from(savedOrder);
+        return createOrderSagaOrchestrator.createOrder(dto, userId);
     }
 
     @Override
@@ -195,7 +101,6 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    @Transactional
     @Caching(evict = {
             @CacheEvict(value = "single_orders", key = "#id"),
             @CacheEvict(value = "order_lists", allEntries = true),
@@ -204,20 +109,7 @@ public class OrderServiceImpl implements OrderService {
             @CacheEvict(value = "user_discount_previews", key = "#result.userId()")
     })
     public OrderDTO payOrder(Long id) {
-        Order order = orderRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Order not found."));
-        if (order.getStatus() != OrderStatus.PENDING) {
-            throw new BadRequestException("Only PENDING orders can be paid.");
-        }
-        order.setStatus(OrderStatus.PAID);
-        order.setPaymentAt(LocalDateTime.now());
-        Order saved = orderRepository.save(order);
-
-        LoyaltyPointsDTO loyalty = userServiceGateway.getLoyaltyPoints(saved.getUserId());
-        userServiceGateway.updateLoyaltyPoints(saved.getUserId(),
-                new AdjustLoyaltyPointsDTO(loyalty.loyaltyPoints() + saved.getLoyaltyPoints()));
-
-        return OrderDTO.from(saved);
+        return payOrderSagaOrchestrator.payOrder(id);
     }
 
     @Override
