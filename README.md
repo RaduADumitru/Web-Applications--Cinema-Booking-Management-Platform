@@ -114,6 +114,16 @@ flowchart TB
 Solid arrows are the synchronous request path; dotted arrows are
 discovery/config, Spring Cloud Bus config refresh, and observability flows.
 
+# API Documentation
+
+The full REST API is described by an **OpenAPI 3.0.3** specification at
+[`api-docs.yaml`](./api-docs.yaml). The contract is **identical
+for the monolith and the microservices stack**. Service-to-service `/internal/**` endpoints are intentionally excluded, as
+they are not part of the public API.
+
+The rendered, browsable documentation is deployed at
+**https://raduadumitru.github.io/Web-Applications--Cinema-Booking-Management-Platform/#/**.
+
 # Running the Application
 
 ## Prerequisites
@@ -127,6 +137,10 @@ discovery/config, Spring Cloud Bus config refresh, and observability flows.
 ```bash
 docker compose -f docker-compose.yml up --build
 ```
+
+The monolith backend is published on **host port 8081** (`docker-compose.yml` maps
+`8081:8080`, so the app listens on 8080 inside the container) and is reachable at
+**http://localhost:8081/api/v1**; the Angular client runs at **http://localhost:4200**.
 
 ### Stop
 
