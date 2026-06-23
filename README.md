@@ -29,6 +29,149 @@ The system must allow creating a booking.
 The system must generate tickets for each booked seat.
 The system must prevent double-booking of the same seat.
 
+# Architecture
+
+The platform is split into three business services (`user`, `catalog`, `booking`),
+each owning its **own** Postgres database, fronted by an API gateway and supported
+by platform services (service discovery, centralized config), shared infrastructure
+(Redis, RabbitMQ) and an observability stack (Prometheus/Grafana/Loki/Zipkin).
+
+The Angular client only ever talks to the **gateway** (`/api/v1`). The gateway
+load-balances across the **2 replicas** of each business service via Eureka
+(`lb://<service>`). Services call each other over the Docker network with Feign
+(`/internal/**` endpoints, not exposed through the gateway).
+
+```mermaid
+flowchart TB
+    client["Angular client<br/>:4200"]
+
+    subgraph edge ["Edge"]
+        gateway["API Gateway<br/>Spring Cloud Gateway :8080"]
+    end
+
+    subgraph platform ["Platform services"]
+        discovery["discovery-server<br/>Eureka :8761"]
+        config["config-server<br/>Spring Cloud Config :8888"]
+    end
+
+    subgraph business ["Business services — 2 replicas each"]
+        user["user-service"]
+        catalog["catalog-service"]
+        booking["booking-service"]
+    end
+
+    subgraph data ["Datastores"]
+        userdb[("user-db<br/>Postgres")]
+        catalogdb[("catalog-db<br/>Postgres")]
+        bookingdb[("booking-db<br/>Postgres")]
+        redis[("Redis<br/>cache + rate limiter")]
+    end
+
+    rabbit["RabbitMQ<br/>Cloud Bus + Saga :15672"]
+
+    subgraph observability ["Observability"]
+        prometheus["Prometheus<br/>:9090"]
+        grafana["Grafana<br/>:3000"]
+        loki["Loki<br/>:3100"]
+        promtail["Promtail"]
+        zipkin["Zipkin<br/>:9411"]
+    end
+
+    %% request path
+    client -->|REST /api/v1| gateway
+    gateway -->|lb:// load-balanced| user
+    gateway -->|lb://| catalog
+    gateway -->|lb://| booking
+    gateway -->|rate limiter| redis
+
+    %% per-service data ownership
+    user --> userdb
+    catalog --> catalogdb
+    booking --> bookingdb
+    catalog --> redis
+    booking --> redis
+
+    %% inter-service Feign (/internal/**)
+    user -. Feign .-> booking
+    booking -. Feign .-> catalog
+    booking -. Feign .-> user
+
+    %% discovery + config
+    gateway & user & catalog & booking -. register / discover .-> discovery
+    gateway & user & catalog & booking -. fetch config .-> config
+
+    %% messaging: saga events + config bus refresh
+    user & catalog & booking -. saga events .-> rabbit
+    config -. busrefresh .-> rabbit
+
+    %% observability
+    gateway & user & catalog & booking -. traces .-> zipkin
+    prometheus -. scrape /actuator/prometheus .-> gateway & user & catalog & booking & discovery
+    promtail -. container logs .-> loki
+    grafana --> prometheus
+    grafana --> loki
+```
+
+Solid arrows are the synchronous request path; dotted arrows are
+discovery/config, asynchronous messaging, and observability flows.
+
+# Running the Application
+
+## Prerequisites
+
+- Docker + Docker Compose v2.
+- A `.env` file at the repo root (copy from `.env.example`).
+- Set a TMDB API key in `.env`, along with a sufficiently long JWT Secret Key
+
+## Start Monolith
+
+```bash
+docker compose -f docker-compose.yml up --build
+```
+
+### Stop
+
+```bash
+docker compose -f docker-compose.yml down        # keep data
+docker compose -f docker-compose.yml down -v     # also drop DB volumes
+```
+## Start Microservices
+
+```bash
+docker compose -f docker-compose.microservices.yml up --build
+```
+
+First run is slow: the shared image compiles the whole reactor (`mvn install`), then
+each service container compiles + boots its module. Watch the healthchecks; the
+gateway only starts routing once `user-service`, `catalog-service`, and
+`booking-service` report healthy.
+
+### Stop
+```bash
+docker compose -f docker-compose.microservices.yml down        # keep data
+docker compose -f docker-compose.microservices.yml down -v     # also drop DB volumes
+```
+
+## Ports
+
+| URL                          | Component                                                             |
+|------------------------------|-----------------------------------------------------------------------|
+| http://localhost:8080/api/v1 | **API gateway** (what the frontend uses)                              |
+| http://localhost:4200        | Angular client  (Default bootstrap user login: `admin`/`Redacted1!`)  |
+| http://localhost:8761        | Eureka dashboard (`discovery-server`)                                 |
+| http://localhost:8888        | config-server (Spring Cloud Config; `/encrypt`, `/<service>/default`) |
+| http://localhost:15672       | RabbitMQ management UI (Spring Cloud Bus; `guest`/`guest`)            |
+| http://localhost:9411        | Zipkin distributed-tracing UI                                         |
+| http://localhost:3000        | Grafana dashboards (`admin`/`admin`)                                  |
+| http://localhost:9090        | Prometheus (metrics & scrape targets)                                 |
+| http://localhost:3100        | Loki log API (queried through Grafana)                                |
+
+Internal `/internal/**` endpoints are **not** routed by the gateway — they are reachable
+only over the Docker network (service-to-service Feign calls).
+
+The three business services (`user-service`, `catalog-service`, `booking-service`) run **2
+instances each** and are reachable only through the gateway on `http://localhost:8080`. 
+See **Load Balancing** below.
 
 # Relational Schema
 
@@ -130,25 +273,6 @@ The bus broker (`rabbitmq:3-management`) exposes a web console at
   bound to the `springCloudBus` exchange. Watching their message rates while you
   run `busrefresh` shows the refresh event fanning out to every service.
 
-## Default owner login (first run)
-
-On first startup against an empty database, user-service seeds an owner account
-from the `BOOTSTRAP_OWNER_*` values in `.env` (defaults: username **`admin`**,
-password **`Redacted1!`**). This is a one-time DB seed — it is intentionally not
-part of the config server, and changing the values later (or refreshing config)
-does **not** alter an existing owner's password.
-
-## Providing the TMDB API key
-
-The TMDB API key is an external third-party credential, so — like the DB
-password — it is **never** committed to the repository. The served
-`catalog-service.yml` references it as an environment placeholder
-(`tmdb.api.key: ${TMDB_API_KEY}`) that `catalog-service` resolves from its own
-environment, fed by the gitignored `.env`.
-
-To provide it, set `TMDB_API_KEY` in your `.env` (copy `.env.example` and fill it
-in). That is the same `.env` entry the monolith already uses.
-
 # Service-to-Service Security
 
 Internal endpoints (`/internal/**`) are authenticated with a short-lived
@@ -224,52 +348,6 @@ original monolith (`docker-compose.yml`) — run one or the other, not both at o
   `DATABASE_PASSWORD`, `JWT_SECRET_KEY`, `TMDB_API_KEY`, `BOOTSTRAP_OWNER_*`,
   `SECURITY_*`) are shared with the monolith.
 
-## Start
-
-```bash
-docker compose -f docker-compose.microservices.yml up --build
-```
-
-First run is slow: the shared image compiles the whole reactor (`mvn install`), then
-each service container compiles + boots its module. Watch the healthchecks; the
-gateway only starts routing once `user-service`, `catalog-service`, and
-`booking-service` report healthy.
-
-## Ports
-
-| URL | Component |
-|---|---|
-| http://localhost:8080/api/v1 | **API gateway** (what the frontend uses) |
-| http://localhost:4200 | Angular client |
-| http://localhost:8888 | config-server (Spring Cloud Config; `/encrypt`, `/<service>/default`) |
-| http://localhost:15672 | RabbitMQ management UI (Spring Cloud Bus; `guest`/`guest`) |
-
-Internal `/internal/**` endpoints are **not** routed by the gateway — they are reachable
-only over the Docker network (service-to-service Feign calls).
-
-The three business services (`user-service`, `catalog-service`, `booking-service`) run **2
-instances each** and are reachable only through the gateway on `http://localhost:8080` — they no
-longer publish direct host ports. See **Load Balancing** below.
-
-## Smoke test (through the gateway)
-
-```bash
-# Register (user-service via gateway). booking-service is up, so the welcome
-# notification is delivered via the user->booking Feign call.
-curl -i -X POST http://localhost:8080/api/v1/auth/register \
-  -H 'Content-Type: application/json' \
-  -d '{"username":"demo","password":"Password123!","confirmPassword":"Password123!","email":"demo@example.com","firstName":"Demo","lastName":"User","phoneNumber":"+1234567890"}'
-
-# Log in (sets jwt + refresh + XSRF-TOKEN cookies)
-curl -i -X POST http://localhost:8080/api/v1/auth/login \
-  -H 'Content-Type: application/json' \
-  -d '{"username":"demo","password":"Password123!"}'
-```
-
-Expect `201` then `200` with `Set-Cookie` headers — proving the gateway routes to
-user-service and the cross-service calls work. The gateway logs every request
-(`Gateway POST /api/v1/auth/login -> 200 OK (… ms)`).
-
 ## Load Balancing (multiple instances)
 
 The stack runs **2 instances of each business service** (`user-service`, `catalog-service`,
@@ -281,20 +359,6 @@ The stack runs **2 instances of each business service** (`user-service`, `catalo
 
 Each instance stamps an `X-Served-By: <service>@<host>:<port>` response header and logs
 `served <method> <uri> by <id>` for every non-actuator request.
-
-### Run with 2 instances per service
-
-```bash
-docker compose -f docker-compose.microservices.yml up -d --build
-```
-
-(equivalently: `... up -d --build --scale user-service=2 --scale catalog-service=2 --scale booking-service=2`)
-
-The first build is slower because every replica builds and starts its own JVM.
-
-### Confirm both instances registered
-
-Open the Eureka dashboard at http://localhost:8761 — each service should list **2** instances.
 
 ### See gateway load balancing (no auth needed)
 
@@ -322,24 +386,6 @@ PowerShell:
 
 You should see two distinct `user-service@<host>:8080` ids appear across the 10 requests.
 
-### See gateway + Feign load balancing (logs)
-
-Run the register/login smoke test a few times. Registration also triggers the user→booking Feign
-**welcome notification**, exercising inter-service load balancing. Then read the per-instance log
-lines:
-
-```bash
-# Gateway LB: which user-service instance served the external login requests
-docker compose -f docker-compose.microservices.yml logs user-service | grep "served "
-
-# Feign LB: which booking-service instance served the inter-service /internal notification calls
-# (the logged URI includes the /api/v1 context-path, e.g. "served POST /api/v1/internal/notifications by ...")
-docker compose -f docker-compose.microservices.yml logs booking-service | grep "/internal"
-```
-
-Across requests the instance id (`<service>@<host>:<port>`) varies, showing round-robin
-distribution.
-
 ### How it works
 
 Each instance registers with Eureka (`prefer-ip-address: true`, so replicas get distinct ids).
@@ -347,18 +393,6 @@ The gateway resolves `lb://<service>` routes and Feign resolves `@FeignClient(na
 through Eureka, and **Spring Cloud LoadBalancer** picks an instance per call using its default
 round-robin strategy. No load-balancer configuration is added — multiplicity plus the
 `X-Served-By` header and request logging are all that's needed to demonstrate it.
-
-## Stop
-
-```bash
-docker compose -f docker-compose.microservices.yml down        # keep data
-docker compose -f docker-compose.microservices.yml down -v     # also drop DB volumes
-```
-
-The infrastructure is fully containerized using Docker and Docker Compose. Three separate Compose files cover the monolith stack, the microservices stack, and an
-optional monitoring stack. Each of the three business services runs as two replicas, with Spring Cloud LoadBalancer distributing traffic across them in a round-robin
-fashion. A separate monitoring configuration brings up Prometheus, Grafana, Loki, and Promtail for metrics collection, log aggregation, and distributed tracing via
-Micrometer and Zipkin.
 
 ### Distributed Transactions and the Saga Pattern
 
