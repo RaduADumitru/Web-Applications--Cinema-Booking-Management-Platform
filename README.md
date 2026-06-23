@@ -3,27 +3,27 @@
 The application is a Cinema Booking & Management System platform that lets users browse available movies, select screenings and book tickets, and lets administrators manage the platform's content (movies, rooms, schedule).
 The system was initially designed as a monolithic application, later to be decomposed into a microservices-based architecture. The split is based on the application's main responsibilities: user management, movie management, and booking management.
 
-# User Management
+### User Management
 The system must allow user registration.
 The system must allow user authentication.
 The system must allow users to log out.
 The system must manage roles.
 The system must restrict access to certain features based on role.
 
-# Movie Management
+### Movie Management
 The system must allow viewing the list of movies.
 The system must allow viewing the details of a movie.
 Administrators must be able to: add movies, edit movies, delete movies.
 The system must allow associating movies with screenings.
 The system must allow searching and sorting movies.
 
-# Screening and Room Management
+### Screening and Room Management
 The system must allow creating screenings for movies.
 The system must allow associating a screening with a cinema room.
 The system must manage the available seats in a room.
 The system must allow viewing the available seats for a screening.
 
-# Booking Management
+### Booking Management
 Users must be able to: select a screening, select available seats, view their own bookings, cancel bookings.
 The system must allow creating a booking.
 The system must generate tickets for each booked seat.
@@ -31,39 +31,8 @@ The system must prevent double-booking of the same seat.
 
 
 # Relational Schema
-  users ( user_id PK, username, first_name, last_name, email, password, phone_number, loyalty_points, role, created_at, email_verified_at, deleted_at )
-  
-  movies ( movie_id PK, title, duration_min, description, rating, release_date, age_rating, image_path, deleted_at )
 
-  genres ( genre_id PK, type )
-  
-  movie_genres ( movie_id FK, genre_id FK )
-
-  session_info ( session_info_id PK, format, points )
-
-  screen_sessions ( session_id PK, session_date, start_time, end_time, movie_id FK, session_info_id FK )
-
-  rooms ( room_id PK, name, type, floor )
-
-  room_screen_sessions ( room_id FK, session_id FK )
-
-  seat_categories ( category_id PK, type, extra_fee, extra_points )
-
-  seats ( seat_id PK, row, number, zone, category_id FK )
-
-  room_seats ( room_id FK, seat_id FK )
-
-  ticket_info ( ticket_info_id PK, type, price )
-
-  offers ( offer_id PK, day, percent )
-
-  points_spend ( points_spend_id PK, points_used, discount )
-
-  orders ( order_id PK, created_at, status, payment_at, price, loyalty_points, deleted_at, user_id FK, points_spend_id FK, offer_id FK )
-
-  tickets ( ticket_id PK, is_available, type, seat_id FK, session_id FK, order_id FK, ticket_info_id FK)
-
-  notifications ( notification_id PK, type, content, created_date, sent_date, user_id FK, order_id FK )
+![ERD](./images/ERD.png)
 
 # Service Discovery (Eureka)
 
