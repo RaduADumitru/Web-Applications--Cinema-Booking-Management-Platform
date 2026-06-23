@@ -3,9 +3,9 @@
 The application is a Cinema Booking & Management System platform that lets users browse available movies, select screenings and book tickets, and lets administrators manage the platform's content (movies, rooms, schedule).
 The system was initially designed as a monolithic application, later to be decomposed into a microservices-based architecture. The split is based on the application's main responsibilities: user management, movie management, and booking management.
 
-## Requirements
+# Requirements
 
-### User Management
+## User Management
 The system must allow user registration.
 The system must allow user authentication.
 The system must allow users to log out.
@@ -15,7 +15,7 @@ The system must restrict access to certain features based on role.
 ![Register](./images/register.png)
 
 
-### Movie Management
+## Movie Management
 The system must allow viewing the list of movies.
 The system must allow viewing the details of a movie.
 Administrators must be able to: add movies, edit movies, delete movies.
@@ -24,7 +24,7 @@ The system must allow searching and sorting movies.
 
 ![Movie List](./images/movie-list.png)
 
-### Screening and Room Management
+## Screening and Room Management
 The system must allow creating screenings for movies.
 The system must allow associating a screening with a cinema room.
 The system must manage the available seats in a room.
@@ -32,7 +32,7 @@ The system must allow viewing the available seats for a screening.
 
 ![Screenings](./images/screenings.png)
 
-### Booking Management
+## Booking Management
 Users must be able to: select a screening, select available seats, view their own bookings, cancel bookings.
 The system must allow creating a booking.
 The system must generate tickets for each booked seat.
@@ -418,7 +418,7 @@ docker compose -f docker-compose.microservices.yml exec gateway \
 returns `404` — the gateway has no such route — which is itself a form of
 proof that internal endpoints aren't externally exposed.)
 
-## Load Balancing (multiple instances)
+# Load Balancing (multiple instances)
 
 The stack runs **2 instances of each business service** (`user-service`, `catalog-service`,
 `booking-service`) via Docker Compose `deploy.replicas`. Client-side load balancing is provided by
@@ -430,7 +430,7 @@ The stack runs **2 instances of each business service** (`user-service`, `catalo
 Each instance stamps an `X-Served-By: <service>@<host>:<port>` response header and logs
 `served <method> <uri> by <id>` for every non-actuator request.
 
-### See gateway load balancing (no auth needed)
+## See gateway load balancing (no auth needed)
 
 Register the `demo` user first (see **Smoke test** above), then loop the public login endpoint and
 watch the `X-Served-By` header alternate across the two user-service instances:
@@ -456,7 +456,7 @@ PowerShell:
 
 You should see two distinct `user-service@<host>:8080` ids appear across the 10 requests.
 
-### How it works
+## How it works
 
 Each instance registers with Eureka (`prefer-ip-address: true`, so replicas get distinct ids).
 The gateway resolves `lb://<service>` routes and Feign resolves `@FeignClient(name = "<service>")`
@@ -464,7 +464,7 @@ through Eureka, and **Spring Cloud LoadBalancer** picks an instance per call usi
 round-robin strategy. No load-balancer configuration is added — multiplicity plus the
 `X-Served-By` header and request logging are all that's needed to demonstrate it.
 
-### Distributed Transactions and the Saga Pattern
+# Distributed Transactions and the Saga Pattern
 
 One of the more advanced engineering aspects of the project is how it handles the booking workflow across service boundaries. When a user completes a purchase, the
 operation involves multiple steps across the Booking Service and the Catalog Service - reserving seats, creating an order, processing payment, and awarding loyalty
