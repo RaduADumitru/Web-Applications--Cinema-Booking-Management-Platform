@@ -1,0 +1,2104 @@
+openapi: 3.0.3
+info:
+  title: Cinema Booking & Management Platform API
+  version: "1.0.0"
+  description: >-
+    Public REST API of the Cinema Booking & Management Platform.
+
+
+    This single specification is **identical for both deployments**: the monolith
+    (`cinema`, exposed on `http://localhost:8081/api/v1`) and the microservices stack
+    behind the Spring Cloud Gateway (`http://localhost:8080/api/v1`). The microservices
+    split these controllers across `user-service`, `catalog-service` and
+    `booking-service`, but the externally exposed contract is the same. Service-to-service
+    `/internal/**` endpoints are intentionally **not** part of this document — they are not
+    reachable by end users.
+
+
+    ## Authentication
+
+    Authentication is JWT-based over an HttpOnly `jwt` cookie obtained from
+    `POST /auth/login`. Every endpoint requires this cookie **except** the `/auth/**`
+    endpoints, which are public. A `refresh` cookie issued alongside it renews the session
+    via `POST /auth/refresh`.
+
+
+    ## Authorization (roles)
+
+    Roles form a hierarchy: `OWNER > STAFF > USER`. An operation requiring `STAFF` is also
+    permitted to `OWNER`; one requiring `USER` is permitted to any authenticated user. Each
+    operation states its requirement under **Authorization** in its description. A missing or
+    invalid session yields `401`; an authenticated user lacking the required role yields `403`.
+
+
+    ## CSRF
+
+    CSRF protection is enabled. Login sets a readable `XSRF-TOKEN` cookie; every
+    state-changing request (`POST`, `PUT`, `PATCH`, `DELETE`) **except** `/auth/**` must echo
+    that value in the `X-XSRF-TOKEN` header. These operations declare the header explicitly.
+
+
+    ## Pagination & sorting
+
+    List endpoints return a Spring "page" object. Most accept the standard `Pageable`
+    parameters (`page` 0-based, `size`, `sort`); a few legacy endpoints
+    (`GET /movies`, `GET /movies/admin/list`, `GET /user/all`) use 1-based `page`/`size`
+    query parameters instead, as documented per operation.
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Microservices stack (Spring Cloud Gateway)
+  - url: http://localhost:8081/api/v1
+    description: Monolith
+
+tags:
+  - name: Auth
+    description: Registration, login, token refresh and logout.
+  - name: User
+    description: Current-user profile and user administration.
+  - name: Movies
+    description: Movie catalog (public browsing + STAFF management, TMDB import).
+  - name: Rooms
+    description: Cinema rooms and their seat / screen-session associations.
+  - name: Seats
+    description: Seats and bulk seat generation.
+  - name: Seat Categories
+    description: Seat category surcharges (extra fee / points).
+  - name: Screen Sessions
+    description: Movie screenings scheduled in rooms.
+  - name: Session Infos
+    description: Reusable screening attributes (format, points).
+  - name: Tickets
+    description: Per-seat tickets for screenings and seat booking.
+  - name: Ticket Info
+    description: Ticket pricing by ticket type.
+  - name: Orders
+    description: Purchase orders, payment, cancellation and loyalty discounts.
+  - name: Notifications
+    description: User notifications.
+  - name: Offers
+    description: Day-of-week percentage discounts.
+
+security:
+  - cookieAuth: []
+
+paths:
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new account
+      description: |
+        Creates a new user account with the default `USER` role.
+        **Authorization:** public.
+      operationId: register
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterDTO' }
+      responses:
+        '201':
+          description: Account created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RegisterResponseDTO' }
+        '409':
+          description: Username or email already in use.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Log in
+      description: |
+        Authenticates the user and sets the `jwt`, `refresh` and `XSRF-TOKEN` cookies.
+        **Authorization:** public.
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginDTO' }
+      responses:
+        '200':
+          description: Authenticated. Auth cookies are set via `Set-Cookie`.
+          headers:
+            Set-Cookie:
+              description: Sets the `jwt` and `refresh` cookies (and `XSRF-TOKEN`).
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LoginResponseDTO' }
+        '401':
+          description: Invalid credentials, locked account, or unverified email.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh the session
+      description: |
+        Issues new `jwt` / `refresh` cookies from a valid `refresh` cookie.
+        **Authorization:** public (requires the `refresh` cookie).
+      operationId: refresh
+      security: []
+      parameters:
+        - name: refresh
+          in: cookie
+          required: true
+          description: The refresh-token cookie issued at login.
+          schema: { type: string }
+      responses:
+        '200':
+          description: Tokens refreshed; new auth cookies are set.
+          headers:
+            Set-Cookie:
+              description: Sets new `jwt` and `refresh` cookies.
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageResponse' }
+        '401':
+          description: Missing or invalid refresh token.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Log out
+      description: |
+        Clears the `jwt` and `refresh` cookies.
+        **Authorization:** public.
+      operationId: logout
+      security: []
+      responses:
+        '200':
+          description: Logged out; auth cookies are cleared.
+          headers:
+            Set-Cookie:
+              description: Expires the `jwt` and `refresh` cookies.
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageResponse' }
+
+  /user:
+    get:
+      tags: [User]
+      summary: Get current user's profile
+      description: '**Authorization:** any authenticated user.'
+      operationId: getCurrentUser
+      responses:
+        '200':
+          description: The authenticated user's profile.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProfileDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    delete:
+      tags: [User]
+      summary: Delete current user's account
+      description: '**Authorization:** any authenticated user (deletes own account).'
+      operationId: deleteCurrentUser
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+      responses:
+        '200':
+          description: Account deleted.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    patch:
+      tags: [User]
+      summary: Update current user's profile
+      description: '**Authorization:** any authenticated user.'
+      operationId: updateProfile
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateProfileDTO' }
+      responses:
+        '200':
+          description: Updated profile.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProfileDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /user/{id}:
+    delete:
+      tags: [User]
+      summary: Delete a user by id
+      description: '**Authorization:** OWNER.'
+      operationId: deleteUserById
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '200':
+          description: User deleted.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessageResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /user/promote:
+    patch:
+      tags: [User]
+      summary: Promote/demote a user's role
+      description: '**Authorization:** OWNER. A user cannot promote themselves (`400`).'
+      operationId: promoteUser
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PromoteDTO' }
+      responses:
+        '200':
+          description: Updated profile with the new role.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProfileDTO' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /user/all:
+    get:
+      tags: [User]
+      summary: List all users
+      description: '**Authorization:** OWNER. Uses 1-based `page`/`size` query parameters.'
+      operationId: getAllUsers
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+          description: 1-based page index.
+        - name: size
+          in: query
+          schema: { type: integer, default: 10 }
+      responses:
+        '200':
+          description: Page of user profiles.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PageProfileDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /movies/admin/list:
+    get:
+      tags: [Movies]
+      summary: List movies (admin view)
+      description: '**Authorization:** STAFF. Uses a 1-based `page` query parameter (fixed size).'
+      operationId: getAdminMovieList
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+          description: 1-based page index.
+      responses:
+        '200':
+          description: Page of admin movie entries.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PageAdminMovieDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /movies/admin/save/{tmdbId}:
+    post:
+      tags: [Movies]
+      summary: Import a movie from TMDB
+      description: '**Authorization:** STAFF. Imports/saves the TMDB movie with the given id.'
+      operationId: saveMovie
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+        - name: tmdbId
+          in: path
+          required: true
+          description: TMDB movie id.
+          schema: { type: integer, format: int32 }
+      responses:
+        '200':
+          description: The saved movie.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SaveMovieDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /movies:
+    get:
+      tags: [Movies]
+      summary: List movies (public catalog) with filters
+      description: '**Authorization:** any authenticated user. Uses 1-based `page`/`size`.'
+      operationId: getMovies
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+          description: 1-based page index.
+        - name: size
+          in: query
+          schema: { type: integer, default: 10 }
+        - name: title
+          in: query
+          schema: { type: string }
+        - name: minRating
+          in: query
+          schema: { type: number, format: double }
+        - name: maxRating
+          in: query
+          schema: { type: number, format: double }
+        - name: ageRating
+          in: query
+          schema: { type: string }
+        - name: releaseFrom
+          in: query
+          description: ISO date lower bound (inclusive).
+          schema: { type: string }
+        - name: releaseTo
+          in: query
+          description: ISO date upper bound (inclusive).
+          schema: { type: string }
+        - name: genre
+          in: query
+          description: Genre name; one of the GenreType values.
+          schema: { type: string }
+      responses:
+        '200':
+          description: Page of movies.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PageMovieDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /movies/{id}:
+    get:
+      tags: [Movies]
+      summary: Get a movie by id
+      description: '**Authorization:** any authenticated user.'
+      operationId: getMovie
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: The movie.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MovieDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Movies]
+      summary: Update a movie
+      description: '**Authorization:** STAFF.'
+      operationId: updateMovie
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SaveMovieDTO' }
+      responses:
+        '200':
+          description: The updated movie.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MovieDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Movies]
+      summary: Delete a movie
+      description: '**Authorization:** STAFF.'
+      operationId: deleteMovie
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204': { description: Movie deleted. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /rooms:
+    post:
+      tags: [Rooms]
+      summary: Create a room
+      description: '**Authorization:** STAFF.'
+      operationId: createRoom
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SaveRoomDTO' }
+      responses:
+        '201':
+          description: Created room.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoomDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    get:
+      tags: [Rooms]
+      summary: List rooms
+      description: '**Authorization:** any authenticated user.'
+      operationId: getRooms
+      parameters:
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/SortParam'
+      responses:
+        '200':
+          description: Page of rooms.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PageRoomDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /rooms/{id}:
+    get:
+      tags: [Rooms]
+      summary: Get a room by id
+      description: '**Authorization:** any authenticated user.'
+      operationId: getRoom
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: The room.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoomDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Rooms]
+      summary: Update a room
+      description: '**Authorization:** STAFF.'
+      operationId: updateRoom
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SaveRoomDTO' }
+      responses:
+        '200':
+          description: The updated room.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoomDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Rooms]
+      summary: Delete a room
+      description: '**Authorization:** STAFF.'
+      operationId: deleteRoom
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204': { description: Room deleted. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /rooms/{roomId}/seats/{seatId}:
+    post:
+      tags: [Rooms]
+      summary: Attach a seat to a room
+      description: '**Authorization:** STAFF.'
+      operationId: addSeatToRoom
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+        - { name: roomId, in: path, required: true, schema: { type: integer, format: int64 } }
+        - { name: seatId, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200':
+          description: The room with the seat attached.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoomDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Rooms]
+      summary: Detach a seat from a room
+      description: '**Authorization:** STAFF.'
+      operationId: removeSeatFromRoom
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+        - { name: roomId, in: path, required: true, schema: { type: integer, format: int64 } }
+        - { name: seatId, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '204': { description: Seat detached. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /rooms/{roomId}/screen-sessions/{sessionId}:
+    post:
+      tags: [Rooms]
+      summary: Attach a screen session to a room
+      description: '**Authorization:** STAFF.'
+      operationId: addScreenSessionToRoom
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+        - { name: roomId, in: path, required: true, schema: { type: integer, format: int64 } }
+        - { name: sessionId, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200':
+          description: The room with the screen session attached.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoomDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Rooms]
+      summary: Detach a screen session from a room
+      description: '**Authorization:** STAFF.'
+      operationId: removeScreenSessionFromRoom
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+        - { name: roomId, in: path, required: true, schema: { type: integer, format: int64 } }
+        - { name: sessionId, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '204': { description: Screen session detached. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /seats:
+    post:
+      tags: [Seats]
+      summary: Create a seat
+      description: '**Authorization:** STAFF.'
+      operationId: createSeat
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SaveSeatDTO' }
+      responses:
+        '201':
+          description: Created seat.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SeatDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    get:
+      tags: [Seats]
+      summary: List seats with filters
+      description: '**Authorization:** any authenticated user.'
+      operationId: getSeats
+      parameters:
+        - { name: roomType, in: query, schema: { type: string }, description: 'Room type filter (IMAX or NORMAL).' }
+        - { name: screenSessionId, in: query, schema: { type: integer, format: int64 } }
+        - { name: movieId, in: query, schema: { type: integer, format: int64 } }
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/SortParam'
+      responses:
+        '200':
+          description: Page of seats.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PageSeatDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /seats/generate:
+    post:
+      tags: [Seats]
+      summary: Bulk-generate seats for a room
+      description: '**Authorization:** STAFF.'
+      operationId: generateSeats
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GenerateSeatsDTO' }
+      responses:
+        '201':
+          description: The generated seats.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SeatDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /seats/{id}:
+    get:
+      tags: [Seats]
+      summary: Get a seat by id
+      description: '**Authorization:** any authenticated user.'
+      operationId: getSeat
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: The seat.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SeatDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Seats]
+      summary: Update a seat
+      description: '**Authorization:** STAFF.'
+      operationId: updateSeat
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SaveSeatDTO' }
+      responses:
+        '200':
+          description: The updated seat.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SeatDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Seats]
+      summary: Delete a seat
+      description: '**Authorization:** STAFF.'
+      operationId: deleteSeat
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204': { description: Seat deleted. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /seat-categories:
+    get:
+      tags: [Seat Categories]
+      summary: List seat categories
+      description: '**Authorization:** any authenticated user.'
+      operationId: getSeatCategories
+      responses:
+        '200':
+          description: All seat categories.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SeatCategoryDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /seat-categories/{id}:
+    put:
+      tags: [Seat Categories]
+      summary: Update a seat category's surcharges
+      description: '**Authorization:** STAFF.'
+      operationId: updateSeatCategory
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateSeatCategoryDTO' }
+      responses:
+        '200':
+          description: The updated seat category.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SeatCategoryDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /screen-sessions:
+    post:
+      tags: [Screen Sessions]
+      summary: Create a screen session
+      description: '**Authorization:** STAFF.'
+      operationId: createScreenSession
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SaveScreenSessionDTO' }
+      responses:
+        '201':
+          description: Created screen session.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ScreenSessionDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    get:
+      tags: [Screen Sessions]
+      summary: List screen sessions with filters
+      description: '**Authorization:** any authenticated user.'
+      operationId: getScreenSessions
+      parameters:
+        - { name: movieId, in: query, schema: { type: integer, format: int64 } }
+        - { name: format, in: query, schema: { type: string }, description: 'Format filter; one of the Format values (TWO_D, THREE_D).' }
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/SortParam'
+      responses:
+        '200':
+          description: Page of screen sessions.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PageScreenSessionDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /screen-sessions/movie/{movieId}:
+    get:
+      tags: [Screen Sessions]
+      summary: List screen sessions for a movie
+      description: '**Authorization:** any authenticated user.'
+      operationId: getScreenSessionsByMovie
+      parameters:
+        - { name: movieId, in: path, required: true, schema: { type: integer, format: int64 } }
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/SortParam'
+      responses:
+        '200':
+          description: Page of screen sessions for the movie.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PageScreenSessionDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /screen-sessions/{id}:
+    get:
+      tags: [Screen Sessions]
+      summary: Get a screen session by id
+      description: '**Authorization:** any authenticated user.'
+      operationId: getScreenSession
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: The screen session.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ScreenSessionDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Screen Sessions]
+      summary: Update a screen session
+      description: '**Authorization:** STAFF.'
+      operationId: updateScreenSession
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SaveScreenSessionDTO' }
+      responses:
+        '200':
+          description: The updated screen session.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ScreenSessionDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Screen Sessions]
+      summary: Delete a screen session
+      description: '**Authorization:** STAFF.'
+      operationId: deleteScreenSession
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204': { description: Screen session deleted. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /session-infos:
+    post:
+      tags: [Session Infos]
+      summary: Create a session info
+      description: '**Authorization:** STAFF.'
+      operationId: createSessionInfo
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SaveSessionInfoDTO' }
+      responses:
+        '201':
+          description: Created session info.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SessionInfoDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    get:
+      tags: [Session Infos]
+      summary: List session infos
+      description: '**Authorization:** any authenticated user.'
+      operationId: getSessionInfos
+      parameters:
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/SortParam'
+      responses:
+        '200':
+          description: Page of session infos.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PageSessionInfoDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /session-infos/{id}:
+    get:
+      tags: [Session Infos]
+      summary: Get a session info by id
+      description: '**Authorization:** any authenticated user.'
+      operationId: getSessionInfo
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: The session info.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SessionInfoDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Session Infos]
+      summary: Update a session info
+      description: '**Authorization:** STAFF.'
+      operationId: updateSessionInfo
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SaveSessionInfoDTO' }
+      responses:
+        '200':
+          description: The updated session info.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SessionInfoDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /tickets:
+    post:
+      tags: [Tickets]
+      summary: Create a ticket
+      description: '**Authorization:** STAFF.'
+      operationId: createTicket
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SaveTicketDTO' }
+      responses:
+        '201':
+          description: Created ticket.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TicketDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    get:
+      tags: [Tickets]
+      summary: List tickets with filters
+      description: '**Authorization:** any authenticated user.'
+      operationId: getTickets
+      parameters:
+        - { name: sessionId, in: query, schema: { type: integer, format: int64 } }
+        - { name: roomId, in: query, schema: { type: integer, format: int64 } }
+        - { name: isAvailable, in: query, schema: { type: boolean } }
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/SortParam'
+      responses:
+        '200':
+          description: Page of tickets.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PageTicketDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /tickets/bulk:
+    post:
+      tags: [Tickets]
+      summary: Bulk-create tickets
+      description: '**Authorization:** STAFF.'
+      operationId: createTickets
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BulkSaveTicketsDTO' }
+      responses:
+        '201':
+          description: The created tickets.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/TicketDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /tickets/{id}:
+    get:
+      tags: [Tickets]
+      summary: Get a ticket by id
+      description: '**Authorization:** any authenticated user.'
+      operationId: getTicket
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: The ticket.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TicketDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Tickets]
+      summary: Delete a ticket
+      description: '**Authorization:** STAFF.'
+      operationId: deleteTicket
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204': { description: Ticket deleted. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /tickets/{id}/book:
+    patch:
+      tags: [Tickets]
+      summary: Book a ticket (choose ticket type)
+      description: '**Authorization:** any authenticated user.'
+      operationId: bookTicket
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BookTicketDTO' }
+      responses:
+        '200':
+          description: The booked ticket.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TicketDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /ticket-info:
+    post:
+      tags: [Ticket Info]
+      summary: Create ticket pricing
+      description: '**Authorization:** STAFF.'
+      operationId: createTicketInfo
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SaveTicketInfoDTO' }
+      responses:
+        '201':
+          description: Created ticket info.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TicketInfoDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    get:
+      tags: [Ticket Info]
+      summary: List ticket pricing
+      description: '**Authorization:** any authenticated user. Returns a page object containing all ticket-info entries.'
+      operationId: getTicketInfos
+      responses:
+        '200':
+          description: Page of ticket-info entries.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PageTicketInfoDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /ticket-info/{id}:
+    get:
+      tags: [Ticket Info]
+      summary: Get ticket pricing by id
+      description: '**Authorization:** any authenticated user.'
+      operationId: getTicketInfo
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: The ticket info.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TicketInfoDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Ticket Info]
+      summary: Update ticket pricing
+      description: '**Authorization:** STAFF.'
+      operationId: updateTicketInfo
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SaveTicketInfoDTO' }
+      responses:
+        '200':
+          description: The updated ticket info.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TicketInfoDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Ticket Info]
+      summary: Delete ticket pricing
+      description: '**Authorization:** STAFF.'
+      operationId: deleteTicketInfo
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204': { description: Ticket info deleted. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /orders:
+    post:
+      tags: [Orders]
+      summary: Create an order
+      description: '**Authorization:** any authenticated user. The order is created for the current user.'
+      operationId: createOrder
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateOrderDTO' }
+      responses:
+        '201':
+          description: Created order.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    get:
+      tags: [Orders]
+      summary: List all orders
+      description: '**Authorization:** STAFF.'
+      operationId: getOrders
+      parameters:
+        - { name: status, in: query, schema: { type: string }, description: 'Optional status filter; one of the OrderStatus values (PENDING, PAID, CANCELLED).' }
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/SortParam'
+      responses:
+        '200':
+          description: Page of orders.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PageOrderDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /orders/my:
+    get:
+      tags: [Orders]
+      summary: List current user's orders
+      description: '**Authorization:** any authenticated user.'
+      operationId: getMyOrders
+      parameters:
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/SortParam'
+      responses:
+        '200':
+          description: Page of the current user's orders.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PageOrderDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /orders/my/discount-preview:
+    get:
+      tags: [Orders]
+      summary: Preview the current user's loyalty discount
+      description: '**Authorization:** any authenticated user.'
+      operationId: getDiscountPreview
+      responses:
+        '200':
+          description: Current loyalty points and the discount they would yield.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DiscountPreviewDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /orders/my/past:
+    get:
+      tags: [Orders]
+      summary: List current user's past orders
+      description: '**Authorization:** any authenticated user.'
+      operationId: getMyPastOrders
+      parameters:
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/SortParam'
+      responses:
+        '200':
+          description: Page of the current user's past orders.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PageOrderDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /orders/{id}:
+    get:
+      tags: [Orders]
+      summary: Get an order by id
+      description: '**Authorization:** any authenticated user.'
+      operationId: getOrder
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: The order.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Orders]
+      summary: Delete an order
+      description: '**Authorization:** STAFF.'
+      operationId: deleteOrder
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204': { description: Order deleted. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /orders/{id}/pay:
+    patch:
+      tags: [Orders]
+      summary: Pay for an order
+      description: '**Authorization:** any authenticated user. Runs the PayOrder saga (marks paid, awards loyalty points).'
+      operationId: payOrder
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: The paid order.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /orders/{id}/cancel:
+    patch:
+      tags: [Orders]
+      summary: Cancel an order
+      description: '**Authorization:** any authenticated user.'
+      operationId: cancelOrder
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: The cancelled order.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /notifications:
+    post:
+      tags: [Notifications]
+      summary: Create a notification
+      description: '**Authorization:** STAFF.'
+      operationId: createNotification
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateNotificationDTO' }
+      responses:
+        '201':
+          description: Created notification.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /notifications/my:
+    get:
+      tags: [Notifications]
+      summary: List current user's notifications
+      description: '**Authorization:** any authenticated user.'
+      operationId: getMyNotifications
+      parameters:
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/SortParam'
+      responses:
+        '200':
+          description: Page of the current user's notifications.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PageNotificationDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /notifications/{id}:
+    get:
+      tags: [Notifications]
+      summary: Get a notification by id
+      description: '**Authorization:** any authenticated user.'
+      operationId: getNotification
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: The notification.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /notifications/{id}/send:
+    patch:
+      tags: [Notifications]
+      summary: Mark a notification as sent
+      description: '**Authorization:** any authenticated user.'
+      operationId: markNotificationAsSent
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: The notification marked as sent.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /offers:
+    post:
+      tags: [Offers]
+      summary: Create an offer
+      description: '**Authorization:** STAFF.'
+      operationId: createOffer
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SaveOfferDTO' }
+      responses:
+        '201':
+          description: Created offer.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OfferDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    get:
+      tags: [Offers]
+      summary: List offers
+      description: '**Authorization:** any authenticated user.'
+      operationId: getOffers
+      parameters:
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/SortParam'
+      responses:
+        '200':
+          description: Page of offers.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PageOfferDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /offers/{id}:
+    get:
+      tags: [Offers]
+      summary: Get an offer by id
+      description: '**Authorization:** any authenticated user.'
+      operationId: getOffer
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: The offer.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OfferDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Offers]
+      summary: Update an offer
+      description: '**Authorization:** STAFF.'
+      operationId: updateOffer
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SaveOfferDTO' }
+      responses:
+        '200':
+          description: The updated offer.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OfferDTO' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Offers]
+      summary: Delete an offer
+      description: '**Authorization:** STAFF.'
+      operationId: deleteOffer
+      parameters:
+        - $ref: '#/components/parameters/XsrfToken'
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204': { description: Offer deleted. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+components:
+
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: jwt
+      description: >-
+        Session JWT issued by `POST /auth/login` as an HttpOnly `jwt` cookie. Required by
+        every endpoint except `/auth/**`.
+
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      description: Resource identifier.
+      schema: { type: integer, format: int64 }
+    XsrfToken:
+      name: X-XSRF-TOKEN
+      in: header
+      required: true
+      description: >-
+        CSRF token; must equal the value of the `XSRF-TOKEN` cookie set at login. Required
+        for all state-changing requests except `/auth/**`.
+      schema: { type: string }
+    PageNumber:
+      name: page
+      in: query
+      required: false
+      description: 0-based page index (Spring `Pageable`).
+      schema: { type: integer, format: int32, default: 0, minimum: 0 }
+    PageSize:
+      name: size
+      in: query
+      required: false
+      description: Page size (Spring `Pageable`).
+      schema: { type: integer, format: int32, default: 20, minimum: 1 }
+    SortParam:
+      name: sort
+      in: query
+      required: false
+      description: >-
+        Sort criteria in the format `property,(asc|desc)`. May be repeated for multiple
+        criteria, e.g. `sort=createdAt,desc`.
+      schema:
+        type: array
+        items: { type: string }
+      explode: true
+
+  responses:
+    BadRequest:
+      description: Bad request.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unauthorized:
+      description: Authentication required or invalid.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Forbidden:
+      description: Authenticated but lacking the required role.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFound:
+      description: Resource not found.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    ValidationError:
+      description: Validation failed (per-field messages in `details`).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ValidationErrorResponse' }
+
+  schemas:
+
+    # ---------- Enums ----------
+    Role:
+      type: string
+      enum: [OWNER, STAFF, USER]
+    GenreType:
+      type: string
+      enum: [ACTION, ADVENTURE, ANIMATION, COMEDY, CRIME, DOCUMENTARY, DRAMA, FAMILY, FANTASY, HISTORY, HORROR, MUSIC, MYSTERY, ROMANCE, SCI_FI, THRILLER, TV_MOVIE, WAR, WESTERN]
+    RoomType:
+      type: string
+      enum: [IMAX, NORMAL]
+    SeatZone:
+      type: string
+      enum: [VIP, A, B, C, D]
+    SeatCategoryType:
+      type: string
+      enum: [STANDARD, VIP]
+    Format:
+      type: string
+      enum: [TWO_D, THREE_D]
+    TicketType:
+      type: string
+      enum: [ADULT, STUDENT, CHILD]
+    OrderStatus:
+      type: string
+      enum: [PENDING, PAID, CANCELLED]
+    NotificationType:
+      type: string
+      enum: [MOVIE_REMINDER, REGISTERED_FROM_ANOTHER_DEVICE, EMAIL_VERIFICATION, TICKET_BOUGHT, SUCCESSFUL_PAYMENT]
+    DayOfWeek:
+      type: string
+      enum: [MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY]
+
+    # ---------- Generic ----------
+    MessageResponse:
+      type: object
+      properties:
+        message: { type: string }
+    ErrorResponse:
+      type: object
+      properties:
+        timestamp: { type: string, format: date-time }
+        status: { type: integer, format: int32 }
+        message: { type: string }
+        details:
+          type: object
+          nullable: true
+          additionalProperties: { type: string }
+    ValidationErrorResponse:
+      type: object
+      properties:
+        timestamp: { type: string, format: date-time }
+        status: { type: integer, format: int32, example: 422 }
+        message: { type: string, example: 'Validation failed.' }
+        details:
+          type: object
+          description: Map of field name to validation message.
+          additionalProperties: { type: string }
+
+    # ---------- Auth ----------
+    RegisterDTO:
+      type: object
+      required: [username, password, confirmPassword, email, firstName, lastName, phoneNumber]
+      properties:
+        username:
+          type: string
+          pattern: '^[a-zA-Z0-9._-]{3,20}$'
+        password:
+          type: string
+          minLength: 8
+          pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$'
+          description: At least 8 chars with lower, upper, digit and special character.
+        confirmPassword:
+          type: string
+          minLength: 8
+          maxLength: 128
+          description: Must match `password`.
+        email: { type: string, format: email }
+        firstName:
+          type: string
+          pattern: '^[a-zA-ZăâîșțĂÂÎȘȚ]{2,}(?:[ -][a-zA-ZăâîșțĂÂÎȘȚ]+){0,2}$'
+        lastName:
+          type: string
+          pattern: '^[a-zA-ZăâîșțĂÂÎȘȚ]{2,}(?:[ -][a-zA-ZăâîșțĂÂÎȘȚ]+){0,2}$'
+        phoneNumber:
+          type: string
+          pattern: '^\+?[0-9]{7,15}$'
+    RegisterResponseDTO:
+      type: object
+      properties:
+        message: { type: string }
+        username: { type: string }
+    LoginDTO:
+      type: object
+      required: [username, password]
+      properties:
+        username: { type: string }
+        password: { type: string }
+    LoginResponseDTO:
+      type: object
+      properties:
+        username: { type: string }
+        email: { type: string }
+        firstName: { type: string }
+        lastName: { type: string }
+        role: { $ref: '#/components/schemas/Role' }
+
+    # ---------- User ----------
+    ProfileDTO:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        username: { type: string }
+        firstName: { type: string }
+        lastName: { type: string }
+        email: { type: string }
+        phoneNumber: { type: string }
+        loyaltyPoints: { type: integer, format: int32 }
+        role: { $ref: '#/components/schemas/Role' }
+    UpdateProfileDTO:
+      type: object
+      properties:
+        firstName:
+          type: string
+          pattern: '^[a-zA-ZăâîșțĂÂÎȘȚ]{2,}(?:[ -][a-zA-ZăâîșțĂÂÎȘȚ]+){0,2}$'
+        lastName:
+          type: string
+          pattern: '^[a-zA-ZăâîșțĂÂÎȘȚ]{2,}(?:[ -][a-zA-ZăâîșțĂÂÎȘȚ]+){0,2}$'
+        email: { type: string, format: email }
+        phoneNumber:
+          type: string
+          pattern: '^\+?[0-9]{7,15}$'
+    PromoteDTO:
+      type: object
+      required: [id, role]
+      properties:
+        id: { type: integer, format: int64, minimum: 0 }
+        role: { $ref: '#/components/schemas/Role' }
+
+    # ---------- Movies ----------
+    AdminMovieDTO:
+      type: object
+      properties:
+        id: { type: integer, format: int32 }
+        title: { type: string }
+        imageUrl: { type: string }
+        releaseDate: { type: string, format: date-time }
+        genreIds:
+          type: array
+          items: { type: integer, format: int32 }
+        rating: { type: number, format: double }
+        description: { type: string }
+    MovieDTO:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        title: { type: string }
+        releaseDate: { type: string, format: date-time }
+        description: { type: string }
+        rating: { type: number, format: double }
+        duration: { type: integer, format: int32 }
+        ageRating: { type: string }
+        genres:
+          type: array
+          items: { $ref: '#/components/schemas/GenreType' }
+        imagePath: { type: string }
+    SaveMovieDTO:
+      type: object
+      properties:
+        title: { type: string }
+        releaseDate: { type: string, format: date-time }
+        description: { type: string }
+        rating: { type: number, format: double }
+        duration: { type: integer, format: int32 }
+        ageRating: { type: string }
+        genres:
+          type: array
+          items: { $ref: '#/components/schemas/GenreType' }
+        imagePath: { type: string }
+
+    # ---------- Rooms ----------
+    RoomDTO:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        type: { $ref: '#/components/schemas/RoomType' }
+        name: { type: string }
+        floor: { type: integer, format: int32 }
+    SaveRoomDTO:
+      type: object
+      required: [type, name, floor]
+      properties:
+        type: { $ref: '#/components/schemas/RoomType' }
+        name: { type: string }
+        floor: { type: integer, format: int32 }
+
+    # ---------- Seats ----------
+    SeatDTO:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        row: { type: integer, format: int32 }
+        number: { type: integer, format: int32 }
+        zone: { $ref: '#/components/schemas/SeatZone' }
+        categoryId: { type: integer, format: int64 }
+    SaveSeatDTO:
+      type: object
+      required: [row, number, zone, roomId]
+      properties:
+        row: { type: integer, format: int32, minimum: 1 }
+        number: { type: integer, format: int32, minimum: 1 }
+        zone: { $ref: '#/components/schemas/SeatZone' }
+        categoryId: { type: integer, format: int64 }
+        roomId: { type: integer, format: int64 }
+    GenerateSeatsDTO:
+      type: object
+      required: [roomId, rows, seatsPerRow, startRow, startSeatNumber, zone]
+      properties:
+        roomId: { type: integer, format: int64 }
+        rows: { type: integer, format: int32, minimum: 1 }
+        seatsPerRow: { type: integer, format: int32, minimum: 1 }
+        startRow: { type: integer, format: int32, minimum: 1 }
+        startSeatNumber: { type: integer, format: int32, minimum: 1 }
+        zone: { $ref: '#/components/schemas/SeatZone' }
+        categoryId: { type: integer, format: int64 }
+
+    # ---------- Seat Categories ----------
+    SeatCategoryDTO:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        type: { $ref: '#/components/schemas/SeatCategoryType' }
+        extraFee: { type: number }
+        extraPoints: { type: integer, format: int32 }
+    UpdateSeatCategoryDTO:
+      type: object
+      required: [extraFee, extraPoints]
+      properties:
+        extraFee: { type: number, minimum: 0 }
+        extraPoints: { type: integer, format: int32, minimum: 0 }
+
+    # ---------- Screen Sessions ----------
+    ScreenSessionDTO:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        date: { type: string, format: date }
+        startTime: { type: string, example: '18:30:00' }
+        endTime: { type: string, example: '20:45:00' }
+        movieId: { type: integer, format: int64 }
+        movieTitle: { type: string }
+        sessionInfoId: { type: integer, format: int64 }
+        format: { $ref: '#/components/schemas/Format' }
+        points: { type: integer, format: int32 }
+        roomIds:
+          type: array
+          items: { type: integer, format: int64 }
+    SaveScreenSessionDTO:
+      type: object
+      required: [movieId, date, startTime, endTime, roomId]
+      properties:
+        movieId: { type: integer, format: int64 }
+        date:
+          type: string
+          format: date
+          description: Must be today or in the future.
+        startTime: { type: string, example: '18:30:00' }
+        endTime: { type: string, example: '20:45:00' }
+        sessionInfoId: { type: integer, format: int64 }
+        roomId: { type: integer, format: int64 }
+
+    # ---------- Session Infos ----------
+    SessionInfoDTO:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        format: { $ref: '#/components/schemas/Format' }
+        points: { type: integer, format: int32 }
+    SaveSessionInfoDTO:
+      type: object
+      required: [format, points]
+      properties:
+        format: { $ref: '#/components/schemas/Format' }
+        points: { type: integer, format: int32, minimum: 0 }
+
+    # ---------- Tickets ----------
+    TicketDTO:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        isAvailable: { type: boolean }
+        seatId: { type: integer, format: int64 }
+        roomId: { type: integer, format: int64 }
+        screenSessionId: { type: integer, format: int64 }
+        type: { $ref: '#/components/schemas/TicketType' }
+        price: { type: number }
+    SaveTicketDTO:
+      type: object
+      required: [seatId, roomId, screenSessionId]
+      properties:
+        seatId: { type: integer, format: int64 }
+        roomId: { type: integer, format: int64 }
+        screenSessionId: { type: integer, format: int64 }
+    BulkSaveTicketsDTO:
+      type: object
+      required: [seatIds, roomId, screenSessionId]
+      properties:
+        seatIds:
+          type: array
+          minItems: 1
+          items: { type: integer, format: int64 }
+        roomId: { type: integer, format: int64 }
+        screenSessionId: { type: integer, format: int64 }
+    BookTicketDTO:
+      type: object
+      required: [type]
+      properties:
+        type: { $ref: '#/components/schemas/TicketType' }
+
+    # ---------- Ticket Info ----------
+    TicketInfoDTO:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        type: { $ref: '#/components/schemas/TicketType' }
+        price: { type: number }
+    SaveTicketInfoDTO:
+      type: object
+      required: [type, price]
+      properties:
+        type: { $ref: '#/components/schemas/TicketType' }
+        price: { type: number, minimum: 0 }
+
+    # ---------- Orders ----------
+    OrderItemDTO:
+      type: object
+      required: [ticketId, type]
+      properties:
+        ticketId: { type: integer, format: int64 }
+        type: { $ref: '#/components/schemas/TicketType' }
+    CreateOrderDTO:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/OrderItemDTO' }
+        useDiscount: { type: boolean }
+    OrderDTO:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        createdAt: { type: string, format: date-time }
+        status: { $ref: '#/components/schemas/OrderStatus' }
+        paymentAt: { type: string, format: date-time, nullable: true }
+        deletedAt: { type: string, format: date-time, nullable: true }
+        price: { type: number }
+        loyaltyPoints: { type: integer, format: int32 }
+        pointsUsed: { type: integer, format: int32 }
+        discount: { type: number }
+        userId: { type: integer, format: int64 }
+        ticketIds:
+          type: array
+          items: { type: integer, format: int64 }
+        offerPercent: { type: integer, format: int32, nullable: true }
+        offerMessage: { type: string, nullable: true }
+    DiscountPreviewDTO:
+      type: object
+      properties:
+        loyaltyPoints: { type: integer, format: int32 }
+        potentialDiscount: { type: number }
+
+    # ---------- Notifications ----------
+    NotificationDTO:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        type: { $ref: '#/components/schemas/NotificationType' }
+        content: { type: string }
+        createdDate: { type: string, format: date-time }
+        sentDate: { type: string, format: date-time, nullable: true }
+        userId: { type: integer, format: int64 }
+        order:
+          allOf: [ { $ref: '#/components/schemas/OrderDTO' } ]
+          nullable: true
+    CreateNotificationDTO:
+      type: object
+      required: [type, content, userId]
+      properties:
+        type: { $ref: '#/components/schemas/NotificationType' }
+        content: { type: string }
+        userId: { type: integer, format: int64 }
+
+    # ---------- Offers ----------
+    OfferDTO:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        day: { $ref: '#/components/schemas/DayOfWeek' }
+        percent: { type: integer, format: int32 }
+    SaveOfferDTO:
+      type: object
+      required: [day, percent]
+      properties:
+        day: { $ref: '#/components/schemas/DayOfWeek' }
+        percent: { type: integer, format: int32, minimum: 1, maximum: 100 }
+
+    # ---------- Pagination ----------
+    PageMeta:
+      type: object
+      description: Spring "page" metadata accompanying the `content` array.
+      properties:
+        totalElements: { type: integer, format: int64 }
+        totalPages: { type: integer, format: int32 }
+        number: { type: integer, format: int32, description: 0-based index of the current page. }
+        size: { type: integer, format: int32 }
+        numberOfElements: { type: integer, format: int32 }
+        first: { type: boolean }
+        last: { type: boolean }
+        empty: { type: boolean }
+        sort:
+          type: object
+          properties:
+            sorted: { type: boolean }
+            unsorted: { type: boolean }
+            empty: { type: boolean }
+        pageable:
+          type: object
+          description: Echo of the resolved paging request.
+    PageProfileDTO:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          properties:
+            content:
+              type: array
+              items: { $ref: '#/components/schemas/ProfileDTO' }
+    PageAdminMovieDTO:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          properties:
+            content:
+              type: array
+              items: { $ref: '#/components/schemas/AdminMovieDTO' }
+    PageMovieDTO:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          properties:
+            content:
+              type: array
+              items: { $ref: '#/components/schemas/MovieDTO' }
+    PageRoomDTO:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          properties:
+            content:
+              type: array
+              items: { $ref: '#/components/schemas/RoomDTO' }
+    PageSeatDTO:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          properties:
+            content:
+              type: array
+              items: { $ref: '#/components/schemas/SeatDTO' }
+    PageScreenSessionDTO:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          properties:
+            content:
+              type: array
+              items: { $ref: '#/components/schemas/ScreenSessionDTO' }
+    PageSessionInfoDTO:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          properties:
+            content:
+              type: array
+              items: { $ref: '#/components/schemas/SessionInfoDTO' }
+    PageTicketDTO:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          properties:
+            content:
+              type: array
+              items: { $ref: '#/components/schemas/TicketDTO' }
+    PageTicketInfoDTO:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          properties:
+            content:
+              type: array
+              items: { $ref: '#/components/schemas/TicketInfoDTO' }
+    PageOrderDTO:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          properties:
+            content:
+              type: array
+              items: { $ref: '#/components/schemas/OrderDTO' }
+    PageNotificationDTO:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          properties:
+            content:
+              type: array
+              items: { $ref: '#/components/schemas/NotificationDTO' }
+    PageOfferDTO:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          properties:
+            content:
+              type: array
+              items: { $ref: '#/components/schemas/OfferDTO' }

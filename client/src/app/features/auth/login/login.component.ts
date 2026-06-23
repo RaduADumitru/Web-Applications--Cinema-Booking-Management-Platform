@@ -21,12 +21,13 @@ export class LoginComponent implements OnInit {
     private formBuilder: FormBuilder,
     private authService: AuthService,
     private router: Router
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.loginForm = this.formBuilder.group({
       username: ['', [Validators.required, Validators.minLength(3)]],
-      password: ['', [Validators.required, Validators.minLength(6)]]
+      password: ['', [Validators.required, Validators.minLength(6)]],
+      rememberMe: [false]
     });
   }
 
@@ -51,6 +52,11 @@ export class LoginComponent implements OnInit {
     this.authService.login(credentials).subscribe({
       next: (user: AuthUser) => {
         if (user && user.username) {
+          if (this.f['rememberMe'].value) {
+            localStorage.setItem('rememberMe', 'true');
+          } else {
+            localStorage.removeItem('rememberMe');
+          }
           this.router.navigate(['/home']);
         }
       },

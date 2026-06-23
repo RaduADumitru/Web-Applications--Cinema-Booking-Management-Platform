@@ -1,21 +1,24 @@
 package com.awbd.cinema.services;
 
 import com.awbd.cinema.DTOs.AuthDTOs.LoginActionDTO;
+import com.awbd.cinema.DTOs.AuthDTOs.LoginCookiesDTO;
 import com.awbd.cinema.DTOs.AuthDTOs.LoginDTO;
 import com.awbd.cinema.DTOs.AuthDTOs.RegisterDTO;
 import com.awbd.cinema.DTOs.AuthDTOs.RegisterResponseDTO;
 import com.awbd.cinema.DTOs.NotificationDTOs.CreateNotificationDTO;
-import com.awbd.cinema.clients.BookingServiceClient;
+import com.awbd.cinema.clients.BookingServiceGateway;
 import com.awbd.cinema.entities.User;
 import com.awbd.cinema.enums.NotificationType;
 import com.awbd.cinema.enums.Role;
 import com.awbd.cinema.exceptions.AlreadyExistsException;
 import com.awbd.cinema.exceptions.InvalidFieldException;
 import com.awbd.cinema.exceptions.TooManyRequestsException;
+import com.awbd.cinema.exceptions.UnauthenticatedException;
 import com.awbd.cinema.repositories.UserRepository;
 import com.awbd.cinema.services.AuthService.AuthServiceImpl;
 import com.awbd.cinema.services.LoginAttemptService.LoginAttemptService;
 import com.awbd.cinema.utils.JwtUtil;
+import io.jsonwebtoken.JwtException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -34,15 +37,14 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
 
     @Mock private UserRepository userRepository;
-    @Mock private BookingServiceClient bookingServiceClient;
+    @Mock private BookingServiceGateway bookingServiceGateway;
     @Mock private BCryptPasswordEncoder passwordEncoder;
     @Mock private LoginAttemptService loginAttemptService;
     @Mock private AuthenticationManager authenticationManager;
@@ -90,7 +92,7 @@ class AuthServiceTest {
             assertEquals("testuser", response.username());
 
             ArgumentCaptor<CreateNotificationDTO> notificationCaptor = ArgumentCaptor.forClass(CreateNotificationDTO.class);
-            verify(bookingServiceClient, times(1)).createNotification(notificationCaptor.capture());
+            verify(bookingServiceGateway, times(1)).createNotification(notificationCaptor.capture());
 
             CreateNotificationDTO sentNotification = notificationCaptor.getValue();
             assertEquals(NotificationType.EMAIL_VERIFICATION, sentNotification.type());
@@ -105,7 +107,7 @@ class AuthServiceTest {
 
             assertThrows(AlreadyExistsException.class, () -> authService.register(sampleRegisterDTO));
             verify(userRepository, never()).save(any(User.class));
-            verify(bookingServiceClient, never()).createNotification(any(CreateNotificationDTO.class));
+            verify(bookingServiceGateway, never()).createNotification(any(CreateNotificationDTO.class));
         }
     }
 
@@ -254,6 +256,116 @@ class AuthServiceTest {
             User executedUserMapping = userCaptor.getValue();
             assertEquals(Role.OWNER, executedUserMapping.getRole());
             assertEquals("testuser", executedUserMapping.getUsername());
+        }
+    }
+
+    @Nested
+    class RefreshTokensTests {
+
+        @Test
+        void refreshTokens_Success() {
+            // Arrange
+            when(jwtUtil.extractClaim(eq("valid-refresh-token"), any())).thenReturn("REFRESH");
+            when(jwtUtil.extractUsername("valid-refresh-token")).thenReturn("testuser");
+
+            User activeUser = User.builder()
+                    .id(1L)
+                    .username("testuser")
+                    .email("test@example.com")
+                    .role(Role.USER)
+                    .deletedAt(null)
+                    .build();
+            when(userRepository.findByUsernameIgnoreCase("testuser")).thenReturn(Optional.of(activeUser));
+
+            when(jwtUtil.generateToken("testuser", 1L, Role.USER)).thenReturn("new-jwt-token");
+            when(jwtUtil.generateRefreshToken("testuser")).thenReturn("new-refresh-token");
+
+            // Act
+            LoginCookiesDTO result = authService.refreshTokens("valid-refresh-token");
+
+            // Assert
+            assertNotNull(result);
+            assertEquals("jwt", result.jwtCookie().getName());
+            assertEquals("new-jwt-token", result.jwtCookie().getValue());
+            assertTrue(result.jwtCookie().isSecure());
+            assertTrue(result.jwtCookie().isHttpOnly());
+
+            assertEquals("refresh", result.refreshTokenCookie().getName());
+            assertEquals("new-refresh-token", result.refreshTokenCookie().getValue());
+        }
+
+        @Test
+        void refreshTokens_ThrowsUnauthenticated_WhenTokenTypeNotRefresh() {
+            // Arrange
+            when(jwtUtil.extractClaim(eq("access-token"), any())).thenReturn("ACCESS");
+
+            // Act & Assert
+            assertThrows(UnauthenticatedException.class, () -> authService.refreshTokens("access-token"));
+            verify(userRepository, never()).findByUsernameIgnoreCase(any());
+        }
+
+        @Test
+        void refreshTokens_ThrowsUnauthenticated_WhenTokenInvalid() {
+            // Arrange
+            when(jwtUtil.extractClaim(eq("expired-token"), any())).thenThrow(new JwtException("Expired"));
+
+            // Act & Assert
+            assertThrows(UnauthenticatedException.class, () -> authService.refreshTokens("expired-token"));
+            verify(userRepository, never()).findByUsernameIgnoreCase(any());
+        }
+
+        @Test
+        void refreshTokens_ThrowsUnauthenticated_WhenUserNotFound() {
+            // Arrange
+            when(jwtUtil.extractClaim(eq("valid-refresh-token"), any())).thenReturn("REFRESH");
+            when(jwtUtil.extractUsername("valid-refresh-token")).thenReturn("nonexistent");
+            when(userRepository.findByUsernameIgnoreCase("nonexistent")).thenReturn(Optional.empty());
+
+            // Act & Assert
+            assertThrows(UnauthenticatedException.class, () -> authService.refreshTokens("valid-refresh-token"));
+        }
+
+        @Test
+        void refreshTokens_ThrowsUnauthenticated_WhenUserSoftDeleted() {
+            // Arrange
+            when(jwtUtil.extractClaim(eq("valid-refresh-token"), any())).thenReturn("REFRESH");
+            when(jwtUtil.extractUsername("valid-refresh-token")).thenReturn("testuser");
+
+            User softDeletedUser = User.builder()
+                    .username("testuser")
+                    .deletedAt(LocalDateTime.now())
+                    .build();
+            when(userRepository.findByUsernameIgnoreCase("testuser")).thenReturn(Optional.of(softDeletedUser));
+
+            // Act & Assert
+            assertThrows(UnauthenticatedException.class, () -> authService.refreshTokens("valid-refresh-token"));
+        }
+    }
+
+    @Nested
+    class LogoutTests {
+
+        @Test
+        void logoutCookies_ReturnsExpiredCookies() {
+            // Act
+            LoginCookiesDTO result = authService.logoutCookies();
+
+            // Assert
+            assertNotNull(result);
+
+            ResponseCookie jwtCookie = result.jwtCookie();
+            assertEquals("jwt", jwtCookie.getName());
+            assertEquals("", jwtCookie.getValue());
+            assertEquals(0, jwtCookie.getMaxAge().getSeconds());
+            assertTrue(jwtCookie.isSecure());
+            assertTrue(jwtCookie.isHttpOnly());
+
+            ResponseCookie refreshCookie = result.refreshTokenCookie();
+            assertEquals("refresh", refreshCookie.getName());
+            assertEquals("", refreshCookie.getValue());
+            assertEquals(0, refreshCookie.getMaxAge().getSeconds());
+            assertTrue(refreshCookie.isSecure());
+            assertTrue(refreshCookie.isHttpOnly());
         }
     }
 }

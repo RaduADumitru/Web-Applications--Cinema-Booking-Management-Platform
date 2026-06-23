@@ -10,8 +10,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 @FeignClient(
         name = "user-service",
-        path = "/api/v1",
-        fallbackFactory = UserServiceClientFallbackFactory.class
+        path = "/api/v1"
 )
 public interface UserServiceClient {
 

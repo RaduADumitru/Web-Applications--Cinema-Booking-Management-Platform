@@ -2,16 +2,18 @@ package com.awbd.cinema.services.AuthService;
 
 import com.awbd.cinema.DTOs.AuthDTOs.*;
 import com.awbd.cinema.DTOs.NotificationDTOs.CreateNotificationDTO;
-import com.awbd.cinema.clients.BookingServiceClient;
+import com.awbd.cinema.clients.BookingServiceGateway;
 import com.awbd.cinema.entities.User;
 import com.awbd.cinema.enums.NotificationType;
 import com.awbd.cinema.enums.Role;
 import com.awbd.cinema.exceptions.AlreadyExistsException;
 import com.awbd.cinema.exceptions.InvalidFieldException;
 import com.awbd.cinema.exceptions.TooManyRequestsException;
+import com.awbd.cinema.exceptions.UnauthenticatedException;
 import com.awbd.cinema.repositories.UserRepository;
 import com.awbd.cinema.services.LoginAttemptService.LoginAttemptService;
 import com.awbd.cinema.utils.JwtUtil;
+import io.jsonwebtoken.JwtException;
 import jakarta.transaction.Transactional;
 import org.springframework.dao.DataIntegrityViolationException;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +33,7 @@ import org.springframework.web.util.HtmlUtils;
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
-    private final BookingServiceClient bookingServiceClient;
+    private final BookingServiceGateway bookingServiceGateway;
     private final BCryptPasswordEncoder passwordEncoder;
     private final LoginAttemptService loginAttemptService;
     private final AuthenticationManager authenticationManager;
@@ -57,7 +59,7 @@ public class AuthServiceImpl implements AuthService {
                 "Welcome, " + savedUser.getFirstName() + "! Please verify your email address ("
                         + savedUser.getEmail() + ") to activate your account.",
                 savedUser.getId());
-        bookingServiceClient.createNotification(notification);
+        bookingServiceGateway.createNotification(notification);
 
         return new RegisterResponseDTO("Account created successfully.", savedUser.getUsername());
     }
@@ -103,6 +105,53 @@ public class AuthServiceImpl implements AuthService {
         ResponseCookie refreshCookie = createRefreshCookie(u.getUsername());
 
         return new LoginActionDTO(LoginResponseDTO.from(u), new LoginCookiesDTO(jwtCookie, refreshCookie));
+    }
+
+    @Override
+    public LoginCookiesDTO refreshTokens(String refreshToken) {
+        String username;
+        try {
+            String type = jwtUtil.extractClaim(refreshToken, claims -> claims.get("typ", String.class));
+            if (!"REFRESH".equals(type)) {
+                throw new UnauthenticatedException("Invalid refresh token.");
+            }
+            username = jwtUtil.extractUsername(refreshToken);
+        } catch (JwtException e) {
+            throw new UnauthenticatedException("Invalid or expired refresh token.");
+        }
+
+        User user = userRepository.findByUsernameIgnoreCase(username)
+                .orElseThrow(() -> new UnauthenticatedException("Invalid refresh token."));
+
+        if (user.getDeletedAt() != null) {
+            throw new UnauthenticatedException("Invalid refresh token.");
+        }
+
+        ResponseCookie jwtCookie = createJwtCookie(user.getUsername(), user.getId(), user.getRole());
+        ResponseCookie refreshCookie = createRefreshCookie(user.getUsername());
+
+        return new LoginCookiesDTO(jwtCookie, refreshCookie);
+    }
+
+    @Override
+    public LoginCookiesDTO logoutCookies() {
+        ResponseCookie expiredJwt = ResponseCookie.from("jwt", "")
+                .httpOnly(true)
+                .secure(cookieSecure)
+                .path("/")
+                .maxAge(0)
+                .sameSite(cookieSameSite)
+                .build();
+
+        ResponseCookie expiredRefresh = ResponseCookie.from("refresh", "")
+                .httpOnly(true)
+                .secure(cookieSecure)
+                .path("/")
+                .maxAge(0)
+                .sameSite(cookieSameSite)
+                .build();
+
+        return new LoginCookiesDTO(expiredJwt, expiredRefresh);
     }
 
     @Override
@@ -160,3 +209,4 @@ public class AuthServiceImpl implements AuthService {
                 .build();
     }
 }
+

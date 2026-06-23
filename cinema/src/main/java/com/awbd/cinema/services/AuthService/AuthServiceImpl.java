@@ -8,10 +8,12 @@ import com.awbd.cinema.enums.Role;
 import com.awbd.cinema.exceptions.AlreadyExistsException;
 import com.awbd.cinema.exceptions.InvalidFieldException;
 import com.awbd.cinema.exceptions.TooManyRequestsException;
+import com.awbd.cinema.exceptions.UnauthenticatedException;
 import com.awbd.cinema.repositories.NotificationRepository;
 import com.awbd.cinema.repositories.UserRepository;
 import com.awbd.cinema.services.LoginAttemptService.LoginAttemptService;
 import com.awbd.cinema.utils.JwtUtil;
+import io.jsonwebtoken.JwtException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -110,6 +112,53 @@ public class AuthServiceImpl implements AuthService{
     }
 
     @Override
+    public LoginCookiesDTO refreshTokens(String refreshToken) {
+        String username;
+        try {
+            String type = jwtUtil.extractClaim(refreshToken, claims -> claims.get("typ", String.class));
+            if (!"REFRESH".equals(type)) {
+                throw new UnauthenticatedException("Invalid refresh token.");
+            }
+            username = jwtUtil.extractUsername(refreshToken);
+        } catch (JwtException e) {
+            throw new UnauthenticatedException("Invalid or expired refresh token.");
+        }
+
+        User user = userRepository.findByUsernameIgnoreCase(username)
+                .orElseThrow(() -> new UnauthenticatedException("Invalid refresh token."));
+
+        if (user.getDeletedAt() != null) {
+            throw new UnauthenticatedException("Invalid refresh token.");
+        }
+
+        ResponseCookie jwtCookie = createJwtCookie(user.getUsername());
+        ResponseCookie refreshCookie = createRefreshCookie(user.getUsername());
+
+        return new LoginCookiesDTO(jwtCookie, refreshCookie);
+    }
+
+    @Override
+    public LoginCookiesDTO logoutCookies() {
+        ResponseCookie expiredJwt = ResponseCookie.from("jwt", "")
+                .httpOnly(true)
+                .secure(cookieSecure)
+                .path("/")
+                .maxAge(0)
+                .sameSite(cookieSameSite)
+                .build();
+
+        ResponseCookie expiredRefresh = ResponseCookie.from("refresh", "")
+                .httpOnly(true)
+                .secure(cookieSecure)
+                .path("/")
+                .maxAge(0)
+                .sameSite(cookieSameSite)
+                .build();
+
+        return new LoginCookiesDTO(expiredJwt, expiredRefresh);
+    }
+
+    @Override
     public void createOwner(RegisterDTO owner){
         userRepository.findByUsernameIgnoreCaseOrEmailIgnoreCase(owner.username(),owner.email())
                 .orElseGet(()->{
@@ -160,3 +209,4 @@ public class AuthServiceImpl implements AuthService{
                 .build();
     }
 }
+

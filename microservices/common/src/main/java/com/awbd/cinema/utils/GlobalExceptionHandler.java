@@ -11,6 +11,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.bind.MissingRequestCookieException;
 
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
@@ -48,6 +49,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(UnauthenticatedException.class)
     public ResponseEntity<Map<String, Object>> handleUnauthenticated(UnauthenticatedException e) {
         return buildResponse(HttpStatus.UNAUTHORIZED, e.getMessage(), null);
+    }
+
+
+    @ExceptionHandler(MissingRequestCookieException.class)
+    public ResponseEntity<Map<String, Object>> handleMissingRequestCookie(MissingRequestCookieException e) {
+        return buildResponse(HttpStatus.BAD_REQUEST, e.getMessage(), null);
     }
 
     @ExceptionHandler(AccessDeniedException.class)

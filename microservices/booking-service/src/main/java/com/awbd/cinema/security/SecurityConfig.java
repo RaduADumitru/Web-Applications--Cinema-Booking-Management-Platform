@@ -1,6 +1,7 @@
 package com.awbd.cinema.security;
 
 import com.awbd.cinema.exceptions.UnauthenticatedException;
+import com.awbd.cinema.utils.JwtUtil;
 import com.awbd.cinema.utils.SecurityCorsProperties;
 import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
@@ -8,11 +9,13 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
@@ -32,6 +35,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final SecurityCorsProperties securityCorsProperties;
+    private final JwtUtil jwtUtil;
 
     @Qualifier("handlerExceptionResolver")
     private final HandlerExceptionResolver handlerExceptionResolver;
@@ -48,6 +52,25 @@ public class SecurityConfig {
     private String authCookieSameSite;
 
     @Bean
+    @Order(1)
+    public SecurityFilterChain internalFilterChain(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher("/internal/**")
+                .cors(AbstractHttpConfigurer::disable)
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint((request, response, authException) ->
+                                handlerExceptionResolver.resolveException(request, response, null,
+                                        new UnauthenticatedException("Service authentication required."))))
+                .authorizeHttpRequests(authz -> authz.anyRequest().hasRole("SERVICE"))
+                .addFilterBefore(new ServiceTokenAuthenticationFilter(jwtUtil),
+                        UsernamePasswordAuthenticationFilter.class);
+        return http.build();
+    }
+
+    @Bean
+    @Order(2)
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
         requestHandler.setCsrfRequestAttributeName("_csrf");
@@ -63,7 +86,6 @@ public class SecurityConfig {
                         .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
-                        .requestMatchers("/internal/**").permitAll()
                         .anyRequest().authenticated())
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
@@ -74,7 +96,7 @@ public class SecurityConfig {
             http.csrf(csrf -> csrf
                     .csrfTokenRepository(cookieCsrfTokenRepository())
                     .csrfTokenRequestHandler(requestHandler)
-                    .ignoringRequestMatchers("/internal/**", "/actuator/**")
+                    .ignoringRequestMatchers("/actuator/**")
             );
         } else {
             http.csrf(AbstractHttpConfigurer::disable);

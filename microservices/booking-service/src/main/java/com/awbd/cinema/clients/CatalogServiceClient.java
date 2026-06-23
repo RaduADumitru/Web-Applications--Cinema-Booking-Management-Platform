@@ -12,8 +12,7 @@ import java.util.List;
 
 @FeignClient(
         name = "catalog-service",
-        path = "/api/v1",
-        fallbackFactory = CatalogServiceClientFallbackFactory.class
+        path = "/api/v1"
 )
 public interface CatalogServiceClient {
 

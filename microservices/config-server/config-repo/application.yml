@@ -4,9 +4,6 @@ spring:
     hibernate:
       ddl-auto: update
   cloud:
-    openfeign:
-      circuitbreaker:
-        enabled: true
     # Spring Cloud Bus refresh transport. By default the bus binds an anonymous,
     # exclusive, auto-delete queue per instance; that queue trips a binder bug
     # where, after any consumer reset, it can only re-declare the queue
@@ -36,6 +33,11 @@ spring:
 jwt:
   secret:
     key: '{cipher}a655e7a74ec967155343ef0fda0e79dc56225ea8a40e3e35ba4bb0c14c458e9bfec7f3b054d77141d3359291a746da9090d45a25b66512a135200c3af89cb49fad1c9a88e3233a6b155ff78a962c47569b247c35f76ccb698b1ffccda5519479ad1a931b7efc75694c71fffc43cd0902814050efc44649f6e69cf0cdde3f159627bdde2d12b3df19c3e1592a8725a5662b5383193195bbe68e0376818a92a56d952bf9bcb6cbcb6c3e6c1aa4a94507a87c22b89748a211e6e9917b43602fdf224698beef6391ec13d1e7f6d7767233c7836143778e24f69ad3ae0f6cea83cb6c9c943c16e2bd04394fcd67d6f21586a5ed5eff0e621e96eeff574eefed1ffb05'
+
+service:
+  token:
+    # TTL (seconds) for service-to-service JWTs minted per outgoing Feign call.
+    ttl-seconds: ${SERVICE_TOKEN_TTL_SECONDS:60}
 
 auth:
   cookie:
@@ -73,6 +75,21 @@ management:
     web:
       exposure:
         include: health,info,metrics,prometheus,busrefresh
+  metrics:
+    tags:
+      # Stamp every meter with application=<service name> so Prometheus series carry
+      # an `application` label. The Grafana "System Monitor" dashboard
+      # keys its `Application` selector (and all panel queries) off this label; without
+      # it the selector is empty and $application interpolates to nothing.
+      application: ${spring.application.name}
+  # Redis is a non-critical dependency: a cache (catalog/booking) and the gateway
+  # rate limiter. Its outage must NOT flip /actuator/health to DOWN, otherwise the
+  # Docker healthcheck marks the service unhealthy and the gateway-gated `client`
+  # container refuses connections. Excluding it keeps services healthy while Redis
+  # is down; the cache (CacheErrorHandler) and limiter (fail-open) degrade gracefully.
+  health:
+    redis:
+      enabled: false
   tracing:
     sampling:
       probability: 1.0
@@ -91,3 +108,53 @@ logging:
     com.awbd.cinema: INFO
     com.netflix.discovery: INFO
     org.springframework.cloud.loadbalancer: DEBUG
+
+# Inter-service resilience. One retry + circuitbreaker instance per downstream service,
+# named to match the @FeignClient name used in @Retry(name=...) / @CircuitBreaker(name=...).
+resilience4j:
+  retry:
+    configs:
+      default:
+        max-attempts: 3
+        wait-duration: 1s
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        exponential-max-wait-duration: 5s
+        # Retry ONLY transient faults. 4xx business errors and an open circuit
+        # (CallNotPermittedException) are deliberately excluded.
+        retry-exceptions:
+          - feign.RetryableException
+          - feign.FeignException$FeignServerException
+          - java.io.IOException
+    instances:
+      catalog-service:
+        base-config: default
+      user-service:
+        base-config: default
+      booking-service:
+        base-config: default
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        register-health-indicator: true
+        # Benign 4xx mean the downstream is healthy and correctly rejecting a request,
+        # so they must not trip the breaker (mirrors the old CircuitBreakerConfiguration).
+        ignore-exceptions:
+          - feign.FeignException$NotFound
+          - feign.FeignException$BadRequest
+          - feign.FeignException$Conflict
+          - feign.FeignException$UnprocessableEntity
+    instances:
+      catalog-service:
+        base-config: default
+      user-service:
+        base-config: default
+      booking-service:
+        base-config: default

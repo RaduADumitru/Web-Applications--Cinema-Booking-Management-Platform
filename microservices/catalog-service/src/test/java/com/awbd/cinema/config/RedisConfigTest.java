@@ -1,6 +1,7 @@
 package com.awbd.cinema.config;
 
 import com.awbd.cinema.utils.CacheProperties;
+import com.awbd.cinema.utils.LoggingCacheErrorHandler;
 import com.awbd.cinema.utils.SecurityCorsProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -120,5 +121,11 @@ class RedisConfigTest {
 
         assertThat(redisCacheManager.getCacheNames())
                 .containsExactlyInAnyOrder("promoCache", "userCache");
+    }
+
+    @Test
+    void errorHandler_ShouldReturnLoggingCacheErrorHandler() {
+        assertThat(redisConfig.errorHandler())
+                .isInstanceOf(LoggingCacheErrorHandler.class);
     }
 }

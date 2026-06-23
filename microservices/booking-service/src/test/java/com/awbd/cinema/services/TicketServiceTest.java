@@ -5,7 +5,7 @@ import com.awbd.cinema.DTOs.TicketDTOs.BulkSaveTicketsDTO;
 import com.awbd.cinema.DTOs.TicketDTOs.SaveTicketDTO;
 import com.awbd.cinema.DTOs.TicketDTOs.TicketDTO;
 import com.awbd.cinema.DTOs.TicketDTOs.TicketSetupDTO;
-import com.awbd.cinema.clients.CatalogServiceClient;
+import com.awbd.cinema.clients.CatalogServiceGateway;
 import com.awbd.cinema.entities.Ticket;
 import com.awbd.cinema.entities.TicketInfo;
 import com.awbd.cinema.enums.TicketType;
@@ -43,7 +43,7 @@ class TicketServiceTest {
 
     @Mock private TicketRepository ticketRepository;
     @Mock private TicketInfoRepository ticketInfoRepository;
-    @Mock private CatalogServiceClient catalogServiceClient;
+    @Mock private CatalogServiceGateway catalogServiceGateway;
 
     @InjectMocks private TicketServiceImpl ticketService;
 
@@ -81,7 +81,7 @@ class TicketServiceTest {
         void createTickets_Success() {
             BulkSaveTicketsDTO filteredDto = new BulkSaveTicketsDTO(java.util.List.of(5L), 2L, 3L);
             when(ticketRepository.findExistingSeatIds(2L, 3L, java.util.List.of(1L, 5L))).thenReturn(java.util.List.of(1L));
-            when(catalogServiceClient.getTicketSetups(filteredDto)).thenReturn(java.util.List.of(sampleSetup));
+            when(catalogServiceGateway.getTicketSetups(filteredDto)).thenReturn(java.util.List.of(sampleSetup));
             when(ticketRepository.saveAll(anyList())).thenReturn(java.util.List.of(sampleTicket));
 
             java.util.List<TicketDTO> results = ticketService.createTickets(bulkSaveDto);
@@ -89,7 +89,7 @@ class TicketServiceTest {
             assertNotNull(results);
             assertEquals(1, results.size());
             assertEquals(100L, results.get(0).id());
-            verify(catalogServiceClient).getTicketSetups(filteredDto);
+            verify(catalogServiceGateway).getTicketSetups(filteredDto);
             verify(ticketRepository).saveAll(anyList());
         }
 
@@ -102,7 +102,7 @@ class TicketServiceTest {
 
             assertNotNull(results);
             assertTrue(results.isEmpty());
-            verifyNoInteractions(catalogServiceClient);
+            verifyNoInteractions(catalogServiceGateway);
             verify(ticketRepository, never()).saveAll(any());
         }
     }
@@ -122,7 +122,7 @@ class TicketServiceTest {
         @DisplayName("Should create a ticket from the catalog snapshot")
         void createTicket_Success() {
             when(ticketRepository.existsBySeatIdAndRoomIdAndScreenSessionId(1L, 2L, 3L)).thenReturn(false);
-            when(catalogServiceClient.getTicketSetup(1L, 2L, 3L)).thenReturn(sampleSetup);
+            when(catalogServiceGateway.getTicketSetup(1L, 2L, 3L)).thenReturn(sampleSetup);
             when(ticketRepository.save(any(Ticket.class))).thenReturn(sampleTicket);
 
             TicketDTO result = ticketService.createTicket(saveDto);
@@ -130,7 +130,7 @@ class TicketServiceTest {
             assertNotNull(result);
             assertEquals(100L, result.id());
             assertTrue(result.isAvailable());
-            verify(catalogServiceClient).getTicketSetup(1L, 2L, 3L);
+            verify(catalogServiceGateway).getTicketSetup(1L, 2L, 3L);
             verify(ticketRepository, times(1)).save(any(Ticket.class));
         }
 
@@ -140,7 +140,7 @@ class TicketServiceTest {
             when(ticketRepository.existsBySeatIdAndRoomIdAndScreenSessionId(1L, 2L, 3L)).thenReturn(true);
 
             assertThrows(AlreadyExistsException.class, () -> ticketService.createTicket(saveDto));
-            verify(catalogServiceClient, never()).getTicketSetup(any(), any(), any());
+            verify(catalogServiceGateway, never()).getTicketSetup(any(), any(), any());
             verify(ticketRepository, never()).save(any());
         }
 
@@ -148,7 +148,7 @@ class TicketServiceTest {
         @DisplayName("Should propagate a clear error when catalog-service is unavailable")
         void createTicket_CatalogUnavailable() {
             when(ticketRepository.existsBySeatIdAndRoomIdAndScreenSessionId(1L, 2L, 3L)).thenReturn(false);
-            when(catalogServiceClient.getTicketSetup(1L, 2L, 3L))
+            when(catalogServiceGateway.getTicketSetup(1L, 2L, 3L))
                     .thenThrow(new BadRequestException("Catalog service is currently unavailable. Please try again later."));
 
             assertThrows(BadRequestException.class, () -> ticketService.createTicket(saveDto));
