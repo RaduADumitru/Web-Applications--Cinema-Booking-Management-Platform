@@ -6,12 +6,15 @@ import com.awbd.cinema.DTOs.OrderDTOs.OrderDTO;
 import com.awbd.cinema.DTOs.OrderDTOs.OrderItemDTO;
 import com.awbd.cinema.DTOs.UserDTOs.LoyaltyPointsDTO;
 import com.awbd.cinema.clients.UserServiceGateway;
-import com.awbd.cinema.entities.*;
+import com.awbd.cinema.entities.Order;
+import com.awbd.cinema.entities.Ticket;
 import com.awbd.cinema.enums.OrderStatus;
 import com.awbd.cinema.enums.TicketType;
 import com.awbd.cinema.exceptions.BadRequestException;
 import com.awbd.cinema.exceptions.NotFoundException;
 import com.awbd.cinema.repositories.*;
+import com.awbd.cinema.sagas.createorder.CreateOrderSagaOrchestrator;
+import com.awbd.cinema.sagas.payorder.PayOrderSagaOrchestrator;
 import com.awbd.cinema.services.OrderService.OrderServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -28,7 +31,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -38,8 +40,6 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -47,10 +47,9 @@ class OrderServiceTest {
 
     @Mock private OrderRepository orderRepository;
     @Mock private TicketRepository ticketRepository;
-    @Mock private TicketInfoRepository ticketInfoRepository;
     @Mock private UserServiceGateway userServiceGateway;
-    @Mock private OfferRepository offerRepository;
-    @Mock private NotificationRepository notificationRepository;
+    @Mock private CreateOrderSagaOrchestrator createOrderSagaOrchestrator;
+    @Mock private PayOrderSagaOrchestrator payOrderSagaOrchestrator;
 
     @InjectMocks private OrderServiceImpl orderService;
 
@@ -79,7 +78,8 @@ class OrderServiceTest {
         @Test
         void createOrder_TicketNotFound_ThrowsNotFoundException() {
             CreateOrderDTO dto = new CreateOrderDTO(List.of(new OrderItemDTO(99L, TicketType.ADULT)), false);
-            when(ticketRepository.findById(99L)).thenReturn(Optional.empty());
+            when(createOrderSagaOrchestrator.createOrder(dto, USER_ID))
+                    .thenThrow(new NotFoundException("Ticket 99 not found."));
 
             assertThatThrownBy(() -> orderService.createOrder(dto, USER_ID))
                     .isInstanceOf(NotFoundException.class)
@@ -89,8 +89,8 @@ class OrderServiceTest {
         @Test
         void createOrder_TicketNotAvailable_ThrowsBadRequestException() {
             CreateOrderDTO dto = new CreateOrderDTO(List.of(new OrderItemDTO(1L, TicketType.ADULT)), false);
-            Ticket unavailable = Ticket.builder().id(1L).isAvailable(false).build();
-            when(ticketRepository.findById(1L)).thenReturn(Optional.of(unavailable));
+            when(createOrderSagaOrchestrator.createOrder(dto, USER_ID))
+                    .thenThrow(new BadRequestException("Ticket 1 is no longer available."));
 
             assertThatThrownBy(() -> orderService.createOrder(dto, USER_ID))
                     .isInstanceOf(BadRequestException.class)
@@ -98,46 +98,34 @@ class OrderServiceTest {
         }
 
         @Test
-        @DisplayName("Should create an order without discount/offer, save the confirmation notification, and never call user-service")
+        @DisplayName("Should delegate to CreateOrderSagaOrchestrator and return its result")
         void createOrder_Success_NoDiscountNoOffer() {
             CreateOrderDTO dto = new CreateOrderDTO(List.of(new OrderItemDTO(1L, TicketType.ADULT)), false);
-            Ticket ticket = availableTicket(1L);
-            TicketInfo ticketInfo = TicketInfo.builder().type(TicketType.ADULT).price(BigDecimal.valueOf(50.00)).build();
             Order savedOrder = Order.builder().id(10L).status(OrderStatus.PENDING)
-                    .price(BigDecimal.valueOf(50.00)).userId(USER_ID).tickets(List.of(ticket)).build();
-
-            when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
-            when(ticketInfoRepository.findByType(TicketType.ADULT)).thenReturn(Optional.of(ticketInfo));
-            when(offerRepository.findByDay(any(DayOfWeek.class))).thenReturn(Optional.empty());
-            when(orderRepository.save(any(Order.class))).thenReturn(savedOrder);
+                    .price(BigDecimal.valueOf(50.00)).userId(USER_ID).build();
+            OrderDTO expected = OrderDTO.from(savedOrder);
+            when(createOrderSagaOrchestrator.createOrder(dto, USER_ID)).thenReturn(expected);
 
             OrderDTO result = orderService.createOrder(dto, USER_ID);
 
-            assertThat(result).isNotNull();
             assertThat(result.id()).isEqualTo(10L);
             assertThat(result.price()).isEqualByComparingTo("50.00");
-            verify(notificationRepository, times(1)).save(any(Notification.class));
-            verify(userServiceGateway, never()).getLoyaltyPoints(any());
+            verify(createOrderSagaOrchestrator).createOrder(dto, USER_ID);
         }
 
         @Test
-        @DisplayName("Should apply loyalty discount and reset points via user-service when requested")
+        @DisplayName("Should delegate to CreateOrderSagaOrchestrator when using loyalty discount")
         void createOrder_Success_WithLoyaltyDiscount() {
             CreateOrderDTO dto = new CreateOrderDTO(List.of(new OrderItemDTO(1L, TicketType.ADULT)), true);
-            Ticket ticket = availableTicket(1L);
-            TicketInfo ticketInfo = TicketInfo.builder().type(TicketType.ADULT).price(BigDecimal.valueOf(50.00)).build();
             Order savedOrder = Order.builder().id(10L).status(OrderStatus.PENDING)
                     .price(BigDecimal.valueOf(40.00)).userId(USER_ID).build();
+            OrderDTO expected = OrderDTO.from(savedOrder);
+            when(createOrderSagaOrchestrator.createOrder(dto, USER_ID)).thenReturn(expected);
 
-            when(ticketRepository.findById(1L)).thenReturn(Optional.of(ticket));
-            when(ticketInfoRepository.findByType(TicketType.ADULT)).thenReturn(Optional.of(ticketInfo));
-            when(offerRepository.findByDay(any(DayOfWeek.class))).thenReturn(Optional.empty());
-            when(userServiceGateway.getLoyaltyPoints(USER_ID)).thenReturn(new LoyaltyPointsDTO(USER_ID, 100));
-            when(orderRepository.save(any(Order.class))).thenReturn(savedOrder);
+            OrderDTO result = orderService.createOrder(dto, USER_ID);
 
-            orderService.createOrder(dto, USER_ID);
-
-            verify(userServiceGateway).updateLoyaltyPoints(eq(USER_ID), argThat(d -> d.loyaltyPoints() == 0));
+            assertThat(result.price()).isEqualByComparingTo("40.00");
+            verify(createOrderSagaOrchestrator).createOrder(dto, USER_ID);
         }
     }
 
@@ -183,24 +171,22 @@ class OrderServiceTest {
     class OrderStateActionTests {
 
         @Test
-        void payOrder_PendingOrder_CreditsLoyaltyViaUserService() {
-            Order pendingOrder = Order.builder().id(5L).status(OrderStatus.PENDING)
+        void payOrder_PendingOrder_SuccessfullyDelegatesToSaga() {
+            Order paidOrder = Order.builder().id(5L).status(OrderStatus.PAID)
                     .loyaltyPoints(15).price(BigDecimal.valueOf(100.00)).userId(USER_ID).build();
-
-            when(orderRepository.findById(5L)).thenReturn(Optional.of(pendingOrder));
-            when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
-            when(userServiceGateway.getLoyaltyPoints(USER_ID)).thenReturn(new LoyaltyPointsDTO(USER_ID, 10));
+            OrderDTO expected = OrderDTO.from(paidOrder);
+            when(payOrderSagaOrchestrator.payOrder(5L)).thenReturn(expected);
 
             OrderDTO result = orderService.payOrder(5L);
 
             assertThat(result.status()).isEqualTo(OrderStatus.PAID);
-            verify(userServiceGateway).updateLoyaltyPoints(eq(USER_ID), argThat(d -> d.loyaltyPoints() == 25));
+            verify(payOrderSagaOrchestrator).payOrder(5L);
         }
 
         @Test
         void payOrder_NotPending_ThrowsBadRequestException() {
-            Order paidOrder = Order.builder().id(5L).status(OrderStatus.PAID).build();
-            when(orderRepository.findById(5L)).thenReturn(Optional.of(paidOrder));
+            when(payOrderSagaOrchestrator.payOrder(5L))
+                    .thenThrow(new BadRequestException("Only PENDING orders can be paid."));
 
             assertThatThrownBy(() -> orderService.payOrder(5L))
                     .isInstanceOf(BadRequestException.class)
