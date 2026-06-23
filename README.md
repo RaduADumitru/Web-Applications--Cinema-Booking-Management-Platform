@@ -3,12 +3,17 @@
 The application is a Cinema Booking & Management System platform that lets users browse available movies, select screenings and book tickets, and lets administrators manage the platform's content (movies, rooms, schedule).
 The system was initially designed as a monolithic application, later to be decomposed into a microservices-based architecture. The split is based on the application's main responsibilities: user management, movie management, and booking management.
 
+## Requirements
+
 ### User Management
 The system must allow user registration.
 The system must allow user authentication.
 The system must allow users to log out.
 The system must manage roles.
 The system must restrict access to certain features based on role.
+
+![Register](./images/register.png)
+
 
 ### Movie Management
 The system must allow viewing the list of movies.
@@ -17,11 +22,15 @@ Administrators must be able to: add movies, edit movies, delete movies.
 The system must allow associating movies with screenings.
 The system must allow searching and sorting movies.
 
+![Movie List](./images/movie-list.png)
+
 ### Screening and Room Management
 The system must allow creating screenings for movies.
 The system must allow associating a screening with a cinema room.
 The system must manage the available seats in a room.
 The system must allow viewing the available seats for a screening.
+
+![Screenings](./images/screenings.png)
 
 ### Booking Management
 Users must be able to: select a screening, select available seats, view their own bookings, cancel bookings.
@@ -29,7 +38,9 @@ The system must allow creating a booking.
 The system must generate tickets for each booked seat.
 The system must prevent double-booking of the same seat.
 
-# Architecture
+![Screenings](./images/bookings.png)
+
+# Microservice Architecture
 
 The platform is split into three business services (`user`, `catalog`, `booking`),
 each owning its **own** Postgres database, fronted by an API gateway and supported
