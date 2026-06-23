@@ -1,4 +1,4 @@
-# Web-Applications--Cinema-Booking-Management-Platform
+# Absolute Cinema - Cinema Booking and Management Platform
 
 The application is a Cinema Booking & Management System platform that lets users browse available movies, select screenings and book tickets, and lets administrators manage the platform's content (movies, rooms, schedule).
 The system was initially designed as a monolithic application, later to be decomposed into a microservices-based architecture. The split is based on the application's main responsibilities: user management, movie management, and booking management.
