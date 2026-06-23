@@ -176,6 +176,76 @@ See **Load Balancing** below.
 
 ![ERD](./images/ERD.png)
 
+# Security & Access Control
+
+User-facing authentication is JWT-based over an HttpOnly `jwt` cookie (a separate
+refresh-token cookie supports silent renewal). Credentials are checked against the
+database through a `CustomUserDetailsService` / `CustomAuthenticationProvider`, and
+passwords are stored with **BCrypt**.
+
+Authorization uses a **role hierarchy** — `OWNER > STAFF > USER` — so higher roles
+inherit the permissions of lower ones. Endpoints are guarded with method-level
+`@PreAuthorize`:
+
+- **OWNER** — user administration (`/user/all`, promote, delete users).
+- **STAFF** — content management (movies, screen-sessions, tickets, order listing).
+- **USER** — browsing and a user's own bookings/notifications.
+
+**CSRF protection** is enabled by default with a cookie-stored token
+(`CookieCsrfTokenRepository`), toggleable via `SECURITY_CSRF_ENABLED`. Repeated failed
+logins are throttled by a `LoginAttemptService` (`SECURITY_MAX_ATTEMPTS`, default 5).
+Login and logout are exposed at `POST /api/v1/auth/login` and `POST /api/v1/auth/logout`.
+
+This user-facing layer is independent of the **Service-to-Service Security** described
+below, which protects `/internal/**` calls with a different token type.
+
+# Validation & Error Handling
+
+Every write endpoint validates its request body with **Bean Validation** — `@Valid` on
+the controller plus JSR-380 constraints on the DTOs (`@NotBlank`, `@Email`, `@Size`,
+`@Pattern`, `@FutureOrPresent`, nested `@Valid`, and a custom `@PasswordMatch` for
+registration).
+
+A global `@RestControllerAdvice` turns failures into consistent JSON: validation errors
+return **422** with a per-field message map, and domain exceptions map to the right
+status (`400`, `401/403`, `404`, `429`, `500`). Each body carries `timestamp`, `status`,
+`message`, and optional `details`.
+
+The Angular client mirrors the key rules with reactive-form validators (required, email,
+length, pattern, cross-field password match), so users get immediate feedback before
+submitting.
+
+# Pagination & Sorting
+
+List endpoints are paginated with Spring Data `Pageable` (most default to
+`@PageableDefault(size = 20)`), covering orders, movies, screen-sessions, tickets,
+ticket-info, offers, notifications, rooms, seats, and users. Sorting is applied with
+`Sort` (e.g. users by `username`, movies by upload date), and request filters (status,
+movie, room, availability, …) compose with paging. Pages are serialized through a small
+`RestPage` wrapper so the JSON page shape stays stable for the client.
+
+# Caching (Redis)
+
+Frequently-read data is cached in **Redis** via Spring Cache (`@Cacheable` /
+`@CacheEvict` / `@Caching`). Each cache has its own TTL tuned to how fast the data
+changes — e.g. `single_movies` 2h, `admin_movies` 15m, `order_lists` 5m — and writes
+evict the affected caches so reads stay consistent. Cache operations are **best-effort**:
+a `CacheErrorHandler` logs and swallows Redis failures so requests fall through to the
+database instead of erroring when Redis is unavailable. Caching is active in the monolith
+and in the catalog/booking services. (Redis also backs the gateway rate limiter — see
+**API Gateway**.)
+
+# Logging
+
+Logging uses **SLF4J + Logback**. Each service writes to its own file
+(`logs/<service>.log`) with a rolling policy (10 MB/file, 100 MB cap), and the file
+appender threshold is **`ERROR`**, so errors are retained separately from console output.
+Levels are set centrally (`com.awbd.cinema` at INFO; raise to DEBUG live via `busrefresh`
+— see Centralized Configuration). Cross-cutting request logging is provided by a servlet
+filter in the monolith (`RequestLoggingFilter`) and a `LoggingGlobalFilter` at the gateway,
+both recording method, path, status and latency; Resilience4j retry/circuit-breaker events
+are logged for observability.
+
 # Service Discovery (Eureka)
 
 The microservices register themselves with a **Netflix Eureka** service registry
@@ -378,6 +448,76 @@ points. In a distributed system, any one of these steps can fail, which could le
 To address this, the Booking Service implements the Saga orchestration pattern through two coordinated sagas: CreateOrderSaga and PayOrderSaga. The orchestrator
 drives the workflow step by step and, if any step fails, triggers compensating actions to undo the work already done - for example, releasing reserved seats if
 payment fails. This ensures the system remains consistent even in the face of partial failures, without relying on a distributed database transaction.
+
+# API Gateway
+
+**Spring Cloud Gateway** is the single public entry point (`:8080`) and provides:
+
+- **Centralized routing** — path-based routes to `lb://user-service`,
+  `lb://catalog-service`, `lb://booking-service`, load-balanced across replicas.
+- **Rate limiting** — a Redis-backed `RedisRateLimiter` (default 50 req/s replenish,
+  100 burst), keyed per client IP, applied to every route. If Redis is unreachable the
+  limiter fails open within ~250 ms instead of stalling requests.
+- **Request/response filtering** — a `LoggingGlobalFilter` logs each request (method,
+  path, status, latency), and CORS is terminated here at the edge (disabled on the
+  downstream services).
+
+`/internal/**` paths are deliberately not routed (see **Service-to-Service Security**).
+
+# Resilience & Fault Tolerance
+
+Inter-service calls are guarded with **Resilience4j**. Each Feign client is wrapped by a
+gateway component annotated with `@CircuitBreaker` + `@Retry` and a fallback method:
+
+- `booking-service → catalog-service` (ticket setup),
+- `booking-service → user-service` (loyalty points),
+- `user-service → booking-service` (welcome notification).
+
+The shared config (`config-repo/application.yml`) retries only transient faults (3
+attempts, exponential backoff) and opens the breaker at a 50% failure rate over a 10-call
+window, while ignoring benign 4xx so business errors don't trip it. Fallbacks degrade
+gracefully (e.g. treat the loyalty balance as 0, skip a best-effort notification) — except
+in saga steps, which fail fast so the orchestrator compensates. Retry and breaker state
+transitions are logged by `CircuitBreakerLoggingConfig`.
+
+# Monitoring & Observability
+
+The stack ships with a full observability layer, all started together by
+`docker-compose.microservices.yml`:
+
+- **Metrics** — every service exposes Spring Boot **Actuator**
+  (`/actuator/health`, `/metrics`, `/prometheus`, `/info`). **Prometheus** (`:9090`)
+  scrapes each replica via DNS service discovery, and **Grafana** (`:3000`,
+  `admin`/`admin`) auto-provisions a Prometheus/Loki datasource plus the per-service
+  dashboard at `infrastructure/grafana/dashboards/dashboard.json` — pick a service from
+  the **Application** dropdown to scope the panels.
+- **Health checks** — Docker healthchecks gate startup ordering on each service's
+  Actuator health endpoint.
+- **Distributed tracing** — Micrometer Tracing + Brave export spans to **Zipkin**
+  (`:9411`); trace context propagates across gateway → service → Feign calls.
+- **Log aggregation** — **Promtail** tails container logs into **Loki** (`:3100`),
+  queryable from Grafana alongside the metrics.
+
+# Configuration Profiles & Testing
+
+**Profiles.** The default configuration targets **PostgreSQL** for development and
+runtime; a `test` profile (`application-test.yml` in each module) swaps in an **H2
+in-memory** database (`create-drop`) and disables Eureka, the Config Server, and the
+Cloud Bus, so tests run standalone with no external infrastructure.
+
+**Tests.** The suite uses **JUnit 5 + Mockito** across the monolith and every
+microservice: service-layer unit tests (`@ExtendWith(MockitoExtension.class)`), controller
+slices (`@WebMvcTest` + MockMvc), end-to-end integration tests (`@SpringBootTest`,
+`@ActiveProfiles("test")`), plus dedicated saga-compensation and circuit-breaker tests.
+Run them per module with `./mvnw test` (monolith) or `mvn verify` (microservices reactor).
+
+# Continuous Integration (CI)
+
+A **GitHub Actions** workflow (`.github/workflows/maven-ci.yml`) runs on every push and
+pull request to `main` and `dev`. It builds and tests both code bases on JDK 21 with
+Maven caching — the monolith via `./mvnw clean test` and the microservices reactor via
+`mvn -B -ntp clean verify` (H2-backed, no external services required) — gating the
+pull-request workflow described in **Contributing**.
 
 # Contributing
 
