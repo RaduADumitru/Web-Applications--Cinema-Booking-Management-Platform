@@ -394,11 +394,11 @@ Micrometer and Zipkin.
 ### Distributed Transactions and the Saga Pattern
 
 One of the more advanced engineering aspects of the project is how it handles the booking workflow across service boundaries. When a user completes a purchase, the
-operation involves multiple steps across the Booking Service and the Catalog Service — reserving seats, creating an order, processing payment, and awarding loyalty
+operation involves multiple steps across the Booking Service and the Catalog Service - reserving seats, creating an order, processing payment, and awarding loyalty
 points. In a distributed system, any one of these steps can fail, which could leave the data in an inconsistent state.
 
 To address this, the Booking Service implements the Saga orchestration pattern through two coordinated sagas: CreateOrderSaga and PayOrderSaga. The orchestrator
-drives the workflow step by step and, if any step fails, triggers compensating actions to undo the work already done — for example, releasing reserved seats if
+drives the workflow step by step and, if any step fails, triggers compensating actions to undo the work already done - for example, releasing reserved seats if
 payment fails. This ensures the system remains consistent even in the face of partial failures, without relying on a distributed database transaction.
 
 
