@@ -29,6 +29,42 @@ The system must allow creating a booking.
 The system must generate tickets for each booked seat.
 The system must prevent double-booking of the same seat.
 
+
+# Relational Schema
+  users ( user_id PK, username, first_name, last_name, email, password, phone_number, loyalty_points, role, created_at, email_verified_at, deleted_at )
+  
+  movies ( movie_id PK, title, duration_min, description, rating, release_date, age_rating, image_path, deleted_at )
+
+  genres ( genre_id PK, type )
+  
+  movie_genres ( movie_id FK, genre_id FK )
+
+  session_info ( session_info_id PK, format, points )
+
+  screen_sessions ( session_id PK, session_date, start_time, end_time, movie_id FK, session_info_id FK )
+
+  rooms ( room_id PK, name, type, floor )
+
+  room_screen_sessions ( room_id FK, session_id FK )
+
+  seat_categories ( category_id PK, type, extra_fee, extra_points )
+
+  seats ( seat_id PK, row, number, zone, category_id FK )
+
+  room_seats ( room_id FK, seat_id FK )
+
+  ticket_info ( ticket_info_id PK, type, price )
+
+  offers ( offer_id PK, day, percent )
+
+  points_spend ( points_spend_id PK, points_used, discount )
+
+  orders ( order_id PK, created_at, status, payment_at, price, loyalty_points, deleted_at, user_id FK, points_spend_id FK, offer_id FK )
+
+  tickets ( ticket_id PK, is_available, type, seat_id FK, session_id FK, order_id FK, ticket_info_id FK)
+
+  notifications ( notification_id PK, type, content, created_date, sent_date, user_id FK, order_id FK )
+
 # Service Discovery (Eureka)
 
 The microservices register themselves with a **Netflix Eureka** service registry
@@ -298,3 +334,20 @@ round-robin strategy. No load-balancer configuration is added — multiplicity p
 docker compose -f docker-compose.microservices.yml down        # keep data
 docker compose -f docker-compose.microservices.yml down -v     # also drop DB volumes
 ```
+
+The infrastructure is fully containerized using Docker and Docker Compose. Three separate Compose files cover the monolith stack, the microservices stack, and an
+optional monitoring stack. Each of the three business services runs as two replicas, with Spring Cloud LoadBalancer distributing traffic across them in a round-robin
+fashion. A separate monitoring configuration brings up Prometheus, Grafana, Loki, and Promtail for metrics collection, log aggregation, and distributed tracing via
+Micrometer and Zipkin.
+
+### Distributed Transactions and the Saga Pattern
+
+One of the more advanced engineering aspects of the project is how it handles the booking workflow across service boundaries. When a user completes a purchase, the
+operation involves multiple steps across the Booking Service and the Catalog Service — reserving seats, creating an order, processing payment, and awarding loyalty
+points. In a distributed system, any one of these steps can fail, which could leave the data in an inconsistent state.
+
+To address this, the Booking Service implements the Saga orchestration pattern through two coordinated sagas: CreateOrderSaga and PayOrderSaga. The orchestrator
+drives the workflow step by step and, if any step fails, triggers compensating actions to undo the work already done — for example, releasing reserved seats if
+payment fails. This ensures the system remains consistent even in the face of partial failures, without relying on a distributed database transaction.
+
+
