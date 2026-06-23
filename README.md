@@ -323,30 +323,6 @@ docker compose -f docker-compose.microservices.yml exec gateway \
 returns `404` — the gateway has no such route — which is itself a form of
 proof that internal endpoints aren't externally exposed.)
 
-# Running the Microservices Stack (Docker)
-
-The new microservices architecture lives in `microservices/` (a multi-module Maven
-reactor) and runs via `docker-compose.microservices.yml`. It is independent of the
-original monolith (`docker-compose.yml`) — run one or the other, not both at once
-(the gateway and the monolith both use host port 8080).
-
-## Prerequisites
-
-- Docker + Docker Compose v2.
-- A `.env` file at the repo root (copy from `.env.example`). It must include the
-  three microservices DB-name vars:
-
-  ```
-  USER_DB_NAME=user_db
-  CATALOG_DB_NAME=catalog_db
-  BOOKING_DB_NAME=booking_db
-  ```
-
-  It must also include `ENCRYPT_KEY` (the config server's symmetric decryption
-  key — see *Centralized Configuration* above). All other vars (`DATABASE_USER`,
-  `DATABASE_PASSWORD`, `JWT_SECRET_KEY`, `TMDB_API_KEY`, `BOOTSTRAP_OWNER_*`,
-  `SECURITY_*`) are shared with the monolith.
-
 ## Load Balancing (multiple instances)
 
 The stack runs **2 instances of each business service** (`user-service`, `catalog-service`,
@@ -403,4 +379,20 @@ To address this, the Booking Service implements the Saga orchestration pattern t
 drives the workflow step by step and, if any step fails, triggers compensating actions to undo the work already done - for example, releasing reserved seats if
 payment fails. This ensures the system remains consistent even in the face of partial failures, without relying on a distributed database transaction.
 
+# Contributing
 
+All changes must be integrated through **pull requests** and **pass CI checks** — do not push directly to
+the long-lived branches.
+
+- **Target the `dev` branch.** Open every pull request against `dev`, never against
+  `main`.
+- **Merge via squash merge.** Pull requests into `dev` are integrated with a
+  **squash merge**, so each PR lands as a single commit on `dev`.
+- **Promotion to `main` is manual.** `dev` is merged into `main` manually via **standard merge**. 
+- Do not open PRs from feature branches directly to `main`.
+
+## Team Member Main Contributions
+
+- @Radush02: Monolith feature development, bulk of frontend functionality implementation
+- @AnghelAnaMaria: Monolith feature development, Monitoring stack and Saga pattern
+- @RaduADumitru: Microservices architecture (Config server, load balancing, circuit breakers, distributed security)
