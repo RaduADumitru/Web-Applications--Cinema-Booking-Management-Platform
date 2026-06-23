@@ -67,7 +67,7 @@ flowchart TB
         redis[("Redis<br/>cache + rate limiter")]
     end
 
-    rabbit["RabbitMQ<br/>Cloud Bus + Saga :15672"]
+    rabbit["RabbitMQ<br/>Spring Cloud Bus :15672"]
 
     subgraph observability ["Observability"]
         prometheus["Prometheus<br/>:9090"]
@@ -91,18 +91,17 @@ flowchart TB
     catalog --> redis
     booking --> redis
 
-    %% inter-service Feign (/internal/**)
+    %% inter-service Feign (/internal/** + synchronous saga steps)
     user -. Feign .-> booking
     booking -. Feign .-> catalog
-    booking -. Feign .-> user
+    booking -. "Feign (saga steps)" .-> user
 
     %% discovery + config
     gateway & user & catalog & booking -. register / discover .-> discovery
     gateway & user & catalog & booking -. fetch config .-> config
 
-    %% messaging: saga events + config bus refresh
-    user & catalog & booking -. saga events .-> rabbit
-    config -. busrefresh .-> rabbit
+    %% config hot-reload over Spring Cloud Bus
+    gateway & user & catalog & booking -. busrefresh (Cloud Bus) .-> rabbit
 
     %% observability
     gateway & user & catalog & booking -. traces .-> zipkin
@@ -113,7 +112,7 @@ flowchart TB
 ```
 
 Solid arrows are the synchronous request path; dotted arrows are
-discovery/config, asynchronous messaging, and observability flows.
+discovery/config, Spring Cloud Bus config refresh, and observability flows.
 
 # Running the Application
 
