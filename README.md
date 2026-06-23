@@ -533,6 +533,23 @@ Maven caching — the monolith via `./mvnw clean test` and the microservices rea
 `mvn -B -ntp clean verify` (H2-backed, no external services required) — gating the
 pull-request workflow described in **Contributing**.
 
+# AI-Assisted Development
+
+AI tooling was used throughout the project in two ways:
+
+- **Early phase — GitHub Copilot.** The initial monolith work was driven largely through
+  GitHub Copilot, including Copilot-authored pull requests. This was scaled back once the
+  available Copilot quota for students was drastically reduced.
+- **Later phase — Claude Code with the Superpowers plugin.** The microservices work
+  followed a **spec-driven development** model using the
+  [Superpowers](https://github.com/obra/superpowers) plugin for Claude Code: high complexity features
+  began with a written **spec** (requirements + design) that was reviewed, then turned into
+  one or more step-by-step **implementation plans** executed and verified incrementally. These
+  artifacts are committed under [`docs/superpowers`](./docs/superpowers) — design specs in
+  [`docs/superpowers/specs`](./docs/superpowers/specs) and the corresponding execution
+  plans in [`docs/superpowers/plans`](./docs/superpowers/plans) — so each major change can
+  be traced from its spec to its plan to the resulting code.
+
 # Contributing
 
 All changes must be integrated through **pull requests** and **pass CI checks** — do not push directly to
