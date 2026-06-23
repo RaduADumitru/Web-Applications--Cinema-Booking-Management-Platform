@@ -277,6 +277,65 @@ services:
     networks:
       - microservices-network
 
+  loki:
+    image: grafana/loki:3.3.2
+    container_name: ms-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./infrastructure/loki:/etc/loki
+      - loki_data:/loki
+    command: -config.file=/etc/loki/loki-config.yml
+    networks:
+      - microservices-network
+
+  promtail:
+    image: grafana/promtail:3.3.2
+    container_name: ms-promtail
+    volumes:
+      - ./infrastructure/promtail:/etc/promtail
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: -config.file=/etc/promtail/promtail-config.yml
+    networks:
+      - microservices-network
+    depends_on:
+      - loki
+
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    container_name: ms-prometheus
+    volumes:
+      - ./infrastructure/prometheus/:/etc/prometheus/
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/etc/prometheus/durable"
+      - "--web.enable-lifecycle"
+    ports:
+      - "9090:9090"
+    networks:
+      - microservices-network
+    depends_on:
+      - loki
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: ms-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./infrastructure/grafana/provisioning:/etc/grafana/provisioning
+      - ./infrastructure/grafana/dashboards:/var/lib/grafana/dashboards
+      - grafana_data:/var/lib/grafana
+    networks:
+      - microservices-network
+    depends_on:
+      - loki
+      - prometheus
+
 networks:
   microservices-network:
     driver: bridge
@@ -285,3 +344,5 @@ volumes:
   user_db_data:
   catalog_db_data:
   booking_db_data:
+  loki_data:
+  grafana_data:

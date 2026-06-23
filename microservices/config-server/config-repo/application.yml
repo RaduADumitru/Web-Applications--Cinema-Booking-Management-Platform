@@ -75,6 +75,13 @@ management:
     web:
       exposure:
         include: health,info,metrics,prometheus,busrefresh
+  metrics:
+    tags:
+      # Stamp every meter with application=<service name> so Prometheus series carry
+      # an `application` label. The Grafana "System Monitor" dashboard
+      # keys its `Application` selector (and all panel queries) off this label; without
+      # it the selector is empty and $application interpolates to nothing.
+      application: ${spring.application.name}
   # Redis is a non-critical dependency: a cache (catalog/booking) and the gateway
   # rate limiter. Its outage must NOT flip /actuator/health to DOWN, otherwise the
   # Docker healthcheck marks the service unhealthy and the gateway-gated `client`
