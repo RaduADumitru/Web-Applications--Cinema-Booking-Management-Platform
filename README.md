@@ -538,7 +538,7 @@ pull-request workflow described in **Contributing**.
 AI tooling was used throughout the project in two ways:
 
 - **Early phase — GitHub Copilot.** The initial monolith work was driven largely through
-  GitHub Copilot, including Copilot-authored pull requests. This was scaled back once the
+  GitHub Copilot, including automated Copilot reviews on raised PRs. This was scaled back once the
   available Copilot quota for students was drastically reduced.
 - **Later phase — Claude Code with the Superpowers plugin.** The microservices work
   followed a **spec-driven development** model using the
